@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Stock · Nodo Matriz</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4 Q22 8 22 16 Q22 24 16 28 Q10 24 10 16 Q10 8 16 4 Z' fill='%234A6B3A'/%3E%3C/svg%3E">
+</head>
+<body>
+  <main class="wrap wrap--narrow">
+
+    <header class="site-header fade-in">
+      <a class="site-mark" href="../">
+        <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#6E8E55"/>
+              <stop offset="100%" stop-color="#4A6B3A"/>
+            </linearGradient>
+          </defs>
+          <path d="M24 4 Q34 10 34 24 Q34 38 24 44 Q14 38 14 24 Q14 10 24 4 Z" fill="url(#leafGrad)"/>
+          <path d="M24 8 V42" stroke="#FAF6EE" stroke-width="1.8" stroke-linecap="round" opacity="0.7"/>
+        </svg>
+        <span>
+          <span class="site-mark__name">Nodo Matriz</span>
+          <span class="site-mark__sub">actualización de stock</span>
+        </span>
+      </a>
+    </header>
+
+    <section class="fade-in" data-delay="1">
+      <h1>Stock para la próxima edición</h1>
+      <p class="lead">
+        Actualizá precios, disponibilidad y fracciones de tus productos para que
+        aparezcan correctamente en el form de pedidos de la quincena.
+      </p>
+    </section>
+
+    <div id="productor-info" class="note note--info fade-in" data-delay="2" style="display: none;">
+      <strong>Estás cargando stock como:</strong> <span id="productor-nombre">–</span>
+      <small style="display: block; margin-top: 4px;">
+        Identificador interno: <code class="kbd" id="productor-id">–</code>
+      </small>
+    </div>
+
+    <div id="link-invalido" class="note note--error fade-in" data-delay="2" style="display: none;">
+      <strong>Link incompleto.</strong> El link que estás usando no incluye tu
+      identificador de productor (<code class="kbd">id_productor</code>).
+      Pedile al Nodo el link correcto.
+    </div>
+
+    <form id="stock-form"
+          class="fade-in"
+          data-delay="3"
+          data-webhook="PEGAR_AQUI_LA_URL_DEL_WEBHOOK_A2"
+          novalidate>
+
+      <div class="card">
+        <h2>Productos a actualizar</h2>
+        <p class="muted">
+          Marcá cuáles tenés disponibles para la próxima edición y, si cambió,
+          ajustá el precio. Si tenés productos nuevos, agregalos al final con el
+          botón "Agregar producto".
+        </p>
+
+        <div id="product-list" class="product-list mt-4">
+          <!-- Los productos se agregan dinámicamente con JS -->
+          <div class="note note--info">
+            Para esta primera versión vas a tener que agregar todos tus
+            productos manualmente con el botón de abajo. En la próxima versión
+            van a aparecer pre-cargados.
+          </div>
+        </div>
+
+        <button type="button" id="btn-add-product" class="btn btn--ghost mt-3">
+          + Agregar producto
+        </button>
+      </div>
+
+      <div class="card mt-4">
+        <h2>Comentarios para el Nodo</h2>
+        <div class="field">
+          <label class="field__label" for="notas">Notas opcionales</label>
+          <textarea
+            class="textarea"
+            id="notas"
+            name="notas"
+            placeholder="Algo que la equipa del Nodo necesite saber: faltantes, demoras, productos nuevos a probar, etc."></textarea>
+        </div>
+      </div>
+
+      <div class="mt-4 center">
+        <button type="submit" class="btn btn--primary">
+          Enviar actualización de stock
+        </button>
+        <p><small>Al enviar, recibirás confirmación por WhatsApp.</small></p>
+      </div>
+
+    </form>
+
+    <footer class="site-footer">
+      <p>Nodo Matriz · sistema interno · soberanía digital</p>
+    </footer>
+
+  </main>
+
+  <!-- Template de fila de producto (clonado por JS) -->
+  <template id="product-row-template">
+    <div class="product" data-product-row>
+      <div class="product__head">
+        <div class="field" style="margin-bottom: 8px;">
+          <label class="field__label">Nombre del producto</label>
+          <input class="input" type="text" name="nombre" placeholder="Ej: Tomate cherry orgánico" required>
+        </div>
+        <div class="product__meta">
+          <select class="select" name="unidad_venta" style="flex: 1; min-width: 110px;">
+            <option value="unidad">unidad</option>
+            <option value="kg">kg</option>
+            <option value="gr">gramos</option>
+            <option value="atado">atado</option>
+            <option value="docena">docena</option>
+            <option value="bolsa">bolsa</option>
+            <option value="botella">botella</option>
+            <option value="frasco">frasco</option>
+            <option value="litro">litro</option>
+            <option value="maple">maple</option>
+            <option value="pack">pack</option>
+            <option value="ramito">ramito</option>
+            <option value="sobre">sobre</option>
+            <option value="mazo">mazo</option>
+          </select>
+          <input
+            class="input"
+            type="number"
+            name="precio"
+            placeholder="Precio"
+            step="100"
+            min="0"
+            style="width: 130px;">
+        </div>
+      </div>
+      <div class="product__control" style="flex-direction: column; align-items: stretch; gap: 8px;">
+        <label class="option" style="background: var(--c-crema-osc);">
+          <input type="checkbox" name="disponible" checked>
+          <span class="option__label">Disponible para esta edición</span>
+        </label>
+        <label class="option">
+          <input type="checkbox" name="es_oferta">
+          <span class="option__label">Está en oferta</span>
+        </label>
+        <button type="button" class="btn btn--warn btn--small" data-action="remove-product">
+          Eliminar este producto
+        </button>
+      </div>
+    </div>
+  </template>
+
+  <script src="../assets/form-logic.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var NM = window.NodoMatriz;
+
+      // 1. Detectar id_productor desde la URL
+      var idProductor = NM.getQueryParam('id_productor');
+      var preview     = NM.getQueryParam('preview') === '1';
+
+      if (!idProductor) {
+        document.getElementById('link-invalido').style.display = 'block';
+        document.getElementById('stock-form').style.display = 'none';
+        return;
+      }
+
+      var infoBox  = document.getElementById('productor-info');
+      var nombreEl = document.getElementById('productor-nombre');
+      var idEl     = document.getElementById('productor-id');
+      idEl.textContent = idProductor;
+      nombreEl.textContent = preview ? '(vista previa de desarrollo)' : 'Cargando…';
+      infoBox.style.display = 'block';
+
+      // 2. Aquí, en una próxima iteración, vamos a hacer fetch de los productos
+      //    del productor desde un endpoint de Make (o un JSON estático) para
+      //    pre-poblar la lista. Por ahora el productor agrega manualmente.
+
+      // 3. Agregar / eliminar filas de producto
+      var template = document.getElementById('product-row-template');
+      var list     = document.getElementById('product-list');
+      var btnAdd   = document.getElementById('btn-add-product');
+
+      function addProductRow() {
+        var clone = template.content.cloneNode(true);
+        list.appendChild(clone);
+      }
+
+      btnAdd.addEventListener('click', addProductRow);
+
+      // Iniciar con una fila vacía para guiar al usuario
+      addProductRow();
+
+      list.addEventListener('click', function (e) {
+        if (e.target.matches('[data-action="remove-product"]')) {
+          var row = e.target.closest('[data-product-row]');
+          if (row && list.querySelectorAll('[data-product-row]').length > 1) {
+            row.remove();
+          } else if (row) {
+            // No permitir quedarse sin ninguna fila; limpiar la actual
+            row.querySelectorAll('input, select').forEach(function (el) {
+              if (el.type === 'checkbox') el.checked = (el.name === 'disponible');
+              else el.value = '';
+            });
+          }
+        }
+      });
+
+      // 4. Construcción del payload al enviar
+      var form = document.getElementById('stock-form');
+
+      NM.bindFormSubmit(form, function buildPayload() {
+        var rows = list.querySelectorAll('[data-product-row]');
+        var productos = [];
+
+        rows.forEach(function (row) {
+          var nombre  = row.querySelector('[name="nombre"]').value.trim();
+          if (!nombre) return;
+          productos.push({
+            nombre:     nombre,
+            unidad:     row.querySelector('[name="unidad_venta"]').value,
+            precio:     parseFloat(row.querySelector('[name="precio"]').value) || null,
+            disponible: row.querySelector('[name="disponible"]').checked,
+            es_oferta:  row.querySelector('[name="es_oferta"]').checked,
+          });
+        });
+
+        if (productos.length === 0) {
+          NM.showErrorMessage(form, 'Tenés que cargar al menos un producto antes de enviar.');
+          return null;
+        }
+
+        return {
+          id_productor: idProductor,
+          enviado_en:   new Date().toISOString(),
+          productos:    productos,
+          notas:        document.getElementById('notas').value.trim(),
+        };
+      }, {
+        successMessage:
+          'Recibimos tu actualización con éxito. La equipa del Nodo va a revisarla y vas a recibir confirmación por WhatsApp.',
+      });
+    })();
+  </script>
+</body>
+</html>

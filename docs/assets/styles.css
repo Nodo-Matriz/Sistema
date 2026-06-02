@@ -1,0 +1,831 @@
+/* ============================================================
+   Nodo Matriz — Sistema de diseño
+   Estética: cálida, orgánica, agroecológica
+   Tipografías: Fraunces (display) + Atkinson Hyperlegible (body)
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..900,30..100&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
+:root {
+  /* Paleta de tierra ----------------------------------------- */
+  --c-suelo:         #2C2418;  /* texto principal — marrón muy oscuro, casi negro cálido */
+  --c-corteza:       #4A3E2E;  /* texto secundario — marrón medio */
+  --c-tierra:        #6B5D4F;  /* texto terciario — gris cálido */
+
+  --c-oliva:         #4A6B3A;  /* verde principal — hojas en sombra */
+  --c-oliva-claro:   #6E8E55;  /* verde claro — hojas al sol */
+  --c-salvia:        #A8B894;  /* verde gris — variante */
+  --c-musgo:         #3A5128;  /* verde profundo — bordes/sombras */
+
+  --c-arcilla:       #B07D62;  /* terracota cálida — acentos */
+  --c-arcilla-oscuro:#8B5A40;  /* terracota oscura */
+  --c-mostaza:       #C49543;  /* amarillo tierra — destacados sutiles */
+
+  --c-crema:         #FAF6EE;  /* fondo principal — papel manteca */
+  --c-crema-osc:     #F0E9D6;  /* fondo secundario */
+  --c-leche:         #FDFBF5;  /* blanco cálido — cards */
+
+  --c-rojo:          #A6402B;  /* errores, eliminación */
+  --c-verde-ok:      #5B7A3A;  /* éxito */
+
+  /* Tipografía ----------------------------------------------- */
+  --f-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --f-body:    'Atkinson Hyperlegible', system-ui, -apple-system, sans-serif;
+
+  /* Espaciado --------------------------------------------------- */
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 0.75rem;
+  --s-4: 1rem;
+  --s-5: 1.5rem;
+  --s-6: 2rem;
+  --s-7: 3rem;
+  --s-8: 4rem;
+  --s-9: 6rem;
+
+  /* Radio orgánico ----------------------------------------------- */
+  --r-card:  18px 22px 16px 24px;   /* asimétrico, hecho a mano */
+  --r-input: 10px 14px 10px 14px;
+  --r-pill:  999px;
+  --r-blob:  62% 38% 55% 45% / 50% 60% 40% 50%;
+
+  /* Sombras ------------------------------------------------------ */
+  --sh-suave: 0 2px 8px rgba(74, 62, 46, 0.06);
+  --sh-medio: 0 4px 20px rgba(74, 62, 46, 0.10);
+  --sh-foco:  0 0 0 3px rgba(110, 142, 85, 0.25);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--f-body);
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--c-suelo);
+  background: var(--c-crema);
+  background-image:
+    radial-gradient(at 12% 8%, rgba(168, 184, 148, 0.18) 0%, transparent 40%),
+    radial-gradient(at 92% 90%, rgba(176, 125, 98, 0.12) 0%, transparent 45%);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Textura de grano sutil sobre el fondo */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.27 0 0 0 0 0.22 0 0 0 0 0.16 0 0 0 0.15 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+}
+
+/* ============================================================
+   Tipografía
+   ============================================================ */
+
+h1, h2, h3, h4 {
+  font-family: var(--f-display);
+  color: var(--c-musgo);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  font-variation-settings: 'opsz' 144, 'SOFT' 80;
+  letter-spacing: -0.025em;
+}
+
+h2 {
+  font-size: clamp(1.5rem, 3.5vw, 2.2rem);
+  font-variation-settings: 'opsz' 80, 'SOFT' 60;
+}
+
+h3 {
+  font-size: 1.25rem;
+  font-variation-settings: 'opsz' 36, 'SOFT' 50;
+}
+
+p {
+  margin: 0 0 var(--s-4);
+}
+
+p.lead {
+  font-size: 1.18rem;
+  color: var(--c-corteza);
+  line-height: 1.5;
+}
+
+a {
+  color: var(--c-oliva);
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--c-salvia);
+  transition: text-decoration-color 0.2s, color 0.2s;
+}
+
+a:hover {
+  color: var(--c-musgo);
+  text-decoration-color: var(--c-oliva);
+}
+
+small {
+  font-size: 0.85rem;
+  color: var(--c-tierra);
+}
+
+/* ============================================================
+   Layout
+   ============================================================ */
+
+.wrap {
+  position: relative;
+  z-index: 1;
+  max-width: 880px;
+  margin: 0 auto;
+  padding: var(--s-7) var(--s-5);
+}
+
+@media (min-width: 768px) {
+  .wrap {
+    padding: var(--s-8) var(--s-6);
+  }
+}
+
+.wrap--narrow {
+  max-width: 640px;
+}
+
+/* ============================================================
+   Header del sitio / página
+   ============================================================ */
+
+.site-header {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  padding-bottom: var(--s-5);
+  margin-bottom: var(--s-6);
+  border-bottom: 1px dashed var(--c-salvia);
+}
+
+.site-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-3);
+  text-decoration: none;
+  color: inherit;
+}
+
+.site-mark svg {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+}
+
+.site-mark__name {
+  font-family: var(--f-display);
+  font-size: 1.4rem;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  font-variation-settings: 'opsz' 36, 'SOFT' 60;
+  color: var(--c-musgo);
+}
+
+.site-mark__sub {
+  font-size: 0.78rem;
+  color: var(--c-tierra);
+  font-style: italic;
+  display: block;
+  margin-top: -3px;
+}
+
+/* ============================================================
+   Tarjetas / contenedores
+   ============================================================ */
+
+.card {
+  background: var(--c-leche);
+  border: 1px solid rgba(74, 107, 58, 0.12);
+  border-radius: var(--r-card);
+  padding: var(--s-6);
+  box-shadow: var(--sh-suave);
+}
+
+@media (min-width: 768px) {
+  .card {
+    padding: var(--s-7);
+  }
+}
+
+.card + .card {
+  margin-top: var(--s-5);
+}
+
+/* ============================================================
+   Botones
+   ============================================================ */
+
+.btn {
+  font-family: var(--f-body);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  padding: var(--s-3) var(--s-6);
+  border-radius: var(--r-pill);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.2s, background-color 0.2s, color 0.2s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  line-height: 1.2;
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: var(--sh-foco);
+}
+
+.btn--primary {
+  background: var(--c-musgo);
+  color: var(--c-crema);
+  border-color: var(--c-musgo);
+}
+
+.btn--primary:hover {
+  background: var(--c-oliva);
+  border-color: var(--c-oliva);
+  transform: translateY(-1px);
+  box-shadow: var(--sh-medio);
+}
+
+.btn--primary:disabled {
+  background: var(--c-salvia);
+  border-color: var(--c-salvia);
+  color: var(--c-leche);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--c-musgo);
+  border-color: var(--c-oliva);
+}
+
+.btn--ghost:hover {
+  background: rgba(74, 107, 58, 0.08);
+}
+
+.btn--warn {
+  background: var(--c-arcilla);
+  color: var(--c-crema);
+  border-color: var(--c-arcilla);
+}
+
+.btn--warn:hover {
+  background: var(--c-arcilla-oscuro);
+  border-color: var(--c-arcilla-oscuro);
+}
+
+.btn--small {
+  padding: var(--s-2) var(--s-4);
+  font-size: 0.88rem;
+}
+
+/* ============================================================
+   Formularios
+   ============================================================ */
+
+.field {
+  margin-bottom: var(--s-5);
+}
+
+.field__label {
+  display: block;
+  font-weight: 700;
+  color: var(--c-corteza);
+  margin-bottom: var(--s-2);
+  font-size: 0.95rem;
+}
+
+.field__hint {
+  display: block;
+  color: var(--c-tierra);
+  font-size: 0.85rem;
+  margin-top: var(--s-1);
+  font-style: italic;
+}
+
+.field__error {
+  color: var(--c-rojo);
+  font-size: 0.85rem;
+  margin-top: var(--s-1);
+  font-weight: 700;
+  display: none;
+}
+
+.field.is-invalid .field__error {
+  display: block;
+}
+
+.input,
+.textarea,
+.select {
+  font-family: var(--f-body);
+  font-size: 1rem;
+  width: 100%;
+  padding: var(--s-3) var(--s-4);
+  border: 1.5px solid var(--c-salvia);
+  border-radius: var(--r-input);
+  background: var(--c-leche);
+  color: var(--c-suelo);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input:focus,
+.textarea:focus,
+.select:focus {
+  outline: none;
+  border-color: var(--c-oliva);
+  box-shadow: var(--sh-foco);
+}
+
+.input.is-invalid,
+.textarea.is-invalid,
+.select.is-invalid {
+  border-color: var(--c-rojo);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 5em;
+}
+
+.select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1L6 6L11 1' stroke='%234A3E2E' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  padding-right: 2.5rem;
+}
+
+/* Radio y checkbox custom */
+.option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border: 1.5px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.option:hover {
+  background-color: rgba(110, 142, 85, 0.06);
+}
+
+.option input[type="radio"],
+.option input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0 0;
+  flex-shrink: 0;
+  accent-color: var(--c-musgo);
+  cursor: pointer;
+}
+
+.option input:checked + .option__label {
+  color: var(--c-musgo);
+  font-weight: 700;
+}
+
+.option__label {
+  color: var(--c-corteza);
+  line-height: 1.4;
+}
+
+/* ============================================================
+   Productos (form de stock y pedidos)
+   ============================================================ */
+
+.product-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.product {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--s-3);
+  padding: var(--s-5);
+  background: var(--c-leche);
+  border: 1px solid rgba(74, 107, 58, 0.12);
+  border-radius: var(--r-card);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.product:hover {
+  border-color: rgba(74, 107, 58, 0.25);
+}
+
+.product.is-active {
+  border-color: var(--c-oliva);
+  box-shadow: var(--sh-suave);
+}
+
+@media (min-width: 600px) {
+  .product {
+    grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
+    align-items: center;
+  }
+}
+
+.product__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.product__name {
+  font-family: var(--f-display);
+  font-size: 1.15rem;
+  font-weight: 500;
+  font-variation-settings: 'opsz' 36, 'SOFT' 40;
+  color: var(--c-suelo);
+  line-height: 1.25;
+}
+
+.product__meta {
+  font-size: 0.85rem;
+  color: var(--c-tierra);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  align-items: center;
+}
+
+.product__price {
+  font-weight: 700;
+  color: var(--c-musgo);
+  font-size: 1rem;
+}
+
+.product__tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: var(--r-pill);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.product__tag--oferta {
+  background: var(--c-mostaza);
+  color: var(--c-suelo);
+}
+
+.product__tag--nuevo {
+  background: var(--c-oliva-claro);
+  color: var(--c-leche);
+}
+
+.product__control {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+
+/* ============================================================
+   Wizard de categorías (form de pedidos)
+   ============================================================ */
+
+.wizard {
+  position: relative;
+}
+
+.wizard__progress {
+  background: var(--c-leche);
+  border: 1px solid rgba(74, 107, 58, 0.15);
+  border-radius: var(--r-card);
+  padding: var(--s-4) var(--s-5);
+  margin-bottom: var(--s-5);
+  box-shadow: var(--sh-suave);
+  position: sticky;
+  top: var(--s-3);
+  z-index: 10;
+}
+
+.wizard__progress-text {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: var(--s-3);
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+
+.wizard__step-count {
+  font-family: var(--f-display);
+  font-size: 0.95rem;
+  font-style: italic;
+  color: var(--c-tierra);
+}
+
+.wizard__step-name {
+  font-family: var(--f-display);
+  font-size: 1.3rem;
+  font-weight: 500;
+  font-variation-settings: 'opsz' 60, 'SOFT' 70;
+  color: var(--c-musgo);
+}
+
+.wizard__bar {
+  height: 6px;
+  background: var(--c-crema-osc);
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+
+.wizard__bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--c-oliva), var(--c-oliva-claro));
+  border-radius: var(--r-pill);
+  transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.wizard__step {
+  display: none;
+  animation: stepIn 0.4s ease-out;
+}
+
+.wizard__step.is-current {
+  display: block;
+}
+
+@keyframes stepIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wizard__nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-3);
+  margin-top: var(--s-6);
+  padding-top: var(--s-5);
+  border-top: 1px dashed var(--c-salvia);
+  flex-wrap: wrap;
+}
+
+.wizard__nav-info {
+  font-size: 0.88rem;
+  color: var(--c-tierra);
+  font-style: italic;
+}
+
+/* Indicador de categoría no visitada */
+.wizard__crumbs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: var(--s-3);
+}
+
+.wizard__crumb {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--c-crema-osc);
+  transition: background 0.2s, transform 0.2s;
+}
+
+.wizard__crumb.is-visited {
+  background: var(--c-oliva-claro);
+}
+
+.wizard__crumb.is-current {
+  background: var(--c-musgo);
+  transform: scale(1.4);
+}
+
+/* ============================================================
+   Resumen final (carrito visible solo al final)
+   ============================================================ */
+
+.summary {
+  background: var(--c-crema-osc);
+  border: 2px dashed var(--c-salvia);
+  border-radius: var(--r-card);
+  padding: var(--s-6);
+}
+
+.summary__title {
+  margin-bottom: var(--s-4);
+}
+
+.summary__items {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--s-5);
+}
+
+.summary__item {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-3) 0;
+  border-bottom: 1px dotted rgba(107, 93, 79, 0.25);
+}
+
+.summary__item:last-child {
+  border-bottom: none;
+}
+
+.summary__item-name {
+  font-weight: 700;
+  color: var(--c-suelo);
+}
+
+.summary__item-detail {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--c-tierra);
+  font-weight: 400;
+  margin-top: 2px;
+}
+
+.summary__item-price {
+  font-weight: 700;
+  color: var(--c-musgo);
+  white-space: nowrap;
+}
+
+.summary__totals {
+  border-top: 2px solid var(--c-musgo);
+  padding-top: var(--s-4);
+  margin-top: var(--s-5);
+}
+
+.summary__total-row {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--s-1) 0;
+}
+
+.summary__total-row--grand {
+  font-family: var(--f-display);
+  font-size: 1.6rem;
+  font-variation-settings: 'opsz' 60, 'SOFT' 70;
+  font-weight: 500;
+  color: var(--c-musgo);
+  border-top: 1px dashed var(--c-salvia);
+  margin-top: var(--s-3);
+  padding-top: var(--s-3);
+}
+
+/* ============================================================
+   Mensajes (info / éxito / error)
+   ============================================================ */
+
+.note {
+  padding: var(--s-4) var(--s-5);
+  border-radius: 14px;
+  margin-bottom: var(--s-5);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.note--info {
+  background: rgba(110, 142, 85, 0.10);
+  border-left: 4px solid var(--c-oliva);
+  color: var(--c-corteza);
+}
+
+.note--warn {
+  background: rgba(196, 149, 67, 0.14);
+  border-left: 4px solid var(--c-mostaza);
+  color: var(--c-corteza);
+}
+
+.note--error {
+  background: rgba(166, 64, 43, 0.10);
+  border-left: 4px solid var(--c-rojo);
+  color: var(--c-corteza);
+}
+
+.note--success {
+  background: rgba(91, 122, 58, 0.12);
+  border-left: 4px solid var(--c-verde-ok);
+  color: var(--c-corteza);
+}
+
+/* ============================================================
+   Footer
+   ============================================================ */
+
+.site-footer {
+  margin-top: var(--s-9);
+  padding-top: var(--s-6);
+  border-top: 1px dashed var(--c-salvia);
+  text-align: center;
+  color: var(--c-tierra);
+  font-size: 0.88rem;
+  font-style: italic;
+}
+
+.site-footer p {
+  margin: var(--s-2) 0;
+}
+
+/* ============================================================
+   Utilidades
+   ============================================================ */
+
+.muted   { color: var(--c-tierra); }
+.center  { text-align: center; }
+.hidden  { display: none !important; }
+.mt-3    { margin-top: var(--s-5); }
+.mt-4    { margin-top: var(--s-6); }
+.mt-5    { margin-top: var(--s-7); }
+
+.divider {
+  height: 1px;
+  background: var(--c-salvia);
+  border: none;
+  margin: var(--s-7) 0;
+  opacity: 0.5;
+}
+
+.kbd {
+  font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 0.85em;
+  background: var(--c-crema-osc);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--c-corteza);
+}
+
+/* Animación de entrada para la página */
+.fade-in {
+  animation: fadeIn 0.6s ease-out backwards;
+}
+
+.fade-in[data-delay="1"] { animation-delay: 0.1s; }
+.fade-in[data-delay="2"] { animation-delay: 0.2s; }
+.fade-in[data-delay="3"] { animation-delay: 0.3s; }
+.fade-in[data-delay="4"] { animation-delay: 0.4s; }
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Loader / spinner */
+.spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid rgba(255, 255, 255, 0.35);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
