@@ -1,0 +1,268 @@
+{
+  "name": "A3 · Generación del formulario de pedidos",
+  "flow": [
+    {
+      "id": 1,
+      "module": "gateway:CustomWebHook",
+      "version": 1,
+      "metadata": {
+        "designer": {
+          "x": 0,
+          "y": 0
+        },
+        "restore": {
+          "parameters": {
+            "hook": {
+              "label": "Webhook A3 — disparo",
+              "data": {
+                "editable": "true"
+              }
+            }
+          }
+        }
+      },
+      "parameters": {
+        "hook": "REEMPLAZAR_WEBHOOK_A3",
+        "maxResults": 1
+      },
+      "_comment": "Disparado desde Apps Script (botón en el Sheet). Recibe {id_edicion}."
+    },
+    {
+      "id": 2,
+      "module": "google-sheets:searchRows",
+      "version": 2,
+      "metadata": {
+        "designer": {
+          "x": 300,
+          "y": 0
+        },
+        "restore": {
+          "parameters": {
+            "__IMTCONN__": {
+              "label": "REEMPLAZAR_CONEXION_SHEETS",
+              "data": {
+                "scoped": "true",
+                "connection": "google"
+              }
+            }
+          }
+        }
+      },
+      "parameters": {
+        "__IMTCONN__": "REEMPLAZAR_CONEXION_SHEETS"
+      },
+      "mapper": {
+        "mode": "select",
+        "spreadsheetId": "REEMPLAZAR_SPREADSHEET_ID",
+        "sheetId": "Productos",
+        "includesHeaders": true,
+        "tableFirstRow": "A6",
+        "tableLastColumn": "O",
+        "filter": [
+          [
+            {
+              "a": "disponible_edicion_actual",
+              "b": "Sí",
+              "o": "text:equal"
+            }
+          ]
+        ],
+        "_comment": "Trae todos los productos disponibles para la edición."
+      }
+    },
+    {
+      "id": 3,
+      "module": "util:TextAggregator",
+      "version": 1,
+      "metadata": {
+        "designer": {
+          "x": 600,
+          "y": 0
+        }
+      },
+      "parameters": {
+        "rowSeparator": ","
+      },
+      "mapper": {
+        "value": "{\"id_producto\":\"{{2.id_producto}}\",\"id_productor\":\"{{2.id_productor}}\",\"nombre\":\"{{2.nombre}}\",\"origen\":\"{{2.origen}}\",\"unidad\":\"{{2.unidad_venta}}\",\"precio\":{{2.precio_unitario}},\"fraccionable\":{{if(2.fraccionable=\"Sí\";true;false)}},\"es_oferta\":{{if(2.es_oferta=\"Sí\";true;false)}}}"
+      },
+      "_comment": "Agrega cada producto como objeto JSON. NOTA: agrupar por categoría requiere un paso extra (ver doc). Esta es la versión plana mínima."
+    },
+    {
+      "id": 4,
+      "module": "http:ActionSendData",
+      "version": 3,
+      "metadata": {
+        "designer": {
+          "x": 900,
+          "y": 0
+        }
+      },
+      "parameters": {
+        "handleErrors": false,
+        "useNewZLibDeCompress": true
+      },
+      "mapper": {
+        "url": "https://raw.githubusercontent.com/Nodo-Matriz/Sistema/main/docs/templates/pedidos.template.html",
+        "method": "get",
+        "headers": [],
+        "qs": [],
+        "bodyType": "raw",
+        "parseResponse": false
+      },
+      "_comment": "Descarga el template HTML desde GitHub raw."
+    },
+    {
+      "id": 5,
+      "module": "builtin:SetVariable2",
+      "version": 1,
+      "metadata": {
+        "designer": {
+          "x": 1200,
+          "y": 0
+        }
+      },
+      "parameters": {},
+      "mapper": {
+        "name": "html_generado",
+        "scope": "roundtrip",
+        "value": "{{replace(replace(replace(replace(4.data; \"{{categorias_json}}\"; \"[{\\\"id\\\":\\\"todos\\\",\\\"nombre\\\":\\\"Catálogo\\\",\\\"productos\\\":[\" + join(3.text; \",\") + \"]}]\"); \"{{id_edicion}}\"; 1.id_edicion); \"{{numero_edicion}}\"; \"REEMPLAZAR_NUMERO\"); \"{{webhook_url}}\"; \"REEMPLAZAR_WEBHOOK_B1\")}}"
+      },
+      "_comment": "Reemplaza los placeholders del template. Faltan algunos (aporte, alias, fechas) - completar según necesidad. La agrupación por categoría real requiere lógica adicional."
+    },
+    {
+      "id": 6,
+      "module": "github:createOrUpdateFileContents",
+      "version": 1,
+      "metadata": {
+        "designer": {
+          "x": 1500,
+          "y": 0
+        },
+        "restore": {
+          "parameters": {
+            "__IMTCONN__": {
+              "label": "REEMPLAZAR_CONEXION_GITHUB",
+              "data": {
+                "scoped": "true",
+                "connection": "github"
+              }
+            }
+          }
+        }
+      },
+      "parameters": {
+        "__IMTCONN__": "REEMPLAZAR_CONEXION_GITHUB"
+      },
+      "mapper": {
+        "owner": "Nodo-Matriz",
+        "repo": "Sistema",
+        "path": "docs/forms/pedidos-{{1.id_edicion}}.html",
+        "message": "A3: genera form de pedidos para {{1.id_edicion}}",
+        "content": "{{base64(5.html_generado)}}",
+        "branch": "main",
+        "_comment": "Commitea el form generado. GitHub Pages lo publica en <1 min."
+      }
+    },
+    {
+      "id": 7,
+      "module": "google-sheets:searchRows",
+      "version": 2,
+      "metadata": {
+        "designer": {
+          "x": 1800,
+          "y": 0
+        },
+        "restore": {
+          "parameters": {
+            "__IMTCONN__": {
+              "label": "REEMPLAZAR_CONEXION_SHEETS",
+              "data": {
+                "scoped": "true",
+                "connection": "google"
+              }
+            }
+          }
+        }
+      },
+      "parameters": {
+        "__IMTCONN__": "REEMPLAZAR_CONEXION_SHEETS"
+      },
+      "mapper": {
+        "mode": "select",
+        "spreadsheetId": "REEMPLAZAR_SPREADSHEET_ID",
+        "sheetId": "Ediciones",
+        "includesHeaders": true,
+        "tableFirstRow": "A6",
+        "tableLastColumn": "N",
+        "filter": [
+          [
+            {
+              "a": "id_edicion",
+              "b": "{{1.id_edicion}}",
+              "o": "text:equal"
+            }
+          ]
+        ]
+      },
+      "_comment": "Ubica la fila de la edición para actualizar su estado y URL."
+    },
+    {
+      "id": 8,
+      "module": "google-sheets:updateRow",
+      "version": 2,
+      "metadata": {
+        "designer": {
+          "x": 2100,
+          "y": 0
+        },
+        "restore": {
+          "parameters": {
+            "__IMTCONN__": {
+              "label": "REEMPLAZAR_CONEXION_SHEETS",
+              "data": {
+                "scoped": "true",
+                "connection": "google"
+              }
+            }
+          }
+        }
+      },
+      "parameters": {
+        "__IMTCONN__": "REEMPLAZAR_CONEXION_SHEETS"
+      },
+      "mapper": {
+        "mode": "select",
+        "spreadsheetId": "REEMPLAZAR_SPREADSHEET_ID",
+        "sheetId": "Ediciones",
+        "includesHeaders": true,
+        "rowNumber": "{{7.`__ROW_NUMBER__`}}",
+        "values": {
+          "3": "Form abierto",
+          "11": "https://nodo-matriz.github.io/Sistema/forms/pedidos-{{1.id_edicion}}.html"
+        },
+        "_comment": "Col 3=estado, col 11(L)=github_form_url."
+      }
+    }
+  ],
+  "metadata": {
+    "instant": true,
+    "version": 1,
+    "scenario": {
+      "roundtrips": 1,
+      "maxErrors": 3,
+      "autoCommit": true,
+      "autoCommitTriggerLast": true,
+      "sequential": false,
+      "slots": null,
+      "confidential": false,
+      "dataloss": false,
+      "dlq": false,
+      "freshVariables": false
+    },
+    "designer": {
+      "orphans": []
+    },
+    "zone": "eu2.make.com"
+  }
+}

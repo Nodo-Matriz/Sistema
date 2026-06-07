@@ -1,0 +1,191 @@
+{
+  "name": "A1 · Solicitud de stocks a productores",
+  "flow": [
+    {
+      "id": 1,
+      "module": "builtin:BasicScheduler",
+      "version": 1,
+      "metadata": {
+        "designer": {
+          "x": 0,
+          "y": 0
+        },
+        "restore": {
+          "parameters": {
+            "__IMTCONN__": {
+              "label": "Programado",
+              "data": {}
+            }
+          }
+        }
+      },
+      "parameters": {},
+      "scheduling": {
+        "type": "indefinitely",
+        "interval": 604800,
+        "_comment": "Semanal. En Make UI ajustar a: lunes 10:00. Free permite >=15min."
+      }
+    },
+    {
+      "id": 2,
+      "module": "google-sheets:searchRows",
+      "version": 2,
+      "metadata": {
+        "designer": {
+          "x": 300,
+          "y": 0
+        },
+        "restore": {
+          "parameters": {
+            "__IMTCONN__": {
+              "label": "REEMPLAZAR_CONEXION_SHEETS",
+              "data": {
+                "scoped": "true",
+                "connection": "google"
+              }
+            }
+          }
+        }
+      },
+      "parameters": {
+        "__IMTCONN__": "REEMPLAZAR_CONEXION_SHEETS"
+      },
+      "mapper": {
+        "mode": "select",
+        "spreadsheetId": "REEMPLAZAR_SPREADSHEET_ID",
+        "sheetId": "Productores",
+        "includesHeaders": true,
+        "tableFirstRow": "A6",
+        "tableLastColumn": "O",
+        "filter": [
+          [
+            {
+              "a": "activo_edicion_actual",
+              "b": "Sí",
+              "o": "text:equal"
+            }
+          ]
+        ],
+        "_comment": "Trae solo productores activos para la edición vigente."
+      }
+    },
+    {
+      "id": 3,
+      "module": "whatsapp:sendaTextOrMediaMessage",
+      "version": 1,
+      "metadata": {
+        "designer": {
+          "x": 600,
+          "y": 0
+        },
+        "restore": {
+          "parameters": {
+            "__IMTCONN__": {
+              "label": "REEMPLAZAR_CONEXION_WHATSAPP",
+              "data": {
+                "scoped": "true",
+                "connection": "whatsapp"
+              }
+            }
+          }
+        }
+      },
+      "parameters": {
+        "__IMTCONN__": "REEMPLAZAR_CONEXION_WHATSAPP"
+      },
+      "mapper": {
+        "phoneNumberId": "REEMPLAZAR_PHONE_NUMBER_ID",
+        "to": "{{2.telefono_whatsapp}}",
+        "messageType": "template",
+        "template": {
+          "name": "solicitud_stock_quincenal",
+          "language": "es",
+          "components": [
+            {
+              "type": "body",
+              "parameters": [
+                {
+                  "type": "text",
+                  "text": "{{2.nombre}}"
+                },
+                {
+                  "type": "text",
+                  "text": "REEMPLAZAR_NUMERO_EDICION"
+                },
+                {
+                  "type": "text",
+                  "text": "REEMPLAZAR_FECHA_CIERRE"
+                },
+                {
+                  "type": "text",
+                  "text": "https://nodo-matriz.github.io/Sistema/forms/stock.html?id_productor={{2.id_productor}}"
+                }
+              ]
+            }
+          ]
+        },
+        "_comment": "Template debe estar aprobado en Meta antes de funcionar."
+      }
+    },
+    {
+      "id": 4,
+      "module": "google-sheets:addRow",
+      "version": 2,
+      "metadata": {
+        "designer": {
+          "x": 900,
+          "y": 0
+        },
+        "restore": {
+          "parameters": {
+            "__IMTCONN__": {
+              "label": "REEMPLAZAR_CONEXION_SHEETS",
+              "data": {
+                "scoped": "true",
+                "connection": "google"
+              }
+            }
+          }
+        }
+      },
+      "parameters": {
+        "__IMTCONN__": "REEMPLAZAR_CONEXION_SHEETS"
+      },
+      "mapper": {
+        "mode": "select",
+        "spreadsheetId": "REEMPLAZAR_SPREADSHEET_ID",
+        "sheetId": "Notificaciones_Log",
+        "includesHeaders": true,
+        "values": {
+          "0": "={{formatDate(now; \"YYYY-MM-DDTHH:mm:ssZ\")}}",
+          "1": "A1",
+          "2": "{{2.id_productor}}",
+          "3": "WhatsApp",
+          "4": "solicitud_stock_quincenal",
+          "5": "Enviado"
+        },
+        "_comment": "Registra cada envío en el log central de notificaciones."
+      }
+    }
+  ],
+  "metadata": {
+    "instant": false,
+    "version": 1,
+    "scenario": {
+      "roundtrips": 1,
+      "maxErrors": 3,
+      "autoCommit": true,
+      "autoCommitTriggerLast": true,
+      "sequential": false,
+      "slots": null,
+      "confidential": false,
+      "dataloss": false,
+      "dlq": false,
+      "freshVariables": false
+    },
+    "designer": {
+      "orphans": []
+    },
+    "zone": "eu2.make.com"
+  }
+}

@@ -1,0 +1,269 @@
+{
+  "name": "B1 · Captura de pedido del consumidor",
+  "flow": [
+    {
+      "id": 1,
+      "module": "gateway:CustomWebHook",
+      "version": 1,
+      "metadata": {
+        "designer": {
+          "x": 0,
+          "y": 0
+        },
+        "restore": {
+          "parameters": {
+            "hook": {
+              "label": "Webhook B1 — pedidos",
+              "data": {
+                "editable": "true"
+              }
+            }
+          }
+        }
+      },
+      "parameters": {
+        "hook": "REEMPLAZAR_WEBHOOK_B1",
+        "maxResults": 1
+      },
+      "_comment": "Recibe POST JSON desde pedidos-*.html. Estructura: {id_edicion, consumidor:{...}, items:[...], subtotal, aporte_monto, total_final, entrega:{...}, forma_pago, comentarios}."
+    },
+    {
+      "id": 2,
+      "module": "google-sheets:searchRows",
+      "version": 2,
+      "metadata": {
+        "designer": {
+          "x": 300,
+          "y": 0
+        },
+        "restore": {
+          "parameters": {
+            "__IMTCONN__": {
+              "label": "REEMPLAZAR_CONEXION_SHEETS",
+              "data": {
+                "scoped": "true",
+                "connection": "google"
+              }
+            }
+          }
+        }
+      },
+      "parameters": {
+        "__IMTCONN__": "REEMPLAZAR_CONEXION_SHEETS"
+      },
+      "mapper": {
+        "mode": "select",
+        "spreadsheetId": "REEMPLAZAR_SPREADSHEET_ID",
+        "sheetId": "Consumidores",
+        "includesHeaders": true,
+        "tableFirstRow": "A6",
+        "tableLastColumn": "P",
+        "filter": [
+          [
+            {
+              "a": "email",
+              "b": "{{1.consumidor.email}}",
+              "o": "text:equal"
+            }
+          ]
+        ],
+        "_comment": "Busca si el consumidor ya existe por email."
+      }
+    },
+    {
+      "id": 3,
+      "module": "builtin:BasicRouter",
+      "version": 1,
+      "metadata": {
+        "designer": {
+          "x": 600,
+          "y": 0
+        }
+      },
+      "routes": [
+        {
+          "flow": [
+            {
+              "id": 4,
+              "module": "google-sheets:addRow",
+              "version": 2,
+              "metadata": {
+                "designer": {
+                  "x": 900,
+                  "y": -150
+                },
+                "restore": {
+                  "parameters": {
+                    "__IMTCONN__": {
+                      "label": "REEMPLAZAR_CONEXION_SHEETS",
+                      "data": {
+                        "scoped": "true",
+                        "connection": "google"
+                      }
+                    }
+                  }
+                }
+              },
+              "filter": {
+                "name": "Consumidor nuevo",
+                "conditions": [
+                  [
+                    {
+                      "a": "{{2.`__ROW_NUMBER__`}}",
+                      "o": "notexist"
+                    }
+                  ]
+                ]
+              },
+              "parameters": {
+                "__IMTCONN__": "REEMPLAZAR_CONEXION_SHEETS"
+              },
+              "mapper": {
+                "mode": "select",
+                "spreadsheetId": "REEMPLAZAR_SPREADSHEET_ID",
+                "sheetId": "Consumidores",
+                "includesHeaders": true,
+                "values": {
+                  "0": "REEMPLAZAR_GENERAR_ID_CONSUMIDOR",
+                  "1": "{{1.consumidor.nombre_completo}}",
+                  "2": "{{1.consumidor.telefono_whatsapp}}",
+                  "3": "{{1.consumidor.email}}",
+                  "8": "{{1.id_edicion}}",
+                  "10": "Sí",
+                  "11": "{{if(1.consumidor.en_grupo_whatsapp=\"si\"; \"Sí\"; \"No\")}}"
+                },
+                "_comment": "Crea consumidor nuevo. Col 8=primera_edicion, 10=activo, 11=recibe_notificaciones."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "module": "google-sheets:addRow",
+      "version": 2,
+      "metadata": {
+        "designer": {
+          "x": 1200,
+          "y": 0
+        },
+        "restore": {
+          "parameters": {
+            "__IMTCONN__": {
+              "label": "REEMPLAZAR_CONEXION_SHEETS",
+              "data": {
+                "scoped": "true",
+                "connection": "google"
+              }
+            }
+          }
+        }
+      },
+      "parameters": {
+        "__IMTCONN__": "REEMPLAZAR_CONEXION_SHEETS"
+      },
+      "mapper": {
+        "mode": "select",
+        "spreadsheetId": "REEMPLAZAR_SPREADSHEET_ID",
+        "sheetId": "Pedidos",
+        "includesHeaders": true,
+        "values": {
+          "0": "REEMPLAZAR_GENERAR_ID_PEDIDO",
+          "1": "{{1.id_edicion}}",
+          "2": "{{1.consumidor.email}}",
+          "3": "{{1.consumidor.nombre_completo}}",
+          "4": "={{formatDate(now; \"YYYY-MM-DDTHH:mm:ssZ\")}}",
+          "5": "{{1.subtotal}}",
+          "6": "{{1.aporte_monto}}",
+          "7": "{{1.total_final}}",
+          "8": "{{1.entrega.modalidad}}",
+          "9": "{{1.forma_pago}}",
+          "10": "Recibido",
+          "11": "{{1.comentarios}}"
+        },
+        "_comment": "Crea la cabecera del pedido. Ajustar índices de columna a la estructura real de Pedidos."
+      }
+    },
+    {
+      "id": 6,
+      "module": "builtin:BasicFeeder",
+      "version": 1,
+      "metadata": {
+        "designer": {
+          "x": 1500,
+          "y": 0
+        }
+      },
+      "parameters": {},
+      "mapper": {
+        "array": "{{1.items}}"
+      },
+      "_comment": "Itera sobre cada item del pedido."
+    },
+    {
+      "id": 7,
+      "module": "google-sheets:addRow",
+      "version": 2,
+      "metadata": {
+        "designer": {
+          "x": 1800,
+          "y": 0
+        },
+        "restore": {
+          "parameters": {
+            "__IMTCONN__": {
+              "label": "REEMPLAZAR_CONEXION_SHEETS",
+              "data": {
+                "scoped": "true",
+                "connection": "google"
+              }
+            }
+          }
+        }
+      },
+      "parameters": {
+        "__IMTCONN__": "REEMPLAZAR_CONEXION_SHEETS"
+      },
+      "mapper": {
+        "mode": "select",
+        "spreadsheetId": "REEMPLAZAR_SPREADSHEET_ID",
+        "sheetId": "Items",
+        "includesHeaders": true,
+        "values": {
+          "0": "REEMPLAZAR_GENERAR_ID_ITEM",
+          "1": "REEMPLAZAR_ID_PEDIDO_PADRE",
+          "2": "{{1.id_edicion}}",
+          "3": "{{6.id_producto}}",
+          "4": "{{6.id_productor}}",
+          "5": "{{6.nombre}}",
+          "6": "{{6.cantidad}}",
+          "7": "{{6.fraccion}}",
+          "8": "{{6.precio_unitario}}",
+          "9": "{{6.subtotal}}"
+        },
+        "_comment": "Crea una fila por item. El id_pedido_padre se toma del pedido creado en el módulo 5."
+      }
+    }
+  ],
+  "metadata": {
+    "instant": true,
+    "version": 1,
+    "scenario": {
+      "roundtrips": 1,
+      "maxErrors": 3,
+      "autoCommit": true,
+      "autoCommitTriggerLast": true,
+      "sequential": false,
+      "slots": null,
+      "confidential": false,
+      "dataloss": false,
+      "dlq": false,
+      "freshVariables": false
+    },
+    "designer": {
+      "orphans": []
+    },
+    "zone": "eu2.make.com"
+  }
+}

@@ -1,0 +1,278 @@
+{
+  "name": "A2 · Captura de actualización de stock",
+  "flow": [
+    {
+      "id": 1,
+      "module": "gateway:CustomWebHook",
+      "version": 1,
+      "metadata": {
+        "designer": {
+          "x": 0,
+          "y": 0
+        },
+        "restore": {
+          "parameters": {
+            "hook": {
+              "label": "Webhook A2 — stock",
+              "data": {
+                "editable": "true"
+              }
+            }
+          }
+        }
+      },
+      "parameters": {
+        "hook": "REEMPLAZAR_WEBHOOK_A2",
+        "maxResults": 1
+      },
+      "_comment": "Recibe POST JSON desde stock.html. Estructura: {id_productor, productos:[...], notas}."
+    },
+    {
+      "id": 2,
+      "module": "builtin:BasicFeeder",
+      "version": 1,
+      "metadata": {
+        "designer": {
+          "x": 300,
+          "y": 0
+        }
+      },
+      "parameters": {},
+      "mapper": {
+        "array": "{{1.productos}}"
+      },
+      "_comment": "Itera sobre cada producto recibido en el payload."
+    },
+    {
+      "id": 3,
+      "module": "google-sheets:searchRows",
+      "version": 2,
+      "metadata": {
+        "designer": {
+          "x": 600,
+          "y": 0
+        },
+        "restore": {
+          "parameters": {
+            "__IMTCONN__": {
+              "label": "REEMPLAZAR_CONEXION_SHEETS",
+              "data": {
+                "scoped": "true",
+                "connection": "google"
+              }
+            }
+          }
+        }
+      },
+      "parameters": {
+        "__IMTCONN__": "REEMPLAZAR_CONEXION_SHEETS"
+      },
+      "mapper": {
+        "mode": "select",
+        "spreadsheetId": "REEMPLAZAR_SPREADSHEET_ID",
+        "sheetId": "Productos",
+        "includesHeaders": true,
+        "tableFirstRow": "A6",
+        "tableLastColumn": "O",
+        "filter": [
+          [
+            {
+              "a": "id_productor",
+              "b": "{{1.id_productor}}",
+              "o": "text:equal"
+            },
+            {
+              "a": "nombre",
+              "b": "{{2.nombre}}",
+              "o": "text:equal"
+            }
+          ]
+        ],
+        "_comment": "Busca si el producto ya existe para ese productor."
+      }
+    },
+    {
+      "id": 4,
+      "module": "builtin:BasicRouter",
+      "version": 1,
+      "metadata": {
+        "designer": {
+          "x": 900,
+          "y": 0
+        }
+      },
+      "routes": [
+        {
+          "flow": [
+            {
+              "id": 5,
+              "module": "google-sheets:updateRow",
+              "version": 2,
+              "metadata": {
+                "designer": {
+                  "x": 1200,
+                  "y": -150
+                },
+                "restore": {
+                  "parameters": {
+                    "__IMTCONN__": {
+                      "label": "REEMPLAZAR_CONEXION_SHEETS",
+                      "data": {
+                        "scoped": "true",
+                        "connection": "google"
+                      }
+                    }
+                  }
+                }
+              },
+              "filter": {
+                "name": "Si ya existe",
+                "conditions": [
+                  [
+                    {
+                      "a": "{{3.`__ROW_NUMBER__`}}",
+                      "o": "exist"
+                    }
+                  ]
+                ]
+              },
+              "parameters": {
+                "__IMTCONN__": "REEMPLAZAR_CONEXION_SHEETS"
+              },
+              "mapper": {
+                "mode": "select",
+                "spreadsheetId": "REEMPLAZAR_SPREADSHEET_ID",
+                "sheetId": "Productos",
+                "includesHeaders": true,
+                "rowNumber": "{{3.`__ROW_NUMBER__`}}",
+                "values": {
+                  "6": "{{2.precio}}",
+                  "9": "{{if(2.disponible; \"Sí\"; \"No\")}}",
+                  "11": "{{if(2.es_oferta; \"Sí\"; \"No\")}}",
+                  "13": "={{formatDate(now; \"YYYY-MM-DD\")}}"
+                },
+                "_comment": "Cols: 6=precio_unitario, 9=disponible, 11=es_oferta, 13=ultima_actualizacion."
+              }
+            }
+          ]
+        },
+        {
+          "flow": [
+            {
+              "id": 6,
+              "module": "google-sheets:addRow",
+              "version": 2,
+              "metadata": {
+                "designer": {
+                  "x": 1200,
+                  "y": 150
+                },
+                "restore": {
+                  "parameters": {
+                    "__IMTCONN__": {
+                      "label": "REEMPLAZAR_CONEXION_SHEETS",
+                      "data": {
+                        "scoped": "true",
+                        "connection": "google"
+                      }
+                    }
+                  }
+                }
+              },
+              "filter": {
+                "name": "Si es nuevo",
+                "conditions": [
+                  [
+                    {
+                      "a": "{{3.`__ROW_NUMBER__`}}",
+                      "o": "notexist"
+                    }
+                  ]
+                ]
+              },
+              "parameters": {
+                "__IMTCONN__": "REEMPLAZAR_CONEXION_SHEETS"
+              },
+              "mapper": {
+                "mode": "select",
+                "spreadsheetId": "REEMPLAZAR_SPREADSHEET_ID",
+                "sheetId": "Productos",
+                "includesHeaders": true,
+                "values": {
+                  "0": "REEMPLAZAR_GENERAR_ID_PRODUCTO",
+                  "1": "{{1.id_productor}}",
+                  "2": "{{2.nombre}}",
+                  "3": "{{2.unidad}}",
+                  "6": "{{2.precio}}",
+                  "9": "{{if(2.disponible; \"Sí\"; \"No\")}}",
+                  "11": "{{if(2.es_oferta; \"Sí\"; \"No\")}}",
+                  "13": "={{formatDate(now; \"YYYY-MM-DD\")}}"
+                },
+                "_comment": "Producto nuevo. El ID se puede generar con un contador o módulo Set Variable."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "module": "google-sheets:addRow",
+      "version": 2,
+      "metadata": {
+        "designer": {
+          "x": 1500,
+          "y": 0
+        },
+        "restore": {
+          "parameters": {
+            "__IMTCONN__": {
+              "label": "REEMPLAZAR_CONEXION_SHEETS",
+              "data": {
+                "scoped": "true",
+                "connection": "google"
+              }
+            }
+          }
+        }
+      },
+      "parameters": {
+        "__IMTCONN__": "REEMPLAZAR_CONEXION_SHEETS"
+      },
+      "mapper": {
+        "mode": "select",
+        "spreadsheetId": "REEMPLAZAR_SPREADSHEET_ID",
+        "sheetId": "Log_Cambios_Stock",
+        "includesHeaders": true,
+        "values": {
+          "0": "={{formatDate(now; \"YYYY-MM-DDTHH:mm:ssZ\")}}",
+          "1": "{{1.id_productor}}",
+          "2": "{{2.nombre}}",
+          "3": "{{2.precio}}",
+          "4": "{{if(2.disponible; \"Sí\"; \"No\")}}"
+        },
+        "_comment": "Auditoría del cambio de stock."
+      }
+    }
+  ],
+  "metadata": {
+    "instant": true,
+    "version": 1,
+    "scenario": {
+      "roundtrips": 1,
+      "maxErrors": 3,
+      "autoCommit": true,
+      "autoCommitTriggerLast": true,
+      "sequential": false,
+      "slots": null,
+      "confidential": false,
+      "dataloss": false,
+      "dlq": false,
+      "freshVariables": false
+    },
+    "designer": {
+      "orphans": []
+    },
+    "zone": "eu2.make.com"
+  }
+}

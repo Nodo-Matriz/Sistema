@@ -41,24 +41,26 @@
       <h1>Sistema interno del Nodo Matriz</h1>
       <p class="lead">
         Espacio web donde habitan los formularios de gestión de cada edición:
-        actualización de stock por productores, pedidos de consumidores,
-        recepción en galpón y retiros.
+        actualización de stock por proveedurías, pedidos de consumidores,
+        recepción en galpón, retiro y referidos.
       </p>
       <p>
-        Este sitio no es para el público, es el acceso central al sistema de gestión. Cada formulario de toma de pedidos se
-        accede a través de un link específico que se distribuye en cada nueva edición.
+        Este sitio no está pensado para navegación general. Cada formulario se
+        accede a través de un link específico que se distribuye en cada momento
+        del ciclo de la edición.
       </p>
     </section>
 
     <hr class="divider">
 
     <section class="fade-in" data-delay="2">
-      <h2>Para productores</h2>
+      <h2>Para proveedurías</h2>
       <div class="card mt-3">
         <h3>Actualización de stock</h3>
         <p class="muted">
-          Al inico de cada edición, cada productor recibe por WhatsApp un link para informe de stock, nuevos productos y modificaciones.
-          El link tiene el identificador por productor (<code class="kbd">id_productor</code>) ya incluido.
+          Cada lunes recibís por WhatsApp un link personalizado a tu form de stock.
+          El link tiene tu identificador (<code class="kbd">id_productor</code>) ya
+          incluido, así no tenés que escribirlo.
         </p>
         <p>
           <a href="forms/stock.html?id_productor=PROD001&amp;preview=1" class="btn btn--ghost btn--small">
@@ -74,11 +76,11 @@
         <h3>Pedido quincenal</h3>
         <p class="muted">
           Cada quincena se publica el formulario de pedidos con los productos
-          disponibles en esa edición. El link se envía por el grupo de WhatsApp y se cierra en la
+          disponibles en esa edición. Lo recibís por WhatsApp y se cierra en la
           fecha indicada.
         </p>
         <p>
-          El form de pedidos se genera nuevo en cada edición, con URL del tipo:
+          El form de pedidos se genera nuevo cada edición, con URL del tipo:
           <code class="kbd">forms/pedidos-ED2026-09.html</code>
         </p>
       </div>
@@ -100,7 +102,7 @@
     <footer class="site-footer">
       <p>Nodo Matriz Agroecológico · Unquillo, Sierras Chicas · Córdoba</p>
       <p>
-        <a href="https://github.com/Nodo-Matriz/Sistema"></a>
+        <a href="https://github.com/Nodo-Matriz/Sistema">repositorio del sistema</a>
       </p>
     </footer>
 
