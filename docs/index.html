@@ -12,25 +12,33 @@
   <main class="wrap fade-in">
 
     <header class="site-header">
-      <a class="site-mark" href="./">
-        <!-- Logo: hoja estilizada -->
-        <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <defs>
-            <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#6E8E55"/>
-              <stop offset="100%" stop-color="#4A6B3A"/>
-            </linearGradient>
-          </defs>
-          <path d="M24 4 Q34 10 34 24 Q34 38 24 44 Q14 38 14 24 Q14 10 24 4 Z" fill="url(#leafGrad)"/>
-          <path d="M24 8 V42" stroke="#FAF6EE" stroke-width="1.8" stroke-linecap="round" opacity="0.7"/>
-          <path d="M24 16 Q19 18 17 22" stroke="#FAF6EE" stroke-width="1.4" stroke-linecap="round" opacity="0.5" fill="none"/>
-          <path d="M24 22 Q19 24 17 28" stroke="#FAF6EE" stroke-width="1.4" stroke-linecap="round" opacity="0.5" fill="none"/>
-          <path d="M24 28 Q19 30 17 34" stroke="#FAF6EE" stroke-width="1.4" stroke-linecap="round" opacity="0.5" fill="none"/>
-          <path d="M24 16 Q29 18 31 22" stroke="#FAF6EE" stroke-width="1.4" stroke-linecap="round" opacity="0.5" fill="none"/>
-          <path d="M24 22 Q29 24 31 28" stroke="#FAF6EE" stroke-width="1.4" stroke-linecap="round" opacity="0.5" fill="none"/>
-          <path d="M24 28 Q29 30 31 34" stroke="#FAF6EE" stroke-width="1.4" stroke-linecap="round" opacity="0.5" fill="none"/>
-        </svg>
-        <span>
+<a class="site-mark" href="./">
+
+  <!-- Contenedor de logos -->
+  <div class="site-mark__logos">
+
+    <!-- Logo actual (SVG) -->
+    <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#6E8E55"/>
+          <stop offset="100%" stop-color="#4A6B3A"/>
+        </linearGradient>
+      </defs>
+      <path d="M24 4 Q34 10 34 24 Q34 38 24 44 Q14 38 14 24 Q14 10 24 4 Z" fill="url(#leafGrad)"/>
+      <path d="M24 8 V42" stroke="#FAF6EE" stroke-width="1.8" stroke-linecap="round" opacity="0.7"/>
+    </svg>
+
+    <!-- TU LOGO PNG -->
+    <img src="assets/logo.png" alt="Logo secundario" class="logo-secundario">
+
+  </div>
+
+  <span>
+    <span class="site-mark__name">Nodo Matriz</span>
+    <span class="site-mark__sub">sistema de gestión</span>
+  </span>
+</a>
           <span class="site-mark__name">Nodo Matriz</span>
           <span class="site-mark__sub">sistema de gestión</span>
         </span>
