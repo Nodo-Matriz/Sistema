@@ -19,11 +19,11 @@
          {{numero_edicion}}          ej: 9
          {{anio_edicion}}            ej: 2026
          {{fecha_cierre_human}}      ej: martes 14 de mayo, 12:00 hs
-         __FECHA_CIERRE_ISO__        ej: 2026-05-14T12:00:00-03:00
+         {{fecha_cierre_iso}}        ej: 2026-05-14T12:00:00-03:00
          {{webhook_url}}             ej: https://hook.eu2.make.com/abc123
          {{aporte_default_porcent}}  ej: 10
          __ALIAS_PAGO__         ej: nodomatriz.mp
-         __CATEGORIAS_JSON__         JSON con todas las categorías y
+         {{categorias_json}}         JSON con todas las categorías y
                                      productos de la edición (ver
                                      formato esperado al pie del archivo).
        ============================================================ -->
@@ -85,7 +85,7 @@
         <div class="wizard__crumbs"></div>
       </div>
 
-      <!-- Las categorías se renderizan acá vía JS desde __CATEGORIAS_JSON__ -->
+      <!-- Las categorías se renderizan acá vía JS desde {{categorias_json}} -->
       <div id="wizard-steps"></div>
 
       <div class="wizard__nav">
@@ -289,7 +289,7 @@
 
   <script src="../assets/form-logic.js"></script>
   <script id="categorias-json" type="application/json">
-__CATEGORIAS_JSON__
+{{categorias_json}}
   </script>
   <script>
     (function () {
