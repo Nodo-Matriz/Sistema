@@ -19,11 +19,11 @@
          {{numero_edicion}}          ej: 9
          {{anio_edicion}}            ej: 2026
          {{fecha_cierre_human}}      ej: martes 14 de mayo, 12:00 hs
-         {{fecha_cierre_iso}}        ej: 2026-05-14T12:00:00-03:00
+         __FECHA_CIERRE_ISO__        ej: 2026-05-14T12:00:00-03:00
          {{webhook_url}}             ej: https://hook.eu2.make.com/abc123
          {{aporte_default_porcent}}  ej: 10
-         {{alias_pago_nodo}}         ej: nodomatriz.mp
-         {{categorias_json}}         JSON con todas las categorías y
+         __ALIAS_PAGO__         ej: nodomatriz.mp
+         __CATEGORIAS_JSON__         JSON con todas las categorías y
                                      productos de la edición (ver
                                      formato esperado al pie del archivo).
        ============================================================ -->
@@ -85,7 +85,7 @@
         <div class="wizard__crumbs"></div>
       </div>
 
-      <!-- Las categorías se renderizan acá vía JS desde {{categorias_json}} -->
+      <!-- Las categorías se renderizan acá vía JS desde __CATEGORIAS_JSON__ -->
       <div id="wizard-steps"></div>
 
       <div class="wizard__nav">
@@ -240,7 +240,7 @@
           <h2>Forma de pago</h2>
           <p class="muted">
             Una vez confirmado tu pedido recibirás los datos para abonar al alias
-            <strong>{{alias_pago_nodo}}</strong>. También aceptamos efectivo al retirar.
+            <strong>__ALIAS_PAGO__</strong>. También aceptamos efectivo al retirar.
           </p>
           <div class="field">
             <label class="field__label">¿Cómo vas a abonar?</label>
@@ -289,7 +289,7 @@
 
   <script src="../assets/form-logic.js"></script>
   <script id="categorias-json" type="application/json">
-{{categorias_json}}
+__CATEGORIAS_JSON__
   </script>
   <script>
     (function () {
