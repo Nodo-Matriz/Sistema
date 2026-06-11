@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+
+  <!-- ============================================================
+       TEMPLATE A3 — formulario de pedidos del Nodo Matriz
+
+       Este archivo es un template. El escenario A3 de Make lo lee
+       cada edición, sustituye los placeholders {{...}} con los
+       datos reales de la edición vigente, y commitea el archivo
+       resultante a /docs/forms/pedidos-ED20XX-XX.html en el repo.
+       GitHub Pages lo publica automáticamente.
+
+       Placeholders esperados:
+         {{id_edicion}}              ej: ED2026-09
+         {{numero_edicion}}          ej: 9
+         {{anio_edicion}}            ej: 2026
+         {{fecha_cierre_human}}      ej: martes 14 de mayo, 12:00 hs
+         {{fecha_cierre_iso}}        ej: 2026-05-14T12:00:00-03:00
+         {{webhook_url}}             ej: https://hook.eu2.make.com/abc123
+         {{aporte_default_porcent}}  ej: 10
+         __ALIAS_PAGO__         ej: nodomatriz.mp
+         {{categorias_json}}         JSON con todas las categorías y
+                                     productos de la edición (ver
+                                     formato esperado al pie del archivo).
+       ============================================================ -->
+
+  <title>Pedido edición {{numero_edicion}} · Nodo Matriz</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4 Q22 8 22 16 Q22 24 16 28 Q10 24 10 16 Q10 8 16 4 Z' fill='%234A6B3A'/%3E%3C/svg%3E">
+</head>
+<body>
+  <main class="wrap">
+
+    <header class="site-header fade-in">
+      <a class="site-mark" href="../">
+        <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#6E8E55"/>
+              <stop offset="100%" stop-color="#4A6B3A"/>
+            </linearGradient>
+          </defs>
+          <path d="M24 4 Q34 10 34 24 Q34 38 24 44 Q14 38 14 24 Q14 10 24 4 Z" fill="url(#leafGrad)"/>
+          <path d="M24 8 V42" stroke="#FAF6EE" stroke-width="1.8" stroke-linecap="round" opacity="0.7"/>
+        </svg>
+        <span>
+          <span class="site-mark__name">Nodo Matriz</span>
+          <span class="site-mark__sub">edición {{numero_edicion}} · {{anio_edicion}}</span>
+        </span>
+      </a>
+    </header>
+
+    <section class="fade-in" data-delay="1">
+      <h1>Pedido quincenal</h1>
+      <p class="lead">
+        Una edición es una invitación a recorrer juntas todo lo que la red trae
+        esta quincena. Pasá por cada categoría antes de cerrar tu pedido:
+        a veces aparecen cosas nuevas, productos de estación, ofertas, productores
+        que vuelven después de mucho tiempo.
+      </p>
+
+      <div class="note note--info">
+        <strong>Cierre del formulario:</strong> {{fecha_cierre_human}}.
+        Pasada esa hora, los pedidos no pueden modificarse ni agregarse.
+      </div>
+    </section>
+
+    <!-- ============================================================
+         WIZARD: una categoría por paso
+         ============================================================ -->
+    <div class="wizard fade-in" data-delay="2" id="wizard">
+
+      <div class="wizard__progress">
+        <div class="wizard__progress-text">
+          <span class="wizard__step-name">Categoría</span>
+          <span class="wizard__step-count">– de –</span>
+        </div>
+        <div class="wizard__bar">
+          <div class="wizard__bar-fill" style="width: 0%"></div>
+        </div>
+        <div class="wizard__crumbs"></div>
+      </div>
+
+      <!-- Las categorías se renderizan acá vía JS desde {{categorias_json}} -->
+      <div id="wizard-steps"></div>
+
+      <div class="wizard__nav">
+        <button type="button" class="btn btn--ghost" data-action="wizard-prev">
+          ← Categoría anterior
+        </button>
+        <span class="wizard__nav-info">
+          Recorré todas las categorías para poder cerrar el pedido.
+        </span>
+        <button type="button" class="btn btn--primary" data-action="wizard-next">
+          Siguiente categoría →
+        </button>
+        <button type="button" class="btn btn--primary hidden" data-action="wizard-finish">
+          Revisar pedido →
+        </button>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         RESUMEN Y DATOS DEL CONSUMIDOR (se muestra al final)
+         ============================================================ -->
+    <section id="final-section" class="hidden mt-5">
+
+      <div class="summary mb-4">
+        <h2 class="summary__title">Resumen de tu pedido</h2>
+        <ul class="summary__items" id="summary-items">
+          <!-- Se llena por JS -->
+        </ul>
+        <div class="summary__totals">
+          <div class="summary__total-row">
+            <span>Subtotal productos</span>
+            <span id="subtotal">$ 0</span>
+          </div>
+          <div class="summary__total-row">
+            <span>
+              Aporte solidario (<span id="aporte-porc">{{aporte_default_porcent}}</span>%)
+              <br>
+              <small style="color: var(--c-tierra)">
+                Sostiene el funcionamiento del Nodo. Podés modificarlo.
+              </small>
+            </span>
+            <span id="aporte-monto">$ 0</span>
+          </div>
+          <div class="summary__total-row summary__total-row--grand">
+            <span>Total a abonar</span>
+            <span id="total-final">$ 0</span>
+          </div>
+        </div>
+      </div>
+
+      <form id="pedido-form"
+            data-webhook="{{webhook_url}}"
+            novalidate>
+
+        <div class="card">
+          <h2>Tus datos</h2>
+
+          <div class="field">
+            <label class="field__label" for="nombre">Nombre completo *</label>
+            <input class="input" type="text" id="nombre" name="nombre" required>
+            <span class="field__error">Necesitamos tu nombre completo.</span>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="email">Email *</label>
+            <input class="input" type="email" id="email" name="email" required>
+            <span class="field__hint">Te llega ahí el detalle del pedido y el total a abonar.</span>
+            <span class="field__error">Email inválido. Revisá la dirección.</span>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="telefono">WhatsApp *</label>
+            <input class="input" type="tel" id="telefono" name="telefono" required>
+            <span class="field__hint">Con código de área. Ej: 351 234 5678</span>
+            <span class="field__error">Necesitamos un número de WhatsApp para coordinar la entrega.</span>
+          </div>
+
+          <div class="field">
+            <label class="field__label">¿Es la primera vez que hacés un pedido al Nodo? *</label>
+            <label class="option">
+              <input type="radio" name="primera_vez" value="si">
+              <span class="option__label">Sí, primera vez</span>
+            </label>
+            <label class="option">
+              <input type="radio" name="primera_vez" value="no" checked>
+              <span class="option__label">No, ya pedí antes</span>
+            </label>
+          </div>
+
+          <div class="field">
+            <label class="field__label">¿Estás en el grupo de WhatsApp del Nodo?</label>
+            <label class="option">
+              <input type="radio" name="en_grupo" value="si" checked>
+              <span class="option__label">Sí</span>
+            </label>
+            <label class="option">
+              <input type="radio" name="en_grupo" value="no">
+              <span class="option__label">No, me gustaría sumarme</span>
+            </label>
+            <label class="option">
+              <input type="radio" name="en_grupo" value="no_prefiero_correo">
+              <span class="option__label">No, prefiero recibir todo por correo</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="card mt-4">
+          <h2>Aporte solidario</h2>
+          <p class="muted">
+            El aporte solidario sostiene el espacio físico, la logística, las
+            comunicaciones y el tiempo de la equipa. La sugerencia es del {{aporte_default_porcent}}%
+            del subtotal, pero podés ajustarlo según tus posibilidades reales.
+          </p>
+          <div class="field">
+            <label class="field__label" for="aporte-input">Porcentaje de aporte (%)</label>
+            <input class="input" type="number" id="aporte-input"
+                   min="0" max="50" step="1"
+                   value="{{aporte_default_porcent}}"
+                   style="width: 130px;">
+          </div>
+        </div>
+
+        <div class="card mt-4">
+          <h2>Entrega</h2>
+
+          <div class="field">
+            <label class="field__label">¿Cómo vas a recibir tu pedido? *</label>
+            <label class="option">
+              <input type="radio" name="entrega" value="galpon" checked>
+              <span class="option__label">
+                <strong>Retiro en el galpón</strong>
+                <small style="display:block;color:var(--c-tierra);">Viernes de 13:00 a 15:00 hs</small>
+              </span>
+            </label>
+            <label class="option">
+              <input type="radio" name="entrega" value="domicilio">
+              <span class="option__label">
+                <strong>Envío a domicilio</strong>
+                <small style="display:block;color:var(--c-tierra);">Costo aparte, calculado según labores y recursos.</small>
+              </span>
+            </label>
+          </div>
+
+          <div class="field" id="campo-direccion" style="display: none;">
+            <label class="field__label" for="direccion">Dirección de entrega</label>
+            <textarea class="textarea" id="direccion" name="direccion"
+                      placeholder="Calle, número, barrio, referencias"></textarea>
+          </div>
+        </div>
+
+        <div class="card mt-4">
+          <h2>Forma de pago</h2>
+          <p class="muted">
+            Una vez confirmado tu pedido recibirás los datos para abonar al alias
+            <strong>__ALIAS_PAGO__</strong>. También aceptamos efectivo al retirar.
+          </p>
+          <div class="field">
+            <label class="field__label">¿Cómo vas a abonar?</label>
+            <label class="option">
+              <input type="radio" name="pago" value="transferencia" checked>
+              <span class="option__label">Transferencia / Mercado Pago</span>
+            </label>
+            <label class="option">
+              <input type="radio" name="pago" value="efectivo">
+              <span class="option__label">Efectivo al retirar</span>
+            </label>
+            <label class="option">
+              <input type="radio" name="pago" value="mixto">
+              <span class="option__label">Mixto (combinación)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="card mt-4">
+          <h2>Comentarios para el Nodo</h2>
+          <div class="field">
+            <label class="field__label" for="comentarios">Algo que quieras decirnos (opcional)</label>
+            <textarea class="textarea" id="comentarios" name="comentarios"
+                      placeholder="Mimos, devoluciones, productos que te gustaría encontrar, sugerencias…"></textarea>
+          </div>
+        </div>
+
+        <div class="mt-5 center">
+          <button type="submit" class="btn btn--primary">
+            Enviar mi pedido
+          </button>
+          <p><small>
+            Al enviar recibirás el detalle por email y por WhatsApp.
+            <br>Recordá que los pedidos no pueden modificarse después del cierre.
+          </small></p>
+        </div>
+
+      </form>
+    </section>
+
+    <footer class="site-footer">
+      <p>Edición {{numero_edicion}} · {{anio_edicion}} · Nodo Matriz Agroecológico</p>
+    </footer>
+
+  </main>
+
+  <script src="../assets/form-logic.js"></script>
+  <script id="categorias-json" type="application/json">
+{{categorias_json}}
+  </script>
+  <script>
+    (function () {
+      'use strict';
+      var NM = window.NodoMatriz;
+      var formatMoney = NM.formatMoney;
+
+      // ----------------------------------------------------------------
+      // 1. Leer el catálogo de productos (inyectado por Make en categorias_json)
+      // ----------------------------------------------------------------
+      //
+      // Formato esperado de categorias_json:
+      //   [
+      //     {
+      //       "id": "verduras",
+      //       "nombre": "Verduras",
+      //       "descripcion": "Cooperativa San Carlos · variedad sujeta a cosecha",
+      //       "productos": [
+      //         {
+      //           "id_producto": "PROD1001",
+      //           "id_productor": "PROD050",
+      //           "nombre": "Cebolla cobriza",
+      //           "origen": "Mendoza",
+      //           "unidad": "kg",
+      //           "precio": 1200,
+      //           "fraccionable": true,
+      //           "fracciones": ["1/4", "1/2", "1", "2"],
+      //           "es_oferta": false,
+      //           "notas": ""
+      //         }
+      //       ]
+      //     }
+      //   ]
+      //
+      var catalogoRaw = document.getElementById('categorias-json').textContent.trim();
+      var categorias;
+      try {
+        categorias = JSON.parse(catalogoRaw);
+      } catch (err) {
+        // Datos de prueba para desarrollo cuando el template no fue procesado
+        if (/^\{\{/.test(catalogoRaw)) {
+          categorias = makeDemoData();
+        } else {
+          console.error('JSON inválido', err);
+          categorias = [];
+        }
+      }
+
+      function makeDemoData() {
+        return [
+          {
+            id: 'verduras', nombre: 'Verduras', descripcion: 'Cooperativas y huertas amigas',
+            productos: [
+              { id_producto: 'PROD1001', id_productor: 'PROD050', nombre: 'Cebolla cobriza', origen: 'Mendoza', unidad: 'kg', precio: 1200, fraccionable: true, fracciones: ['1/4','1/2','1'], es_oferta: false },
+              { id_producto: 'PROD1002', id_productor: 'PROD050', nombre: 'Zapallo anco',     origen: 'Las Rositas', unidad: 'kg', precio: 1500, fraccionable: true, fracciones: ['1/2','1'], es_oferta: true },
+              { id_producto: 'PROD1003', id_productor: 'PROD050', nombre: 'Lechuga mantecosa',origen: 'Sierras Chicas', unidad: 'atado', precio: 800, fraccionable: false },
+            ],
+          },
+          {
+            id: 'frutas', nombre: 'Frutas',
+            productos: [
+              { id_producto: 'PROD1010', id_productor: 'PROD051', nombre: 'Manzana roja',  unidad: 'kg', precio: 2100, fraccionable: true, fracciones: ['1/2','1','2'] },
+              { id_producto: 'PROD1011', id_productor: 'PROD051', nombre: 'Naranja jugo',  unidad: 'kg', precio: 1500, fraccionable: true, fracciones: ['1','2','5'] },
+            ],
+          },
+          {
+            id: 'panificados', nombre: 'Panificados', descripcion: 'Masa madre y horno de leña',
+            productos: [
+              { id_producto: 'PROD1020', id_productor: 'PROD003', nombre: 'Pan integral multisemillas', origen: 'VERDELANDIA', unidad: 'unidad', precio: 4500, fraccionable: false },
+              { id_producto: 'PROD1021', id_productor: 'PROD006', nombre: 'Pan a horno de leña',         origen: 'HIUPY',       unidad: 'unidad', precio: 4200, fraccionable: false },
+            ],
+          },
+        ];
+      }
+
+      // ----------------------------------------------------------------
+      // 2. Render del wizard: una categoría por paso
+      // ----------------------------------------------------------------
+      var stepsContainer = document.getElementById('wizard-steps');
+      var stateProductos = {};  // id_producto → { cantidad, fraccion }
+
+      categorias.forEach(function (cat, idx) {
+        var step = document.createElement('div');
+        step.className = 'wizard__step card';
+        step.dataset.stepName = cat.nombre;
+        step.dataset.stepIndex = String(idx);
+
+        var html = '<h2>' + escapeHtml(cat.nombre) + '</h2>';
+        if (cat.descripcion) {
+          html += '<p class="muted">' + escapeHtml(cat.descripcion) + '</p>';
+        }
+        html += '<div class="product-list mt-3">';
+
+        cat.productos.forEach(function (p) {
+          html += renderProductCard(p);
+        });
+
+        html += '</div>';
+        step.innerHTML = html;
+        stepsContainer.appendChild(step);
+      });
+
+      function renderProductCard(p) {
+        var tags = '';
+        if (p.es_oferta) {
+          tags += '<span class="product__tag product__tag--oferta">Oferta</span>';
+        }
+        if (p.es_nuevo) {
+          tags += '<span class="product__tag product__tag--nuevo">Nuevo</span>';
+        }
+
+        var meta = '';
+        if (p.origen) meta += escapeHtml(p.origen) + ' · ';
+        meta += 'por ' + escapeHtml(p.unidad);
+
+        var control = '';
+        if (p.fraccionable && p.fracciones && p.fracciones.length) {
+          control += '<select class="select" data-product="' + p.id_producto + '" data-field="fraccion" style="width: auto;">';
+          control += '<option value="0">— sin elegir —</option>';
+          p.fracciones.forEach(function (f) {
+            control += '<option value="' + f + '">' + f + ' ' + escapeHtml(p.unidad) + '</option>';
+          });
+          control += '</select>';
+          control += '<input class="input" type="number" min="0" step="1" value="0" data-product="' + p.id_producto + '" data-field="cantidad" placeholder="cant." style="width: 80px;">';
+        } else {
+          control += '<input class="input" type="number" min="0" step="1" value="0" data-product="' + p.id_producto + '" data-field="cantidad" placeholder="0" style="width: 100px;">';
+        }
+
+        return '' +
+          '<div class="product" data-product-id="' + p.id_producto + '" data-precio="' + (p.precio || 0) + '">' +
+          '  <div class="product__head">' +
+          '    <span class="product__name">' + escapeHtml(p.nombre) + ' ' + tags + '</span>' +
+          '    <span class="product__meta">' +
+          '      <span>' + meta + '</span>' +
+          '      <span class="product__price">' + formatMoney(p.precio) + '</span>' +
+          '    </span>' +
+          '  </div>' +
+          '  <div class="product__control">' +
+          control +
+          '  </div>' +
+          '</div>';
+      }
+
+      function escapeHtml(s) {
+        if (s === null || s === undefined) return '';
+        return String(s)
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+      }
+
+      // ----------------------------------------------------------------
+      // 3. Inicialización del wizard
+      // ----------------------------------------------------------------
+      var wizardEl = document.getElementById('wizard');
+      var finalSection = document.getElementById('final-section');
+
+      var wizard = NM.initWizard(wizardEl, {
+        onStepChange: function (idx, stepEl) {
+          // Marcar productos en este paso como "activos" visualmente
+          stepEl.querySelectorAll('.product').forEach(function (p) {
+            p.classList.add('is-active');
+          });
+        }
+      });
+
+      // El botón "Revisar pedido" muestra la sección final
+      var btnFinish = wizardEl.querySelector('[data-action="wizard-finish"]');
+      btnFinish.addEventListener('click', function () {
+        actualizarResumen();
+        wizardEl.classList.add('hidden');
+        finalSection.classList.remove('hidden');
+        finalSection.scrollIntoView({ behavior: 'smooth' });
+      });
+
+      // ----------------------------------------------------------------
+      // 4. Captura de cantidades y fracciones
+      // ----------------------------------------------------------------
+      stepsContainer.addEventListener('input', function (e) {
+        var t = e.target;
+        if (!t.dataset || !t.dataset.product) return;
+        var id = t.dataset.product;
+        var field = t.dataset.field;
+
+        if (!stateProductos[id]) {
+          stateProductos[id] = { cantidad: 0, fraccion: null };
+        }
+        if (field === 'cantidad') {
+          stateProductos[id].cantidad = parseInt(t.value, 10) || 0;
+        } else if (field === 'fraccion') {
+          stateProductos[id].fraccion = t.value === '0' ? null : t.value;
+        }
+      });
+
+      // ----------------------------------------------------------------
+      // 5. Cálculo del resumen
+      // ----------------------------------------------------------------
+      function calcularItems() {
+        var items = [];
+        var subtotal = 0;
+
+        categorias.forEach(function (cat) {
+          cat.productos.forEach(function (p) {
+            var s = stateProductos[p.id_producto];
+            if (!s || s.cantidad <= 0) return;
+
+            // Si es fraccionable y eligió fracción, multiplicar por la fracción
+            var multiplicador = 1;
+            if (p.fraccionable && s.fraccion) {
+              multiplicador = parseFraction(s.fraccion);
+            }
+            var subtotalItem = (p.precio || 0) * s.cantidad * multiplicador;
+            subtotal += subtotalItem;
+
+            items.push({
+              id_producto: p.id_producto,
+              id_productor: p.id_productor,
+              nombre: p.nombre,
+              unidad: p.unidad,
+              cantidad: s.cantidad,
+              fraccion: s.fraccion,
+              precio_unitario: p.precio,
+              subtotal: subtotalItem,
+              detalleVisual: detalleItem(p, s),
+            });
+          });
+        });
+
+        return { items: items, subtotal: subtotal };
+      }
+
+      function parseFraction(s) {
+        if (!s) return 1;
+        if (s.indexOf('/') === -1) return parseFloat(s) || 1;
+        var parts = s.split('/');
+        var n = parseFloat(parts[0]);
+        var d = parseFloat(parts[1]);
+        return d ? (n / d) : 1;
+      }
+
+      function detalleItem(p, s) {
+        var partes = [];
+        if (p.fraccionable && s.fraccion) {
+          partes.push(s.cantidad + ' × ' + s.fraccion + ' ' + p.unidad);
+        } else {
+          partes.push(s.cantidad + ' ' + p.unidad + (s.cantidad > 1 ? 's' : ''));
+        }
+        partes.push(formatMoney(p.precio) + ' c/u');
+        return partes.join(' · ');
+      }
+
+      function actualizarResumen() {
+        var calc = calcularItems();
+        var listaEl = document.getElementById('summary-items');
+        listaEl.innerHTML = '';
+
+        if (calc.items.length === 0) {
+          listaEl.innerHTML = '<li class="muted center">No agregaste ningún producto a tu pedido.</li>';
+        } else {
+          calc.items.forEach(function (it) {
+            var li = document.createElement('li');
+            li.className = 'summary__item';
+            li.innerHTML =
+              '<span>' +
+              '  <span class="summary__item-name">' + escapeHtml(it.nombre) + '</span>' +
+              '  <small class="summary__item-detail">' + it.detalleVisual + '</small>' +
+              '</span>' +
+              '<span class="summary__item-price">' + formatMoney(it.subtotal) + '</span>';
+            listaEl.appendChild(li);
+          });
+        }
+
+        actualizarTotales(calc.subtotal);
+      }
+
+      function actualizarTotales(subtotal) {
+        var aportePorc = parseFloat(document.getElementById('aporte-input').value) || 0;
+        var aporte = subtotal * (aportePorc / 100);
+        var total = subtotal + aporte;
+
+        document.getElementById('subtotal').textContent = formatMoney(subtotal);
+        document.getElementById('aporte-porc').textContent = aportePorc;
+        document.getElementById('aporte-monto').textContent = formatMoney(aporte);
+        document.getElementById('total-final').textContent = formatMoney(total);
+
+        return { subtotal: subtotal, aporte: aporte, total: total, aportePorc: aportePorc };
+      }
+
+      // Recalcular cuando cambia el aporte
+      document.getElementById('aporte-input').addEventListener('input', function () {
+        var calc = calcularItems();
+        actualizarTotales(calc.subtotal);
+      });
+
+      // Mostrar/ocultar campo de dirección según la entrega
+      var entregaRadios = document.querySelectorAll('input[name="entrega"]');
+      var campoDireccion = document.getElementById('campo-direccion');
+      entregaRadios.forEach(function (r) {
+        r.addEventListener('change', function () {
+          campoDireccion.style.display = (r.value === 'domicilio' && r.checked) ? 'block' : 'none';
+        });
+      });
+
+      // ----------------------------------------------------------------
+      // 6. Envío del pedido
+      // ----------------------------------------------------------------
+      var pedidoForm = document.getElementById('pedido-form');
+
+      NM.bindFormSubmit(pedidoForm, function buildPayload() {
+        var calc = calcularItems();
+
+        // Validación: al menos un producto
+        if (calc.items.length === 0) {
+          NM.showErrorMessage(pedidoForm,
+            'Tu pedido está vacío. Volvé a las categorías y elegí al menos un producto.');
+          return null;
+        }
+
+        // Validación: campos requeridos
+        var nombre = document.getElementById('nombre');
+        var email = document.getElementById('email');
+        var telefono = document.getElementById('telefono');
+        var ok = true;
+
+        [nombre, email, telefono].forEach(NM.clearInvalid);
+
+        if (!nombre.value.trim()) {
+          NM.markInvalid(nombre); ok = false;
+        }
+        if (!NM.isValidEmail(email.value)) {
+          NM.markInvalid(email); ok = false;
+        }
+        var telNorm = NM.normalizePhone(telefono.value);
+        if (!telNorm) {
+          NM.markInvalid(telefono); ok = false;
+        }
+
+        if (!ok) {
+          NM.showErrorMessage(pedidoForm, 'Revisá los campos marcados en rojo.');
+          return null;
+        }
+
+        var totales = actualizarTotales(calc.subtotal);
+
+        return {
+          id_edicion: '{{id_edicion}}',
+          enviado_en: new Date().toISOString(),
+          consumidor: {
+            nombre_completo: nombre.value.trim(),
+            email: email.value.trim().toLowerCase(),
+            telefono_whatsapp: telNorm,
+            primera_vez: document.querySelector('[name="primera_vez"]:checked').value,
+            en_grupo_whatsapp: document.querySelector('[name="en_grupo"]:checked').value,
+          },
+          items: calc.items,
+          subtotal: calc.subtotal,
+          aporte_porcentaje: totales.aportePorc,
+          aporte_monto: totales.aporte,
+          total_final: totales.total,
+          entrega: {
+            modalidad: document.querySelector('[name="entrega"]:checked').value,
+            direccion: document.getElementById('direccion').value.trim() || null,
+          },
+          forma_pago: document.querySelector('[name="pago"]:checked').value,
+          comentarios: document.getElementById('comentarios').value.trim() || null,
+        };
+      }, {
+        successMessage:
+          '¡Recibimos tu pedido! En breve te llegará el detalle por email y por WhatsApp, con los datos para abonar. Gracias por sostener esta red.',
+      });
+
+    })();
+  </script>
+</body>
+</html>
