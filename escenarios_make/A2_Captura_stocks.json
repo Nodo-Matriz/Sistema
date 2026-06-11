@@ -1,1497 +1,278 @@
 {
-    "name": "Integration Webhooks, Google Sheets",
-    "flow": [
-        {
-            "id": 1,
-            "module": "gateway:CustomWebHook",
-            "version": 1,
-            "parameters": {
-                "hook": 2427905,
-                "maxResults": 1
-            },
-            "mapper": {},
-            "metadata": {
-                "designer": {
-                    "x": 0,
-                    "y": 0
-                },
-                "restore": {
-                    "parameters": {
-                        "hook": {
-                            "label": "My gateway-webhook webhook",
-                            "data": {
-                                "editable": "true"
-                            }
-                        }
-                    }
-                },
-                "parameters": [
-                    {
-                        "name": "hook",
-                        "type": "hook:gateway-webhook",
-                        "label": "Webhook",
-                        "required": true
-                    },
-                    {
-                        "name": "maxResults",
-                        "type": "number",
-                        "label": "Maximum number of results"
-                    }
-                ],
-                "interface": [
-                    {
-                        "name": "id_productor",
-                        "type": "text"
-                    },
-                    {
-                        "name": "enviado_en",
-                        "type": "text"
-                    },
-                    {
-                        "name": "productos",
-                        "type": "array",
-                        "spec": {
-                            "type": "collection",
-                            "spec": [
-                                {
-                                    "name": "id_producto",
-                                    "type": "text"
-                                },
-                                {
-                                    "name": "unidad",
-                                    "type": "text"
-                                },
-                                {
-                                    "name": "precio",
-                                    "type": "number"
-                                },
-                                {
-                                    "name": "disponible",
-                                    "type": "text"
-                                },
-                                {
-                                    "name": "es_oferta",
-                                    "type": "text"
-                                }
-                            ]
-                        }
-                    },
-                    {
-                        "name": "notas",
-                        "type": "text"
-                    }
-                ]
-            }
-        },
-        {
-            "id": 3,
-            "module": "builtin:BasicFeeder",
-            "version": 1,
-            "parameters": {},
-            "mapper": {
-                "array": [
-                    "{{1.productos[].id_producto}}"
-                ]
-            },
-            "metadata": {
-                "designer": {
-                    "x": 300,
-                    "y": 0
-                },
-                "restore": {
-                    "expect": {
-                        "array": {
-                            "mode": "chose",
-                            "items": [
-                                null
-                            ]
-                        }
-                    }
-                },
-                "expect": [
-                    {
-                        "mode": "edit",
-                        "name": "array",
-                        "spec": [],
-                        "type": "array",
-                        "label": "Array"
-                    }
-                ]
-            }
-        },
-        {
-            "id": 4,
-            "module": "google-sheets:filterRows",
-            "version": 2,
-            "parameters": {
-                "__IMTCONN__": 9232640
-            },
-            "mapper": {
-                "from": "share",
-                "limit": "1",
-                "filter": [
-                    [
-                        {
-                            "a": "B",
-                            "b": "{{1.id_productor}}",
-                            "o": "text:equal"
-                        },
-                        {
-                            "a": "A",
-                            "b": "{{1.productos[].id_producto}}",
-                            "o": "text:equal"
-                        }
-                    ]
-                ],
-                "sheetId": "Productos",
-                "sortOrder": "asc",
-                "spreadsheetId": "1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg",
-                "tableFirstRow": "A1:Z1",
-                "includesHeaders": true,
-                "valueRenderOption": "FORMATTED_VALUE",
-                "dateTimeRenderOption": "FORMATTED_STRING"
-            },
-            "metadata": {
-                "designer": {
-                    "x": 600,
-                    "y": 0
-                },
-                "restore": {
-                    "expect": {
-                        "from": {
-                            "label": "Select from all"
-                        },
-                        "orderBy": {
-                            "mode": "chose"
-                        },
-                        "sheetId": {
-                            "mode": "chose",
-                            "label": "Productos"
-                        },
-                        "sortOrder": {
-                            "mode": "chose",
-                            "label": "Ascending"
-                        },
-                        "tableFirstRow": {
-                            "label": "A-Z"
-                        },
-                        "includesHeaders": {
-                            "mode": "chose",
-                            "label": "Yes"
-                        },
-                        "valueRenderOption": {
-                            "mode": "chose",
-                            "label": "Formatted value"
-                        },
-                        "dateTimeRenderOption": {
-                            "mode": "chose",
-                            "label": "Formatted string"
-                        }
-                    },
-                    "parameters": {
-                        "__IMTCONN__": {
-                            "data": {
-                                "scoped": "true",
-                                "connection": "google"
-                            },
-                            "label": "SistemaNodo (juanmorenocorreo@gmail.com)"
-                        }
-                    }
-                },
-                "parameters": [
-                    {
-                        "name": "__IMTCONN__",
-                        "type": "account:google",
-                        "label": "Connection",
-                        "required": true
-                    }
-                ],
-                "expect": [
-                    {
-                        "name": "from",
-                        "type": "select",
-                        "label": "Search Method",
-                        "required": true,
-                        "validate": {
-                            "enum": [
-                                "drive",
-                                "share"
-                            ]
-                        }
-                    },
-                    {
-                        "name": "valueRenderOption",
-                        "type": "select",
-                        "label": "Value render option",
-                        "validate": {
-                            "enum": [
-                                "FORMATTED_VALUE",
-                                "UNFORMATTED_VALUE",
-                                "FORMULA"
-                            ]
-                        }
-                    },
-                    {
-                        "name": "dateTimeRenderOption",
-                        "type": "select",
-                        "label": "Date and time render option",
-                        "validate": {
-                            "enum": [
-                                "SERIAL_NUMBER",
-                                "FORMATTED_STRING"
-                            ]
-                        }
-                    },
-                    {
-                        "name": "limit",
-                        "type": "uinteger",
-                        "label": "Limit"
-                    },
-                    {
-                        "name": "spreadsheetId",
-                        "type": "text",
-                        "label": "Spreadsheet ID",
-                        "required": true
-                    },
-                    {
-                        "name": "sheetId",
-                        "type": "select",
-                        "label": "Sheet Name",
-                        "required": true
-                    },
-                    {
-                        "name": "includesHeaders",
-                        "type": "select",
-                        "label": "Table contains headers",
-                        "required": true,
-                        "validate": {
-                            "enum": [
-                                true,
-                                false
-                            ]
-                        }
-                    },
-                    {
-                        "name": "tableFirstRow",
-                        "type": "select",
-                        "label": "Column range",
-                        "required": true,
-                        "validate": {
-                            "enum": [
-                                "A1:Z1",
-                                "A1:BZ1",
-                                "A1:CZ1",
-                                "A1:DZ1",
-                                "A1:MZ1",
-                                "A1:ZZ1",
-                                "A1:AZZ1",
-                                "A1:BZZ1",
-                                "A1:CZZ1",
-                                "A1:DZZ1",
-                                "A1:MZZ1",
-                                "A1:ZZZ1"
-                            ]
-                        }
-                    },
-                    {
-                        "name": "filter",
-                        "type": "filter",
-                        "label": "Filter",
-                        "options": "rpc://google-sheets/2/rpcGetFilterKeys?includesHeaders=true"
-                    },
-                    {
-                        "name": "orderBy",
-                        "type": "select",
-                        "label": "Order by"
-                    },
-                    {
-                        "name": "sortOrder",
-                        "type": "select",
-                        "label": "Sort order",
-                        "validate": {
-                            "enum": [
-                                "asc",
-                                "desc"
-                            ]
-                        }
-                    }
-                ],
-                "interface": [
-                    {
-                        "name": "__IMTLENGTH__",
-                        "type": "uinteger",
-                        "label": "Total number of bundles"
-                    },
-                    {
-                        "name": "__IMTINDEX__",
-                        "type": "uinteger",
-                        "label": "Bundle order position"
-                    },
-                    {
-                        "name": "__ROW_NUMBER__",
-                        "type": "number",
-                        "label": "Row number"
-                    },
-                    {
-                        "name": "__SPREADSHEET_ID__",
-                        "type": "text",
-                        "label": "Spreadsheet ID"
-                    },
-                    {
-                        "name": "__SHEET__",
-                        "type": "text",
-                        "label": "Sheet"
-                    },
-                    {
-                        "name": "0",
-                        "type": "text",
-                        "label": "id_producto (A)"
-                    },
-                    {
-                        "name": "1",
-                        "type": "text",
-                        "label": "id_productor (B)"
-                    },
-                    {
-                        "name": "2",
-                        "type": "text",
-                        "label": "nombre (C)"
-                    },
-                    {
-                        "name": "3",
-                        "type": "text",
-                        "label": "unidad_venta (D)"
-                    },
-                    {
-                        "name": "4",
-                        "type": "text",
-                        "label": "fraccionable (E)"
-                    },
-                    {
-                        "name": "5",
-                        "type": "text",
-                        "label": "fracciones_disponibles (F)"
-                    },
-                    {
-                        "name": "6",
-                        "type": "text",
-                        "label": "precio_unitario (G)"
-                    },
-                    {
-                        "name": "7",
-                        "type": "text",
-                        "label": "origen (H)"
-                    },
-                    {
-                        "name": "8",
-                        "type": "text",
-                        "label": "categoria (I)"
-                    },
-                    {
-                        "name": "9",
-                        "type": "text",
-                        "label": "disponible_edicion_actual (J)"
-                    },
-                    {
-                        "name": "10",
-                        "type": "text",
-                        "label": "stock_estimado (K)"
-                    },
-                    {
-                        "name": "11",
-                        "type": "text",
-                        "label": "es_oferta (L)"
-                    },
-                    {
-                        "name": "12",
-                        "type": "text",
-                        "label": "es_intercambio_directo (M)"
-                    },
-                    {
-                        "name": "13",
-                        "type": "text",
-                        "label": "ultima_actualizacion (N)"
-                    },
-                    {
-                        "name": "14",
-                        "type": "text",
-                        "label": "notas (O)"
-                    },
-                    {
-                        "name": "15",
-                        "type": "text",
-                        "label": "(P)"
-                    },
-                    {
-                        "name": "16",
-                        "type": "text",
-                        "label": "(Q)"
-                    },
-                    {
-                        "name": "17",
-                        "type": "text",
-                        "label": "(R)"
-                    },
-                    {
-                        "name": "18",
-                        "type": "text",
-                        "label": "(S)"
-                    },
-                    {
-                        "name": "19",
-                        "type": "text",
-                        "label": "(T)"
-                    },
-                    {
-                        "name": "20",
-                        "type": "text",
-                        "label": "(U)"
-                    },
-                    {
-                        "name": "21",
-                        "type": "text",
-                        "label": "(V)"
-                    },
-                    {
-                        "name": "22",
-                        "type": "text",
-                        "label": "(W)"
-                    },
-                    {
-                        "name": "23",
-                        "type": "text",
-                        "label": "(X)"
-                    },
-                    {
-                        "name": "24",
-                        "type": "text",
-                        "label": "(Y)"
-                    },
-                    {
-                        "name": "25",
-                        "type": "text",
-                        "label": "(Z)"
-                    }
-                ]
-            }
-        },
-        {
-            "id": 6,
-            "module": "google-sheets:updateRow",
-            "version": 2,
-            "parameters": {
-                "__IMTCONN__": 9232640
-            },
-            "filter": {
-                "name": "ROW_NUMBER exists",
-                "conditions": [
-                    [
-                        {
-                            "a": "{{4.`0`}}",
-                            "b": "P0001",
-                            "o": "text:equal"
-                        }
-                    ]
-                ]
-            },
-            "mapper": {
-                "mode": "fromAll",
-                "valueInputOption": "USER_ENTERED",
-                "spreadsheetId": "1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg",
-                "sheetId": "Productos",
-                "rowNumber": "{{4.`__ROW_NUMBER__`}}",
-                "includesHeaders": true,
-                "useColumnHeaders": true,
-                "values": {
-                    "unidad_venta": "{{1.productos[].unidad}}",
-                    "precio_unitario": "{{1.productos[].precio}}",
-                    "disponible_edicion_actual": "{{if(1.productos[].disponible; \"Sí\"; \"No\")}}",
-                    "es_oferta": "{{if(1.productos[].es_oferta; \"Sí\"; \"No\")}}",
-                    "ultima_actualizacion": "{{formatDate(now; \"YYYY-MM-DD HH:mm\")}}"
-                }
-            },
-            "metadata": {
-                "designer": {
-                    "x": 900,
-                    "y": 0
-                },
-                "restore": {
-                    "parameters": {
-                        "__IMTCONN__": {
-                            "label": "SistemaNodo (juanmorenocorreo@gmail.com)",
-                            "data": {
-                                "scoped": "true",
-                                "connection": "google"
-                            }
-                        }
-                    },
-                    "expect": {
-                        "mode": {
-                            "label": "Select from all"
-                        },
-                        "valueInputOption": {
-                            "mode": "chose",
-                            "label": "User entered"
-                        },
-                        "sheetId": {
-                            "mode": "chose",
-                            "label": "Productos"
-                        },
-                        "includesHeaders": {
-                            "label": "Yes"
-                        },
-                        "useColumnHeaders": {
-                            "nested": [
-                                {
-                                    "name": "values",
-                                    "spec": [
-                                        {
-                                            "name": "id_producto",
-                                            "type": "text",
-                                            "label": "id_producto (A)"
-                                        },
-                                        {
-                                            "name": "id_productor",
-                                            "type": "text",
-                                            "label": "id_productor (B)"
-                                        },
-                                        {
-                                            "name": "nombre",
-                                            "type": "text",
-                                            "label": "nombre (C)"
-                                        },
-                                        {
-                                            "name": "unidad_venta",
-                                            "type": "text",
-                                            "label": "unidad_venta (D)"
-                                        },
-                                        {
-                                            "name": "fraccionable",
-                                            "type": "text",
-                                            "label": "fraccionable (E)"
-                                        },
-                                        {
-                                            "name": "fracciones_disponibles",
-                                            "type": "text",
-                                            "label": "fracciones_disponibles (F)"
-                                        },
-                                        {
-                                            "name": "precio_unitario",
-                                            "type": "text",
-                                            "label": "precio_unitario (G)"
-                                        },
-                                        {
-                                            "name": "origen",
-                                            "type": "text",
-                                            "label": "origen (H)"
-                                        },
-                                        {
-                                            "name": "categoria",
-                                            "type": "text",
-                                            "label": "categoria (I)"
-                                        },
-                                        {
-                                            "name": "disponible_edicion_actual",
-                                            "type": "text",
-                                            "label": "disponible_edicion_actual (J)"
-                                        },
-                                        {
-                                            "name": "stock_estimado",
-                                            "type": "text",
-                                            "label": "stock_estimado (K)"
-                                        },
-                                        {
-                                            "name": "es_oferta",
-                                            "type": "text",
-                                            "label": "es_oferta (L)"
-                                        },
-                                        {
-                                            "name": "es_intercambio_directo",
-                                            "type": "text",
-                                            "label": "es_intercambio_directo (M)"
-                                        },
-                                        {
-                                            "name": "ultima_actualizacion",
-                                            "type": "text",
-                                            "label": "ultima_actualizacion (N)"
-                                        },
-                                        {
-                                            "name": "notas",
-                                            "type": "text",
-                                            "label": "notas (O)"
-                                        },
-                                        {
-                                            "name": "undefined",
-                                            "type": "text",
-                                            "label": "(P)"
-                                        },
-                                        {
-                                            "name": "undefined",
-                                            "type": "text",
-                                            "label": "(Q)"
-                                        },
-                                        {
-                                            "name": "undefined",
-                                            "type": "text",
-                                            "label": "(R)"
-                                        },
-                                        {
-                                            "name": "undefined",
-                                            "type": "text",
-                                            "label": "(S)"
-                                        },
-                                        {
-                                            "name": "undefined",
-                                            "type": "text",
-                                            "label": "(T)"
-                                        },
-                                        {
-                                            "name": "undefined",
-                                            "type": "text",
-                                            "label": "(U)"
-                                        },
-                                        {
-                                            "name": "undefined",
-                                            "type": "text",
-                                            "label": "(V)"
-                                        },
-                                        {
-                                            "name": "undefined",
-                                            "type": "text",
-                                            "label": "(W)"
-                                        },
-                                        {
-                                            "name": "undefined",
-                                            "type": "text",
-                                            "label": "(X)"
-                                        },
-                                        {
-                                            "name": "undefined",
-                                            "type": "text",
-                                            "label": "(Y)"
-                                        },
-                                        {
-                                            "name": "undefined",
-                                            "type": "text",
-                                            "label": "(Z)"
-                                        }
-                                    ],
-                                    "type": "collection",
-                                    "label": "Values in columns",
-                                    "metadata": [
-                                        [
-                                            [
-                                                "id_producto",
-                                                "id_productor",
-                                                "nombre",
-                                                "unidad_venta",
-                                                "fraccionable",
-                                                "fracciones_disponibles",
-                                                "precio_unitario",
-                                                "origen",
-                                                "categoria",
-                                                "disponible_edicion_actual",
-                                                "stock_estimado",
-                                                "es_oferta",
-                                                "es_intercambio_directo",
-                                                "ultima_actualizacion",
-                                                "notas"
-                                            ]
-                                        ]
-                                    ]
-                                }
-                            ],
-                            "label": "Yes"
-                        }
-                    }
-                },
-                "parameters": [
-                    {
-                        "name": "__IMTCONN__",
-                        "type": "account:google",
-                        "label": "Connection",
-                        "required": true
-                    }
-                ],
-                "expect": [
-                    {
-                        "name": "mode",
-                        "type": "select",
-                        "label": "Search Method",
-                        "required": true,
-                        "validate": {
-                            "enum": [
-                                "select",
-                                "fromAll",
-                                "map"
-                            ]
-                        }
-                    },
-                    {
-                        "name": "valueInputOption",
-                        "type": "select",
-                        "label": "Value input option",
-                        "validate": {
-                            "enum": [
-                                "USER_ENTERED",
-                                "RAW"
-                            ]
-                        }
-                    },
-                    {
-                        "name": "spreadsheetId",
-                        "type": "text",
-                        "label": "Spreadsheet ID",
-                        "required": true
-                    },
-                    {
-                        "name": "sheetId",
-                        "type": "select",
-                        "label": "Sheet Name",
-                        "mode": "edit",
-                        "required": true
-                    },
-                    {
-                        "name": "rowNumber",
-                        "type": "uinteger",
-                        "label": "Row number",
-                        "required": true
-                    },
-                    {
-                        "name": "includesHeaders",
-                        "type": "select",
-                        "label": "Table contains headers",
-                        "required": true,
-                        "validate": {
-                            "enum": [
-                                true,
-                                false
-                            ]
-                        }
-                    },
-                    {
-                        "name": "useColumnHeaders",
-                        "type": "select",
-                        "label": "Use column headers as IDs of the columns",
-                        "required": true,
-                        "validate": {
-                            "enum": [
-                                true,
-                                false
-                            ]
-                        }
-                    },
-                    {
-                        "name": "values",
-                        "type": "collection",
-                        "label": "Values in columns",
-                        "metadata": [
-                            [
-                                [
-                                    "id_producto",
-                                    "id_productor",
-                                    "nombre",
-                                    "unidad_venta",
-                                    "fraccionable",
-                                    "fracciones_disponibles",
-                                    "precio_unitario",
-                                    "origen",
-                                    "categoria",
-                                    "disponible_edicion_actual",
-                                    "stock_estimado",
-                                    "es_oferta",
-                                    "es_intercambio_directo",
-                                    "ultima_actualizacion",
-                                    "notas"
-                                ]
-                            ]
-                        ],
-                        "spec": [
-                            {
-                                "name": "id_producto",
-                                "type": "text",
-                                "label": "id_producto (A)"
-                            },
-                            {
-                                "name": "id_productor",
-                                "type": "text",
-                                "label": "id_productor (B)"
-                            },
-                            {
-                                "name": "nombre",
-                                "type": "text",
-                                "label": "nombre (C)"
-                            },
-                            {
-                                "name": "unidad_venta",
-                                "type": "text",
-                                "label": "unidad_venta (D)"
-                            },
-                            {
-                                "name": "fraccionable",
-                                "type": "text",
-                                "label": "fraccionable (E)"
-                            },
-                            {
-                                "name": "fracciones_disponibles",
-                                "type": "text",
-                                "label": "fracciones_disponibles (F)"
-                            },
-                            {
-                                "name": "precio_unitario",
-                                "type": "text",
-                                "label": "precio_unitario (G)"
-                            },
-                            {
-                                "name": "origen",
-                                "type": "text",
-                                "label": "origen (H)"
-                            },
-                            {
-                                "name": "categoria",
-                                "type": "text",
-                                "label": "categoria (I)"
-                            },
-                            {
-                                "name": "disponible_edicion_actual",
-                                "type": "text",
-                                "label": "disponible_edicion_actual (J)"
-                            },
-                            {
-                                "name": "stock_estimado",
-                                "type": "text",
-                                "label": "stock_estimado (K)"
-                            },
-                            {
-                                "name": "es_oferta",
-                                "type": "text",
-                                "label": "es_oferta (L)"
-                            },
-                            {
-                                "name": "es_intercambio_directo",
-                                "type": "text",
-                                "label": "es_intercambio_directo (M)"
-                            },
-                            {
-                                "name": "ultima_actualizacion",
-                                "type": "text",
-                                "label": "ultima_actualizacion (N)"
-                            },
-                            {
-                                "name": "notas",
-                                "type": "text",
-                                "label": "notas (O)"
-                            },
-                            {
-                                "name": "undefined",
-                                "type": "text",
-                                "label": "(P)"
-                            },
-                            {
-                                "name": "undefined",
-                                "type": "text",
-                                "label": "(Q)"
-                            },
-                            {
-                                "name": "undefined",
-                                "type": "text",
-                                "label": "(R)"
-                            },
-                            {
-                                "name": "undefined",
-                                "type": "text",
-                                "label": "(S)"
-                            },
-                            {
-                                "name": "undefined",
-                                "type": "text",
-                                "label": "(T)"
-                            },
-                            {
-                                "name": "undefined",
-                                "type": "text",
-                                "label": "(U)"
-                            },
-                            {
-                                "name": "undefined",
-                                "type": "text",
-                                "label": "(V)"
-                            },
-                            {
-                                "name": "undefined",
-                                "type": "text",
-                                "label": "(W)"
-                            },
-                            {
-                                "name": "undefined",
-                                "type": "text",
-                                "label": "(X)"
-                            },
-                            {
-                                "name": "undefined",
-                                "type": "text",
-                                "label": "(Y)"
-                            },
-                            {
-                                "name": "undefined",
-                                "type": "text",
-                                "label": "(Z)"
-                            }
-                        ]
-                    }
-                ]
-            }
-        },
-        {
-            "id": 9,
-            "module": "google-sheets:addRow",
-            "version": 2,
-            "parameters": {
-                "__IMTCONN__": 9232640
-            },
-            "mapper": {
-                "mode": "fromAll",
-                "insertUnformatted": false,
-                "valueInputOption": "USER_ENTERED",
-                "insertDataOption": "INSERT_ROWS",
-                "spreadsheetId": "1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg",
-                "sheetId": "Log_Cambios_Stock",
-                "includesHeaders": true,
-                "useColumnHeaders": false,
-                "values": {
-                    "0": "{{formatDate(now; \"YYYYMMDDHHmmss\")}}",
-                    "1": "{{formatDate(now; \"YYYY-MM-DDTHH:mm:ssZ\")}}",
-                    "2": "{{1.id_productor}}",
-                    "4": "{{4.`0`}}",
-                    "5": "{{4.`2`}}",
-                    "6": "Actualización",
-                    "8": "{{4.`6`}}",
-                    "12": "{{if(4.`9`; \"Sí\"; \"No\")}}",
-                    "13": "stock.html"
-                }
-            },
-            "metadata": {
-                "designer": {
-                    "x": 1200,
-                    "y": 0
-                },
-                "restore": {
-                    "parameters": {
-                        "__IMTCONN__": {
-                            "label": "SistemaNodo (juanmorenocorreo@gmail.com)",
-                            "data": {
-                                "scoped": "true",
-                                "connection": "google"
-                            }
-                        }
-                    },
-                    "expect": {
-                        "mode": {
-                            "label": "Select from all"
-                        },
-                        "insertUnformatted": {
-                            "mode": "chose"
-                        },
-                        "valueInputOption": {
-                            "mode": "chose",
-                            "label": "User entered"
-                        },
-                        "insertDataOption": {
-                            "mode": "chose",
-                            "label": "Insert rows"
-                        },
-                        "sheetId": {
-                            "mode": "chose",
-                            "label": "Log_Cambios_Stock"
-                        },
-                        "includesHeaders": {
-                            "label": "Yes"
-                        },
-                        "useColumnHeaders": {
-                            "nested": [
-                                {
-                                    "name": "values",
-                                    "spec": [
-                                        {
-                                            "name": "0",
-                                            "type": "text",
-                                            "label": "id_log (A)"
-                                        },
-                                        {
-                                            "name": "1",
-                                            "type": "text",
-                                            "label": "timestamp (B)"
-                                        },
-                                        {
-                                            "name": "2",
-                                            "type": "text",
-                                            "label": "id_productor (C)"
-                                        },
-                                        {
-                                            "name": "3",
-                                            "type": "text",
-                                            "label": "nombre_productor (D)"
-                                        },
-                                        {
-                                            "name": "4",
-                                            "type": "text",
-                                            "label": "id_producto (E)"
-                                        },
-                                        {
-                                            "name": "5",
-                                            "type": "text",
-                                            "label": "nombre_producto (F)"
-                                        },
-                                        {
-                                            "name": "6",
-                                            "type": "text",
-                                            "label": "accion (G)"
-                                        },
-                                        {
-                                            "name": "7",
-                                            "type": "text",
-                                            "label": "precio_anterior (H)"
-                                        },
-                                        {
-                                            "name": "8",
-                                            "type": "text",
-                                            "label": "precio_nuevo (I)"
-                                        },
-                                        {
-                                            "name": "9",
-                                            "type": "text",
-                                            "label": "stock_anterior (J)"
-                                        },
-                                        {
-                                            "name": "10",
-                                            "type": "text",
-                                            "label": "stock_nuevo (K)"
-                                        },
-                                        {
-                                            "name": "11",
-                                            "type": "text",
-                                            "label": "disponible_anterior (L)"
-                                        },
-                                        {
-                                            "name": "12",
-                                            "type": "text",
-                                            "label": "disponible_nuevo (M)"
-                                        },
-                                        {
-                                            "name": "13",
-                                            "type": "text",
-                                            "label": "origen (N)"
-                                        },
-                                        {
-                                            "name": "14",
-                                            "type": "text",
-                                            "label": "(O)"
-                                        },
-                                        {
-                                            "name": "15",
-                                            "type": "text",
-                                            "label": "(P)"
-                                        },
-                                        {
-                                            "name": "16",
-                                            "type": "text",
-                                            "label": "(Q)"
-                                        },
-                                        {
-                                            "name": "17",
-                                            "type": "text",
-                                            "label": "(R)"
-                                        },
-                                        {
-                                            "name": "18",
-                                            "type": "text",
-                                            "label": "(S)"
-                                        },
-                                        {
-                                            "name": "19",
-                                            "type": "text",
-                                            "label": "(T)"
-                                        },
-                                        {
-                                            "name": "20",
-                                            "type": "text",
-                                            "label": "(U)"
-                                        },
-                                        {
-                                            "name": "21",
-                                            "type": "text",
-                                            "label": "(V)"
-                                        },
-                                        {
-                                            "name": "22",
-                                            "type": "text",
-                                            "label": "(W)"
-                                        },
-                                        {
-                                            "name": "23",
-                                            "type": "text",
-                                            "label": "(X)"
-                                        },
-                                        {
-                                            "name": "24",
-                                            "type": "text",
-                                            "label": "(Y)"
-                                        },
-                                        {
-                                            "name": "25",
-                                            "type": "text",
-                                            "label": "(Z)"
-                                        }
-                                    ],
-                                    "type": "collection",
-                                    "label": "Values in columns",
-                                    "metadata": [
-                                        [
-                                            [
-                                                "id_log",
-                                                "timestamp",
-                                                "id_productor",
-                                                "nombre_productor",
-                                                "id_producto",
-                                                "nombre_producto",
-                                                "accion",
-                                                "precio_anterior",
-                                                "precio_nuevo",
-                                                "stock_anterior",
-                                                "stock_nuevo",
-                                                "disponible_anterior",
-                                                "disponible_nuevo",
-                                                "origen"
-                                            ]
-                                        ]
-                                    ]
-                                }
-                            ],
-                            "label": "No"
-                        },
-                        "values": {
-                            "nested": {
-                                "14": {
-                                    "collapsed": true
-                                },
-                                "15": {
-                                    "collapsed": true
-                                },
-                                "16": {
-                                    "collapsed": true
-                                },
-                                "17": {
-                                    "collapsed": true
-                                },
-                                "18": {
-                                    "collapsed": true
-                                },
-                                "19": {
-                                    "collapsed": true
-                                },
-                                "20": {
-                                    "collapsed": true
-                                },
-                                "21": {
-                                    "collapsed": true
-                                },
-                                "22": {
-                                    "collapsed": true
-                                },
-                                "23": {
-                                    "collapsed": true
-                                },
-                                "24": {
-                                    "collapsed": true
-                                },
-                                "25": {
-                                    "collapsed": true
-                                }
-                            }
-                        }
-                    }
-                },
-                "parameters": [
-                    {
-                        "name": "__IMTCONN__",
-                        "type": "account:google",
-                        "label": "Connection",
-                        "required": true
-                    }
-                ],
-                "expect": [
-                    {
-                        "name": "mode",
-                        "type": "select",
-                        "label": "Search Method",
-                        "required": true,
-                        "validate": {
-                            "enum": [
-                                "select",
-                                "fromAll",
-                                "map"
-                            ]
-                        }
-                    },
-                    {
-                        "name": "insertUnformatted",
-                        "type": "boolean",
-                        "label": "Unformatted",
-                        "required": true
-                    },
-                    {
-                        "name": "valueInputOption",
-                        "type": "select",
-                        "label": "Value input option",
-                        "required": true,
-                        "validate": {
-                            "enum": [
-                                "USER_ENTERED",
-                                "RAW"
-                            ]
-                        }
-                    },
-                    {
-                        "name": "insertDataOption",
-                        "type": "select",
-                        "label": "Insert data option",
-                        "validate": {
-                            "enum": [
-                                "INSERT_ROWS",
-                                "OVERWRITE"
-                            ]
-                        }
-                    },
-                    {
-                        "name": "spreadsheetId",
-                        "type": "text",
-                        "label": "Spreadsheet ID",
-                        "required": true
-                    },
-                    {
-                        "name": "sheetId",
-                        "type": "select",
-                        "label": "Sheet Name",
-                        "required": true
-                    },
-                    {
-                        "name": "includesHeaders",
-                        "type": "select",
-                        "label": "Table contains headers",
-                        "required": true,
-                        "validate": {
-                            "enum": [
-                                true,
-                                false
-                            ]
-                        }
-                    },
-                    {
-                        "name": "useColumnHeaders",
-                        "type": "select",
-                        "label": "Use column headers as IDs of the columns",
-                        "required": true,
-                        "validate": {
-                            "enum": [
-                                true,
-                                false
-                            ]
-                        }
-                    },
-                    {
-                        "name": "values",
-                        "type": "collection",
-                        "label": "Values in columns",
-                        "metadata": [
-                            [
-                                [
-                                    "id_log",
-                                    "timestamp",
-                                    "id_productor",
-                                    "nombre_productor",
-                                    "id_producto",
-                                    "nombre_producto",
-                                    "accion",
-                                    "precio_anterior",
-                                    "precio_nuevo",
-                                    "stock_anterior",
-                                    "stock_nuevo",
-                                    "disponible_anterior",
-                                    "disponible_nuevo",
-                                    "origen"
-                                ]
-                            ]
-                        ],
-                        "spec": [
-                            {
-                                "name": "0",
-                                "type": "text",
-                                "label": "id_log (A)"
-                            },
-                            {
-                                "name": "1",
-                                "type": "text",
-                                "label": "timestamp (B)"
-                            },
-                            {
-                                "name": "2",
-                                "type": "text",
-                                "label": "id_productor (C)"
-                            },
-                            {
-                                "name": "3",
-                                "type": "text",
-                                "label": "nombre_productor (D)"
-                            },
-                            {
-                                "name": "4",
-                                "type": "text",
-                                "label": "id_producto (E)"
-                            },
-                            {
-                                "name": "5",
-                                "type": "text",
-                                "label": "nombre_producto (F)"
-                            },
-                            {
-                                "name": "6",
-                                "type": "text",
-                                "label": "accion (G)"
-                            },
-                            {
-                                "name": "7",
-                                "type": "text",
-                                "label": "precio_anterior (H)"
-                            },
-                            {
-                                "name": "8",
-                                "type": "text",
-                                "label": "precio_nuevo (I)"
-                            },
-                            {
-                                "name": "9",
-                                "type": "text",
-                                "label": "stock_anterior (J)"
-                            },
-                            {
-                                "name": "10",
-                                "type": "text",
-                                "label": "stock_nuevo (K)"
-                            },
-                            {
-                                "name": "11",
-                                "type": "text",
-                                "label": "disponible_anterior (L)"
-                            },
-                            {
-                                "name": "12",
-                                "type": "text",
-                                "label": "disponible_nuevo (M)"
-                            },
-                            {
-                                "name": "13",
-                                "type": "text",
-                                "label": "origen (N)"
-                            },
-                            {
-                                "name": "14",
-                                "type": "text",
-                                "label": "(O)"
-                            },
-                            {
-                                "name": "15",
-                                "type": "text",
-                                "label": "(P)"
-                            },
-                            {
-                                "name": "16",
-                                "type": "text",
-                                "label": "(Q)"
-                            },
-                            {
-                                "name": "17",
-                                "type": "text",
-                                "label": "(R)"
-                            },
-                            {
-                                "name": "18",
-                                "type": "text",
-                                "label": "(S)"
-                            },
-                            {
-                                "name": "19",
-                                "type": "text",
-                                "label": "(T)"
-                            },
-                            {
-                                "name": "20",
-                                "type": "text",
-                                "label": "(U)"
-                            },
-                            {
-                                "name": "21",
-                                "type": "text",
-                                "label": "(V)"
-                            },
-                            {
-                                "name": "22",
-                                "type": "text",
-                                "label": "(W)"
-                            },
-                            {
-                                "name": "23",
-                                "type": "text",
-                                "label": "(X)"
-                            },
-                            {
-                                "name": "24",
-                                "type": "text",
-                                "label": "(Y)"
-                            },
-                            {
-                                "name": "25",
-                                "type": "text",
-                                "label": "(Z)"
-                            }
-                        ]
-                    }
-                ]
-            }
-        }
-    ],
-    "metadata": {
-        "instant": true,
-        "version": 1,
-        "scenario": {
-            "roundtrips": 1,
-            "maxErrors": 3,
-            "autoCommit": true,
-            "autoCommitTriggerLast": true,
-            "sequential": false,
-            "slots": null,
-            "confidential": false,
-            "dataloss": false,
-            "dlq": false,
-            "freshVariables": false
-        },
+  "name": "A2 · Captura de actualización de stock",
+  "flow": [
+    {
+      "id": 1,
+      "module": "gateway:CustomWebHook",
+      "version": 1,
+      "metadata": {
         "designer": {
-            "orphans": [
-                [
-                    {
-                        "id": 2,
-                        "module": "placeholder:Placeholder",
-                        "filter": null,
-                        "metadata": {
-                            "designer": {
-                                "x": 0,
-                                "y": 300
-                            }
-                        }
-                    }
-                ]
-            ]
+          "x": 0,
+          "y": 0
         },
-        "zone": "us2.make.com",
-        "notes": []
+        "restore": {
+          "parameters": {
+            "hook": {
+              "label": "Webhook A2 — stock",
+              "data": {
+                "editable": "true"
+              }
+            }
+          }
+        }
+      },
+      "parameters": {
+        "hook": "REEMPLAZAR_WEBHOOK_A2",
+        "maxResults": 1
+      },
+      "_comment": "Recibe POST JSON desde stock.html. Estructura: {id_productor, productos:[...], notas}."
+    },
+    {
+      "id": 2,
+      "module": "builtin:BasicFeeder",
+      "version": 1,
+      "metadata": {
+        "designer": {
+          "x": 300,
+          "y": 0
+        }
+      },
+      "parameters": {},
+      "mapper": {
+        "array": "{{1.productos}}"
+      },
+      "_comment": "Itera sobre cada producto recibido en el payload."
+    },
+    {
+      "id": 3,
+      "module": "google-sheets:searchRows",
+      "version": 2,
+      "metadata": {
+        "designer": {
+          "x": 600,
+          "y": 0
+        },
+        "restore": {
+          "parameters": {
+            "__IMTCONN__": {
+              "label": "REEMPLAZAR_CONEXION_SHEETS",
+              "data": {
+                "scoped": "true",
+                "connection": "google"
+              }
+            }
+          }
+        }
+      },
+      "parameters": {
+        "__IMTCONN__": "REEMPLAZAR_CONEXION_SHEETS"
+      },
+      "mapper": {
+        "mode": "select",
+        "spreadsheetId": "REEMPLAZAR_SPREADSHEET_ID",
+        "sheetId": "Productos",
+        "includesHeaders": true,
+        "tableFirstRow": "A6",
+        "tableLastColumn": "O",
+        "filter": [
+          [
+            {
+              "a": "id_productor",
+              "b": "{{1.id_productor}}",
+              "o": "text:equal"
+            },
+            {
+              "a": "nombre",
+              "b": "{{2.nombre}}",
+              "o": "text:equal"
+            }
+          ]
+        ],
+        "_comment": "Busca si el producto ya existe para ese productor."
+      }
+    },
+    {
+      "id": 4,
+      "module": "builtin:BasicRouter",
+      "version": 1,
+      "metadata": {
+        "designer": {
+          "x": 900,
+          "y": 0
+        }
+      },
+      "routes": [
+        {
+          "flow": [
+            {
+              "id": 5,
+              "module": "google-sheets:updateRow",
+              "version": 2,
+              "metadata": {
+                "designer": {
+                  "x": 1200,
+                  "y": -150
+                },
+                "restore": {
+                  "parameters": {
+                    "__IMTCONN__": {
+                      "label": "REEMPLAZAR_CONEXION_SHEETS",
+                      "data": {
+                        "scoped": "true",
+                        "connection": "google"
+                      }
+                    }
+                  }
+                }
+              },
+              "filter": {
+                "name": "Si ya existe",
+                "conditions": [
+                  [
+                    {
+                      "a": "{{3.`__ROW_NUMBER__`}}",
+                      "o": "exist"
+                    }
+                  ]
+                ]
+              },
+              "parameters": {
+                "__IMTCONN__": "REEMPLAZAR_CONEXION_SHEETS"
+              },
+              "mapper": {
+                "mode": "select",
+                "spreadsheetId": "REEMPLAZAR_SPREADSHEET_ID",
+                "sheetId": "Productos",
+                "includesHeaders": true,
+                "rowNumber": "{{3.`__ROW_NUMBER__`}}",
+                "values": {
+                  "6": "{{2.precio}}",
+                  "9": "{{if(2.disponible; \"Sí\"; \"No\")}}",
+                  "11": "{{if(2.es_oferta; \"Sí\"; \"No\")}}",
+                  "13": "={{formatDate(now; \"YYYY-MM-DD\")}}"
+                },
+                "_comment": "Cols: 6=precio_unitario, 9=disponible, 11=es_oferta, 13=ultima_actualizacion."
+              }
+            }
+          ]
+        },
+        {
+          "flow": [
+            {
+              "id": 6,
+              "module": "google-sheets:addRow",
+              "version": 2,
+              "metadata": {
+                "designer": {
+                  "x": 1200,
+                  "y": 150
+                },
+                "restore": {
+                  "parameters": {
+                    "__IMTCONN__": {
+                      "label": "REEMPLAZAR_CONEXION_SHEETS",
+                      "data": {
+                        "scoped": "true",
+                        "connection": "google"
+                      }
+                    }
+                  }
+                }
+              },
+              "filter": {
+                "name": "Si es nuevo",
+                "conditions": [
+                  [
+                    {
+                      "a": "{{3.`__ROW_NUMBER__`}}",
+                      "o": "notexist"
+                    }
+                  ]
+                ]
+              },
+              "parameters": {
+                "__IMTCONN__": "REEMPLAZAR_CONEXION_SHEETS"
+              },
+              "mapper": {
+                "mode": "select",
+                "spreadsheetId": "REEMPLAZAR_SPREADSHEET_ID",
+                "sheetId": "Productos",
+                "includesHeaders": true,
+                "values": {
+                  "0": "REEMPLAZAR_GENERAR_ID_PRODUCTO",
+                  "1": "{{1.id_productor}}",
+                  "2": "{{2.nombre}}",
+                  "3": "{{2.unidad}}",
+                  "6": "{{2.precio}}",
+                  "9": "{{if(2.disponible; \"Sí\"; \"No\")}}",
+                  "11": "{{if(2.es_oferta; \"Sí\"; \"No\")}}",
+                  "13": "={{formatDate(now; \"YYYY-MM-DD\")}}"
+                },
+                "_comment": "Producto nuevo. El ID se puede generar con un contador o módulo Set Variable."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "module": "google-sheets:addRow",
+      "version": 2,
+      "metadata": {
+        "designer": {
+          "x": 1500,
+          "y": 0
+        },
+        "restore": {
+          "parameters": {
+            "__IMTCONN__": {
+              "label": "REEMPLAZAR_CONEXION_SHEETS",
+              "data": {
+                "scoped": "true",
+                "connection": "google"
+              }
+            }
+          }
+        }
+      },
+      "parameters": {
+        "__IMTCONN__": "REEMPLAZAR_CONEXION_SHEETS"
+      },
+      "mapper": {
+        "mode": "select",
+        "spreadsheetId": "REEMPLAZAR_SPREADSHEET_ID",
+        "sheetId": "Log_Cambios_Stock",
+        "includesHeaders": true,
+        "values": {
+          "0": "={{formatDate(now; \"YYYY-MM-DDTHH:mm:ssZ\")}}",
+          "1": "{{1.id_productor}}",
+          "2": "{{2.nombre}}",
+          "3": "{{2.precio}}",
+          "4": "{{if(2.disponible; \"Sí\"; \"No\")}}"
+        },
+        "_comment": "Auditoría del cambio de stock."
+      }
     }
+  ],
+  "metadata": {
+    "instant": true,
+    "version": 1,
+    "scenario": {
+      "roundtrips": 1,
+      "maxErrors": 3,
+      "autoCommit": true,
+      "autoCommitTriggerLast": true,
+      "sequential": false,
+      "slots": null,
+      "confidential": false,
+      "dataloss": false,
+      "dlq": false,
+      "freshVariables": false
+    },
+    "designer": {
+      "orphans": []
+    },
+    "zone": "eu2.make.com"
+  }
 }

@@ -22,8 +22,8 @@
          {{fecha_cierre_iso}}        ej: 2026-05-14T12:00:00-03:00
          {{webhook_url}}             ej: https://hook.eu2.make.com/abc123
          {{aporte_default_porcent}}  ej: 10
-         __ALIAS_PAGO__         ej: nodomatriz.mp
-         {{categorias_json}}         JSON con todas las categorías y
+         {{alias_pago_nodo}}         ej: nodomatriz.mp
+         __CATEGORIAS_JSON__         JSON con todas las categorías y
                                      productos de la edición (ver
                                      formato esperado al pie del archivo).
        ============================================================ -->
@@ -35,23 +35,15 @@
 <body>
   <main class="wrap">
 
-    <header class="site-header fade-in">
-      <a class="site-mark" href="../">
-        <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <defs>
-            <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#6E8E55"/>
-              <stop offset="100%" stop-color="#4A6B3A"/>
-            </linearGradient>
-          </defs>
-          <path d="M24 4 Q34 10 34 24 Q34 38 24 44 Q14 38 14 24 Q14 10 24 4 Z" fill="url(#leafGrad)"/>
-          <path d="M24 8 V42" stroke="#FAF6EE" stroke-width="1.8" stroke-linecap="round" opacity="0.7"/>
-        </svg>
-        <span>
-          <span class="site-mark__name">Nodo Matriz</span>
-          <span class="site-mark__sub">edición {{numero_edicion}} · {{anio_edicion}}</span>
-        </span>
+    <header class="nodo-header fade-in">
+      <a href="../" style="display:block;">
+        <img src="../assets/cabecera.png"
+             alt="Nodo Matriz Agroecológico · Sierras Chicas"
+             style="width:100%; max-width:100%; height:auto; display:block; border-radius: 16px 20px 14px 18px;">
       </a>
+      <p style="text-align:center; margin: var(--s-3) 0 0; font-size: 0.88rem; color: var(--c-tierra); font-style: italic;">
+        edición {{numero_edicion}} · {{anio_edicion}}
+      </p>
     </header>
 
     <section class="fade-in" data-delay="1">
@@ -85,7 +77,7 @@
         <div class="wizard__crumbs"></div>
       </div>
 
-      <!-- Las categorías se renderizan acá vía JS desde {{categorias_json}} -->
+      <!-- Las categorías se renderizan acá vía JS desde __CATEGORIAS_JSON__ -->
       <div id="wizard-steps"></div>
 
       <div class="wizard__nav">
@@ -108,6 +100,12 @@
          RESUMEN Y DATOS DEL CONSUMIDOR (se muestra al final)
          ============================================================ -->
     <section id="final-section" class="hidden mt-5">
+
+      <div style="margin-bottom: var(--s-5);">
+        <button type="button" id="btn-volver-catalogo" class="btn btn--ghost btn--small">
+          ← Volver al catálogo
+        </button>
+      </div>
 
       <div class="summary mb-4">
         <h2 class="summary__title">Resumen de tu pedido</h2>
@@ -196,15 +194,36 @@
           <h2>Aporte solidario</h2>
           <p class="muted">
             El aporte solidario sostiene el espacio físico, la logística, las
-            comunicaciones y el tiempo de la equipa. La sugerencia es del {{aporte_default_porcent}}%
-            del subtotal, pero podés ajustarlo según tus posibilidades reales.
+            comunicaciones y el tiempo de la equipa. Elegí según tus posibilidades reales.
           </p>
           <div class="field">
-            <label class="field__label" for="aporte-input">Porcentaje de aporte (%)</label>
-            <input class="input" type="number" id="aporte-input"
-                   min="0" max="50" step="1"
-                   value="{{aporte_default_porcent}}"
-                   style="width: 130px;">
+            <label class="field__label">Porcentaje de aporte</label>
+            <label class="option">
+              <input type="radio" name="aporte_porcent" value="14">
+              <span class="option__label">14% <span class="muted">(mínimo sugerido)</span></span>
+            </label>
+            <label class="option">
+              <input type="radio" name="aporte_porcent" value="20" checked>
+              <span class="option__label">20%</span>
+            </label>
+            <label class="option">
+              <input type="radio" name="aporte_porcent" value="30">
+              <span class="option__label">30%</span>
+            </label>
+            <label class="option">
+              <input type="radio" name="aporte_porcent" value="50">
+              <span class="option__label">50% <span class="muted">(¡gracias!</span>)</span>
+            </label>
+            <label class="option">
+              <input type="radio" name="aporte_porcent" value="otro" id="aporte-otro-radio">
+              <span class="option__label">Otro porcentaje</span>
+            </label>
+            <div id="aporte-otro-campo" style="display:none; margin-top: var(--s-3); padding-left: var(--s-6);">
+              <input class="input" type="number" id="aporte-input-custom"
+                     min="0" max="100" step="1" placeholder="Ej: 10"
+                     style="width: 130px;">
+              <span class="muted" style="margin-left: var(--s-2);">%</span>
+            </div>
           </div>
         </div>
 
@@ -240,7 +259,7 @@
           <h2>Forma de pago</h2>
           <p class="muted">
             Una vez confirmado tu pedido recibirás los datos para abonar al alias
-            <strong>__ALIAS_PAGO__</strong>. También aceptamos efectivo al retirar.
+            <strong>{{alias_pago_nodo}}</strong>. También aceptamos efectivo al retirar.
           </p>
           <div class="field">
             <label class="field__label">¿Cómo vas a abonar?</label>
@@ -289,7 +308,7 @@
 
   <script src="../assets/form-logic.js"></script>
   <script id="categorias-json" type="application/json">
-{{categorias_json}}
+__CATEGORIAS_JSON__
   </script>
   <script>
     (function () {
@@ -330,7 +349,7 @@
         categorias = JSON.parse(catalogoRaw);
       } catch (err) {
         // Datos de prueba para desarrollo cuando el template no fue procesado
-        if (/^\{\{/.test(catalogoRaw)) {
+        if (/^__CATEGORIAS/.test(catalogoRaw) || /^\{\{/.test(catalogoRaw)) {
           categorias = makeDemoData();
         } else {
           console.error('JSON inválido', err);
@@ -464,6 +483,13 @@
         finalSection.scrollIntoView({ behavior: 'smooth' });
       });
 
+      // Botón "Volver al catálogo"
+      document.getElementById('btn-volver-catalogo').addEventListener('click', function () {
+        finalSection.classList.add('hidden');
+        wizardEl.classList.remove('hidden');
+        wizardEl.scrollIntoView({ behavior: 'smooth' });
+      });
+
       // ----------------------------------------------------------------
       // 4. Captura de cantidades y fracciones
       // ----------------------------------------------------------------
@@ -565,7 +591,7 @@
       }
 
       function actualizarTotales(subtotal) {
-        var aportePorc = parseFloat(document.getElementById('aporte-input').value) || 0;
+        var aportePorc = getAportePorc();
         var aporte = subtotal * (aportePorc / 100);
         var total = subtotal + aporte;
 
@@ -577,11 +603,12 @@
         return { subtotal: subtotal, aporte: aporte, total: total, aportePorc: aportePorc };
       }
 
-      // Recalcular cuando cambia el aporte
-      document.getElementById('aporte-input').addEventListener('input', function () {
-        var calc = calcularItems();
-        actualizarTotales(calc.subtotal);
-      });
+      // Pre-llenar email desde query param ?email=...
+      var emailParam = NM.getQueryParam('email');
+      if (emailParam) {
+        var emailField = document.getElementById('email');
+        if (emailField) emailField.value = decodeURIComponent(emailParam);
+      }
 
       // Mostrar/ocultar campo de dirección según la entrega
       var entregaRadios = document.querySelectorAll('input[name="entrega"]');
@@ -591,6 +618,35 @@
           campoDireccion.style.display = (r.value === 'domicilio' && r.checked) ? 'block' : 'none';
         });
       });
+
+      // Aporte solidario: opciones fijas + campo personalizado
+      var aporteRadios = document.querySelectorAll('input[name="aporte_porcent"]');
+      var aporteOtroCampo = document.getElementById('aporte-otro-campo');
+      var aporteInputCustom = document.getElementById('aporte-input-custom');
+
+      function getAportePorc() {
+        var checked = document.querySelector('input[name="aporte_porcent"]:checked');
+        if (!checked) return 20;
+        if (checked.value === 'otro') {
+          return parseFloat(aporteInputCustom.value) || 0;
+        }
+        return parseFloat(checked.value) || 0;
+      }
+
+      aporteRadios.forEach(function (r) {
+        r.addEventListener('change', function () {
+          aporteOtroCampo.style.display = (r.value === 'otro' && r.checked) ? 'flex' : 'none';
+          var calc = calcularItems();
+          actualizarTotales(calc.subtotal);
+        });
+      });
+
+      if (aporteInputCustom) {
+        aporteInputCustom.addEventListener('input', function () {
+          var calc = calcularItems();
+          actualizarTotales(calc.subtotal);
+        });
+      }
 
       // ----------------------------------------------------------------
       // 6. Envío del pedido
