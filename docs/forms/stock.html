@@ -4,23 +4,244 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex">
-  <title>Stock · Nodo Matriz</title>
+  <title>Mi stock · Nodo Matriz</title>
   <link rel="stylesheet" href="../assets/styles.css">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4 Q22 8 22 16 Q22 24 16 28 Q10 24 10 16 Q10 8 16 4 Z' fill='%234A6B3A'/%3E%3C/svg%3E">
+  <style>
+    /* ── Tabla de stock ─────────────────────────────────────────── */
+    .stock-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.95rem;
+    }
+
+    .stock-table thead th {
+      font-family: var(--f-body);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--c-tierra);
+      padding: var(--s-2) var(--s-3);
+      border-bottom: 2px solid var(--c-salvia);
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    .stock-table thead th:last-child {
+      text-align: center;
+    }
+
+    .stock-table tbody tr {
+      transition: background-color 0.15s;
+    }
+
+    .stock-table tbody tr:hover {
+      background-color: rgba(110, 142, 85, 0.05);
+    }
+
+    .stock-table tbody tr.is-quitado {
+      opacity: 0.4;
+    }
+
+    .stock-table tbody tr.is-nuevo {
+      background-color: rgba(110, 142, 85, 0.07);
+    }
+
+    .stock-table td {
+      padding: var(--s-3) var(--s-3);
+      border-bottom: 1px solid rgba(107, 93, 79, 0.10);
+      vertical-align: middle;
+    }
+
+    .stock-table td:last-child {
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    /* Celdas editables inline */
+    .celda-editable {
+      background: transparent;
+      border: 1.5px solid transparent;
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-family: var(--f-body);
+      font-size: 0.95rem;
+      color: var(--c-suelo);
+      width: 100%;
+      min-width: 60px;
+      transition: border-color 0.15s, background-color 0.15s;
+    }
+
+    .celda-editable:hover {
+      border-color: var(--c-salvia);
+      background: var(--c-leche);
+    }
+
+    .celda-editable:focus {
+      outline: none;
+      border-color: var(--c-oliva);
+      background: var(--c-leche);
+      box-shadow: var(--sh-foco);
+    }
+
+    .celda-editable.precio {
+      text-align: right;
+      font-weight: 700;
+      color: var(--c-musgo);
+      max-width: 110px;
+    }
+
+    .celda-editable.stock {
+      max-width: 80px;
+      text-align: center;
+    }
+
+    /* Toggle disponible */
+    .toggle-disponible {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--s-2);
+      cursor: pointer;
+      font-size: 0.88rem;
+      white-space: nowrap;
+    }
+
+    .toggle-disponible input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--c-musgo);
+      cursor: pointer;
+    }
+
+    /* Nombre del producto */
+    .nombre-producto {
+      font-weight: 700;
+      color: var(--c-suelo);
+      display: block;
+    }
+
+    .nombre-producto small {
+      font-weight: 400;
+      font-size: 0.8rem;
+      color: var(--c-tierra);
+    }
+
+    /* Botones de acción */
+    .btn-accion {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      color: var(--c-tierra);
+      transition: background-color 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn-accion:hover {
+      background: var(--c-crema-osc);
+      color: var(--c-suelo);
+    }
+
+    .btn-accion.quitar {
+      color: var(--c-arcilla);
+    }
+
+    .btn-accion.quitar:hover {
+      background: rgba(176, 125, 98, 0.12);
+      color: var(--c-arcilla-oscuro);
+    }
+
+    .btn-accion.restaurar {
+      color: var(--c-oliva);
+    }
+
+    /* Estado de cambios */
+    .badge-modificado {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: var(--c-mostaza);
+      border-radius: 50%;
+      margin-left: var(--s-2);
+      vertical-align: middle;
+    }
+
+    /* Tabla responsive: scroll horizontal en mobile */
+    .tabla-wrap {
+      overflow-x: auto;
+      border: 1px solid rgba(74, 107, 58, 0.12);
+      border-radius: var(--r-card);
+      background: var(--c-leche);
+    }
+
+    /* Barra de estado fija arriba */
+    .barra-estado {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: var(--c-leche);
+      border: 1px solid rgba(74, 107, 58, 0.15);
+      border-radius: 12px;
+      padding: var(--s-3) var(--s-5);
+      margin-bottom: var(--s-5);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--s-3);
+      flex-wrap: wrap;
+      box-shadow: var(--sh-suave);
+    }
+
+    .barra-estado__info {
+      font-size: 0.9rem;
+      color: var(--c-corteza);
+    }
+
+    .barra-estado__cambios {
+      font-weight: 700;
+      color: var(--c-mostaza);
+    }
+
+    /* Fila agregar nuevo */
+    .fila-nuevo td {
+      background: rgba(110, 142, 85, 0.06);
+      padding-top: var(--s-4);
+      padding-bottom: var(--s-4);
+    }
+
+    /* Loading skeleton */
+    .skeleton {
+      background: linear-gradient(90deg, var(--c-crema-osc) 25%, var(--c-leche) 50%, var(--c-crema-osc) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 6px;
+      height: 1em;
+      display: block;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+  </style>
 </head>
 <body>
-  <main class="wrap wrap--narrow">
+  <main class="wrap">
 
     <header class="site-header fade-in">
       <a class="site-mark" href="../">
         <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <defs>
-            <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stop-color="#6E8E55"/>
               <stop offset="100%" stop-color="#4A6B3A"/>
             </linearGradient>
           </defs>
-          <path d="M24 4 Q34 10 34 24 Q34 38 24 44 Q14 38 14 24 Q14 10 24 4 Z" fill="url(#leafGrad)"/>
+          <path d="M24 4 Q34 10 34 24 Q34 38 24 44 Q14 38 14 24 Q14 10 24 4 Z" fill="url(#g)"/>
           <path d="M24 8 V42" stroke="#FAF6EE" stroke-width="1.8" stroke-linecap="round" opacity="0.7"/>
         </svg>
         <span>
@@ -30,225 +251,491 @@
       </a>
     </header>
 
-    <section class="fade-in" data-delay="1">
-      <h1>Stock para la próxima edición</h1>
-      <p class="lead">
-        Actualizá precios, disponibilidad y fracciones de tus productos para que
-        aparezcan correctamente en el form de pedidos de la quincena.
-      </p>
-    </section>
-
-    <div id="productor-info" class="note note--info fade-in" data-delay="2" style="display: none;">
-      <strong>Estás cargando stock como:</strong> <span id="productor-nombre">–</span>
-      <small style="display: block; margin-top: 4px;">
-        Identificador interno: <code class="kbd" id="productor-id">–</code>
-      </small>
-    </div>
-
-    <div id="link-invalido" class="note note--error fade-in" data-delay="2" style="display: none;">
-      <strong>Link incompleto.</strong> El link que estás usando no incluye tu
-      identificador de productor (<code class="kbd">id_productor</code>).
+    <!-- Estado de validación del link -->
+    <div id="error-link" class="note note--error hidden fade-in">
+      <strong>Link incompleto.</strong> Este link no tiene tu identificador de productor.
       Pedile al Nodo el link correcto.
     </div>
 
-    <form id="stock-form"
-          class="fade-in"
-          data-delay="3"
-          data-webhook="PEGAR_AQUI_LA_URL_DEL_WEBHOOK_A2"
-          novalidate>
+    <div id="contenido-principal" class="hidden">
 
-      <div class="card">
-        <h2>Productos a actualizar</h2>
-        <p class="muted">
-          Marcá cuáles tenés disponibles para la próxima edición y, si cambió,
-          ajustá el precio. Si tenés productos nuevos, agregalos al final con el
-          botón "Agregar producto".
+      <section class="fade-in" data-delay="1">
+        <h1>Tu stock para la próxima edición</h1>
+        <p class="lead">
+          Revisá y actualizá tus productos. Los cambios no se guardan hasta que
+          hagas clic en <strong>Enviar actualización</strong>.
         </p>
-
-        <div id="product-list" class="product-list mt-4">
-          <!-- Los productos se agregan dinámicamente con JS -->
-          <div class="note note--info">
-            Para esta primera versión vas a tener que agregar todos tus
-            productos manualmente con el botón de abajo. En la próxima versión
-            van a aparecer pre-cargados.
-          </div>
+        <div id="info-productor" class="note note--info" style="display:none">
+          Cargando datos de tu productor…
         </div>
+      </section>
 
-        <button type="button" id="btn-add-product" class="btn btn--ghost mt-3">
-          + Agregar producto
+      <!-- Barra de estado sticky -->
+      <div class="barra-estado fade-in" data-delay="2">
+        <span class="barra-estado__info">
+          <span id="contador-productos">0</span> productos ·
+          <span class="barra-estado__cambios" id="contador-cambios" style="display:none">
+            <span id="num-cambios">0</span> cambio(s) sin guardar
+          </span>
+          <span id="sin-cambios" class="muted">sin cambios pendientes</span>
+        </span>
+        <button id="btn-enviar" class="btn btn--primary" disabled>
+          Enviar actualización
         </button>
       </div>
 
-      <div class="card mt-4">
+      <!-- Tabla principal -->
+      <div class="tabla-wrap fade-in" data-delay="3">
+        <table class="stock-table" id="tabla-stock">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Unidad</th>
+              <th>Precio</th>
+              <th>Stock est.</th>
+              <th>Oferta</th>
+              <th>Disponible</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-stock">
+            <!-- Filas del skeleton de carga -->
+            <tr><td colspan="7"><span class="skeleton" style="width:80%"></span></td></tr>
+            <tr><td colspan="7"><span class="skeleton" style="width:65%"></span></td></tr>
+            <tr><td colspan="7"><span class="skeleton" style="width:72%"></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Botón agregar nuevo producto -->
+      <div class="mt-4">
+        <button type="button" id="btn-agregar" class="btn btn--ghost">
+          + Agregar producto nuevo
+        </button>
+        <p><small class="muted">
+          Para productos que nunca publicaste antes. El Nodo les asignará un identificador.
+        </small></p>
+      </div>
+
+      <!-- Notas para el Nodo -->
+      <div class="card mt-4 fade-in" data-delay="4">
         <h2>Comentarios para el Nodo</h2>
         <div class="field">
           <label class="field__label" for="notas">Notas opcionales</label>
-          <textarea
-            class="textarea"
-            id="notas"
-            name="notas"
-            placeholder="Algo que la equipa del Nodo necesite saber: faltantes, demoras, productos nuevos a probar, etc."></textarea>
+          <textarea class="textarea" id="notas" rows="3"
+            placeholder="Demoras, productos por volver, cambios de presentación, lo que necesitemos saber…"></textarea>
         </div>
       </div>
 
-      <div class="mt-4 center">
-        <button type="submit" class="btn btn--primary">
+      <div class="mt-4 center fade-in" data-delay="4">
+        <button id="btn-enviar-bottom" class="btn btn--primary" disabled>
           Enviar actualización de stock
         </button>
-        <p><small>Al enviar, recibirás confirmación por WhatsApp.</small></p>
+        <p><small>Al enviar recibirás confirmación por WhatsApp.</small></p>
       </div>
 
-    </form>
+    </div>
 
     <footer class="site-footer">
-      <p>Nodo Matriz · sistema interno · soberanía digital</p>
+      <p>Nodo Matriz Agroecológico · Unquillo, Sierras Chicas</p>
     </footer>
 
   </main>
 
-  <!-- Template de fila de producto (clonado por JS) -->
-  <template id="product-row-template">
-    <div class="product" data-product-row>
-      <div class="product__head">
-        <div class="field" style="margin-bottom: 8px;">
-          <label class="field__label">Nombre del producto</label>
-          <input class="input" type="text" name="nombre" placeholder="Ej: Tomate cherry orgánico" required>
-        </div>
-        <div class="product__meta">
-          <select class="select" name="unidad_venta" style="flex: 1; min-width: 110px;">
-            <option value="unidad">unidad</option>
-            <option value="kg">kg</option>
-            <option value="gr">gramos</option>
-            <option value="atado">atado</option>
-            <option value="docena">docena</option>
-            <option value="bolsa">bolsa</option>
-            <option value="botella">botella</option>
-            <option value="frasco">frasco</option>
-            <option value="litro">litro</option>
-            <option value="maple">maple</option>
-            <option value="pack">pack</option>
-            <option value="ramito">ramito</option>
-            <option value="sobre">sobre</option>
-            <option value="mazo">mazo</option>
-          </select>
-          <input
-            class="input"
-            type="number"
-            name="precio"
-            placeholder="Precio"
-            step="100"
-            min="0"
-            style="width: 130px;">
-        </div>
-      </div>
-      <div class="product__control" style="flex-direction: column; align-items: stretch; gap: 8px;">
-        <label class="option" style="background: var(--c-crema-osc);">
-          <input type="checkbox" name="disponible" checked>
-          <span class="option__label">Disponible para esta edición</span>
-        </label>
-        <label class="option">
-          <input type="checkbox" name="es_oferta">
-          <span class="option__label">Está en oferta</span>
-        </label>
-        <button type="button" class="btn btn--warn btn--small" data-action="remove-product">
-          Eliminar este producto
-        </button>
-      </div>
-    </div>
-  </template>
-
   <script src="../assets/form-logic.js"></script>
   <script>
-    (function () {
-      'use strict';
-      var NM = window.NodoMatriz;
+  (function () {
+    'use strict';
+    var NM = window.NodoMatriz;
 
-      // 1. Detectar id_productor desde la URL
-      var idProductor = NM.getQueryParam('id_productor');
-      var preview     = NM.getQueryParam('preview') === '1';
+    // ── Configuración ──────────────────────────────────────────────
+    var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
+    var WEBHOOK_URL    = 'REEMPLAZAR_WEBHOOK_A2';
 
-      if (!idProductor) {
-        document.getElementById('link-invalido').style.display = 'block';
-        document.getElementById('stock-form').style.display = 'none';
-        return;
-      }
+    // Columnas de la hoja Productos_API_Stock (en orden, 0-based):
+    // 0:id_producto, 1:id_productor, 2:nombre, 3:unidad_venta,
+    // 4:precio_unitario, 5:disponible_edicion_actual, 6:stock_estimado,
+    // 7:es_oferta, 8:es_intercambio_directo, 9:ultima_actualizacion, 10:notas
+    var COL = {
+      id_producto:              0,
+      id_productor:             1,
+      nombre:                   2,
+      unidad_venta:             3,
+      precio_unitario:          4,
+      disponible_edicion_actual:5,
+      stock_estimado:           6,
+      es_oferta:                7,
+      es_intercambio_directo:   8,
+      ultima_actualizacion:     9,
+      notas:                   10,
+    };
 
-      var infoBox  = document.getElementById('productor-info');
-      var nombreEl = document.getElementById('productor-nombre');
-      var idEl     = document.getElementById('productor-id');
-      idEl.textContent = idProductor;
-      nombreEl.textContent = preview ? '(vista previa de desarrollo)' : 'Cargando…';
-      infoBox.style.display = 'block';
+    // ── Init ───────────────────────────────────────────────────────
+    var idProductor = NM.getQueryParam('id_productor');
 
-      // 2. Aquí, en una próxima iteración, vamos a hacer fetch de los productos
-      //    del productor desde un endpoint de Make (o un JSON estático) para
-      //    pre-poblar la lista. Por ahora el productor agrega manualmente.
+    if (!idProductor) {
+      document.getElementById('error-link').classList.remove('hidden');
+      return;
+    }
 
-      // 3. Agregar / eliminar filas de producto
-      var template = document.getElementById('product-row-template');
-      var list     = document.getElementById('product-list');
-      var btnAdd   = document.getElementById('btn-add-product');
+    document.getElementById('contenido-principal').classList.remove('hidden');
 
-      function addProductRow() {
-        var clone = template.content.cloneNode(true);
-        list.appendChild(clone);
-      }
+    // Estado mutable
+    var productosOriginales = [];  // snapshot de lo que vino de gviz
+    var productosModificados = {}; // id_producto → true si hay cambios
+    var productosNuevos = [];      // productos sin id_producto (a crear)
+    var productosQuitados = {};    // id_producto → true si se quitó de esta edición
 
-      btnAdd.addEventListener('click', addProductRow);
+    // ── Cargar datos desde gviz ────────────────────────────────────
+    function cargarProductos() {
+      var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
+        '/gviz/tq?tqx=out:json&sheet=Productos_API_Stock&headers=1';
 
-      // Iniciar con una fila vacía para guiar al usuario
-      addProductRow();
+      fetch(url)
+        .then(function (r) { return r.text(); })
+        .then(function (text) {
+          // gviz devuelve un callback JS, no JSON puro — hay que extraer el JSON
+          var jsonStr = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+          if (!jsonStr) throw new Error('Respuesta inesperada de gviz');
+          var data = JSON.parse(jsonStr[1]);
+          procesarRespuestaGviz(data);
+        })
+        .catch(function (err) {
+          console.error('Error cargando productos:', err);
+          document.getElementById('tbody-stock').innerHTML =
+            '<tr><td colspan="7" class="center muted">No pudimos cargar tus productos. ' +
+            'Recargá la página o avisanos al Nodo.</td></tr>';
+        });
+    }
 
-      list.addEventListener('click', function (e) {
-        if (e.target.matches('[data-action="remove-product"]')) {
-          var row = e.target.closest('[data-product-row]');
-          if (row && list.querySelectorAll('[data-product-row]').length > 1) {
-            row.remove();
-          } else if (row) {
-            // No permitir quedarse sin ninguna fila; limpiar la actual
-            row.querySelectorAll('input, select').forEach(function (el) {
-              if (el.type === 'checkbox') el.checked = (el.name === 'disponible');
-              else el.value = '';
-            });
-          }
-        }
-      });
+    function procesarRespuestaGviz(data) {
+      var rows = data.table.rows;
 
-      // 4. Construcción del payload al enviar
-      var form = document.getElementById('stock-form');
-
-      NM.bindFormSubmit(form, function buildPayload() {
-        var rows = list.querySelectorAll('[data-product-row]');
-        var productos = [];
-
-        rows.forEach(function (row) {
-          var nombre  = row.querySelector('[name="nombre"]').value.trim();
-          if (!nombre) return;
-          productos.push({
-            nombre:     nombre,
-            unidad:     row.querySelector('[name="unidad_venta"]').value,
-            precio:     parseFloat(row.querySelector('[name="precio"]').value) || null,
-            disponible: row.querySelector('[name="disponible"]').checked,
-            es_oferta:  row.querySelector('[name="es_oferta"]').checked,
-          });
+      // Filtrar solo los productos de este productor
+      var misProd = rows
+        .map(function (row) {
+          return row.c.map(function (c) { return c ? c.v : null; });
+        })
+        .filter(function (cols) {
+          return String(cols[COL.id_productor]).trim() === idProductor.trim();
         });
 
-        if (productos.length === 0) {
-          NM.showErrorMessage(form, 'Tenés que cargar al menos un producto antes de enviar.');
-          return null;
-        }
+      productosOriginales = misProd;
 
-        return {
-          id_productor: idProductor,
-          enviado_en:   new Date().toISOString(),
-          productos:    productos,
-          notas:        document.getElementById('notas').value.trim(),
-        };
-      }, {
-        successMessage:
-          'Recibimos tu actualización con éxito. La equipa del Nodo va a revisarla y vas a recibir confirmación por WhatsApp.',
+      document.getElementById('contador-productos').textContent = misProd.length;
+
+      if (misProd.length === 0) {
+        document.getElementById('tbody-stock').innerHTML =
+          '<tr><td colspan="7" class="center muted">' +
+          'No encontramos productos en tu catálogo. ' +
+          'Usá el botón de abajo para agregar tu primer producto.</td></tr>';
+      } else {
+        renderizarTabla(misProd);
+      }
+    }
+
+    // ── Render de la tabla ─────────────────────────────────────────
+    function renderizarTabla(productos) {
+      var tbody = document.getElementById('tbody-stock');
+      tbody.innerHTML = '';
+
+      productos.forEach(function (cols) {
+        var idProd = cols[COL.id_producto];
+        var nombre = cols[COL.nombre] || '';
+        var unidad = cols[COL.unidad_venta] || 'unidad';
+        var precio = cols[COL.precio_unitario] || '';
+        var stock  = cols[COL.stock_estimado] || '';
+        var esOferta    = String(cols[COL.es_oferta] || 'No').trim() === 'Sí';
+        var disponible  = String(cols[COL.disponible_edicion_actual] || 'No').trim() === 'Sí';
+        var ultimaAct   = cols[COL.ultima_actualizacion] || '';
+
+        var tr = document.createElement('tr');
+        tr.dataset.id = idProd;
+        if (!disponible) tr.classList.add('is-quitado');
+
+        tr.innerHTML =
+          '<td>' +
+            '<span class="nombre-producto">' + escH(nombre) +
+              '<span class="badge-modificado" style="display:none" title="Modificado"></span>' +
+            '</span>' +
+            (ultimaAct ? '<small class="muted">Últ. actualización: ' + escH(String(ultimaAct).slice(0,10)) + '</small>' : '') +
+          '</td>' +
+
+          '<td><span class="muted">' + escH(unidad) + '</span></td>' +
+
+          '<td>' +
+            '<input class="celda-editable precio" type="number" min="0" step="50" ' +
+              'value="' + (precio || '') + '" data-campo="precio" ' +
+              'placeholder="$ precio" title="Editá el precio">' +
+          '</td>' +
+
+          '<td>' +
+            '<input class="celda-editable stock" type="number" min="0" step="1" ' +
+              'value="' + (stock || '') + '" data-campo="stock" ' +
+              'placeholder="—" title="Stock estimado">' +
+          '</td>' +
+
+          '<td class="center">' +
+            '<label class="toggle-disponible" title="¿Está en oferta?">' +
+              '<input type="checkbox" data-campo="es_oferta"' + (esOferta ? ' checked' : '') + '>' +
+              '<span>Oferta</span>' +
+            '</label>' +
+          '</td>' +
+
+          '<td class="center">' +
+            '<label class="toggle-disponible">' +
+              '<input type="checkbox" data-campo="disponible"' + (disponible ? ' checked' : '') + '>' +
+              '<span>' + (disponible ? 'Disponible' : 'Quitado') + '</span>' +
+            '</label>' +
+          '</td>' +
+
+          '<td>' +
+            (disponible
+              ? '<button class="btn-accion quitar" data-id="' + idProd + '" data-accion="quitar">' +
+                  'Quitar de esta edición</button>'
+              : '<button class="btn-accion restaurar" data-id="' + idProd + '" data-accion="restaurar">' +
+                  'Incluir en esta edición</button>') +
+          '</td>';
+
+        tbody.appendChild(tr);
       });
-    })();
+
+      // Escuchar cambios en los inputs
+      tbody.addEventListener('input', onCambioInput);
+      tbody.addEventListener('change', onCambioInput);
+      tbody.addEventListener('click', onClickAccion);
+    }
+
+    function onCambioInput(e) {
+      var target = e.target;
+      var tr = target.closest('tr[data-id]');
+      if (!tr) return;
+      var id = tr.dataset.id;
+
+      // Actualizar texto del checkbox de disponible
+      if (target.dataset.campo === 'disponible') {
+        var label = target.nextElementSibling;
+        if (label) label.textContent = target.checked ? 'Disponible' : 'Quitado';
+        tr.classList.toggle('is-quitado', !target.checked);
+      }
+
+      // Mostrar badge de modificado
+      var badge = tr.querySelector('.badge-modificado');
+      if (badge) badge.style.display = 'inline-block';
+
+      productosModificados[id] = true;
+      actualizarContadorCambios();
+    }
+
+    function onClickAccion(e) {
+      var btn = e.target.closest('[data-accion]');
+      if (!btn) return;
+      var id = btn.dataset.id;
+      var accion = btn.dataset.accion;
+      var tr = document.querySelector('tr[data-id="' + id + '"]');
+      if (!tr) return;
+
+      if (accion === 'quitar') {
+        var chk = tr.querySelector('[data-campo="disponible"]');
+        if (chk) { chk.checked = false; chk.dispatchEvent(new Event('change', {bubbles:true})); }
+        btn.textContent = 'Incluir en esta edición';
+        btn.dataset.accion = 'restaurar';
+        btn.classList.remove('quitar');
+        btn.classList.add('restaurar');
+        productosQuitados[id] = true;
+      } else if (accion === 'restaurar') {
+        var chk2 = tr.querySelector('[data-campo="disponible"]');
+        if (chk2) { chk2.checked = true; chk2.dispatchEvent(new Event('change', {bubbles:true})); }
+        btn.textContent = 'Quitar de esta edición';
+        btn.dataset.accion = 'quitar';
+        btn.classList.remove('restaurar');
+        btn.classList.add('quitar');
+        delete productosQuitados[id];
+      }
+    }
+
+    function actualizarContadorCambios() {
+      var n = Object.keys(productosModificados).length + productosNuevos.length;
+      document.getElementById('num-cambios').textContent = n;
+      document.getElementById('contador-cambios').style.display = n > 0 ? '' : 'none';
+      document.getElementById('sin-cambios').style.display = n > 0 ? 'none' : '';
+      document.getElementById('btn-enviar').disabled = n === 0;
+      document.getElementById('btn-enviar-bottom').disabled = n === 0;
+    }
+
+    // ── Agregar producto nuevo ─────────────────────────────────────
+    document.getElementById('btn-agregar').addEventListener('click', function () {
+      var tbody = document.getElementById('tbody-stock');
+      var idx = productosNuevos.length;
+      var key = '__nuevo__' + idx;
+
+      var tr = document.createElement('tr');
+      tr.dataset.id = key;
+      tr.classList.add('is-nuevo', 'fila-nuevo');
+
+      tr.innerHTML =
+        '<td>' +
+          '<input class="celda-editable" type="text" placeholder="Nombre del producto *" ' +
+            'data-campo="nombre" style="min-width: 200px;" required>' +
+        '</td>' +
+        '<td>' +
+          '<select class="celda-editable" data-campo="unidad">' +
+            '<option value="unidad">unidad</option>' +
+            '<option value="kg">kg</option>' +
+            '<option value="gr">gramos</option>' +
+            '<option value="atado">atado</option>' +
+            '<option value="docena">docena</option>' +
+            '<option value="bolsa">bolsa</option>' +
+            '<option value="botella">botella</option>' +
+            '<option value="frasco">frasco</option>' +
+            '<option value="litro">litro</option>' +
+            '<option value="maple">maple</option>' +
+            '<option value="pack">pack</option>' +
+            '<option value="ramito">ramito</option>' +
+          '</select>' +
+        '</td>' +
+        '<td><input class="celda-editable precio" type="number" min="0" step="50" ' +
+          'placeholder="$ precio" data-campo="precio"></td>' +
+        '<td><input class="celda-editable stock" type="number" min="0" step="1" ' +
+          'placeholder="—" data-campo="stock"></td>' +
+        '<td class="center">' +
+          '<label class="toggle-disponible">' +
+            '<input type="checkbox" data-campo="es_oferta">' +
+            '<span>Oferta</span>' +
+          '</label>' +
+        '</td>' +
+        '<td class="center">' +
+          '<label class="toggle-disponible">' +
+            '<input type="checkbox" data-campo="disponible" checked>' +
+            '<span>Disponible</span>' +
+          '</label>' +
+        '</td>' +
+        '<td>' +
+          '<button class="btn-accion quitar" data-accion="eliminar-nuevo" data-key="' + key + '">' +
+            '✕ Cancelar</button>' +
+        '</td>';
+
+      tbody.appendChild(tr);
+
+      // Registrar en el array de nuevos
+      productosNuevos.push({ key: key, tr: tr });
+
+      // Escuchar cambio de nombre para habilitar envío
+      tr.querySelector('[data-campo="nombre"]').addEventListener('input', actualizarContadorCambios);
+
+      // Botón cancelar
+      tr.querySelector('[data-accion="eliminar-nuevo"]').addEventListener('click', function () {
+        tr.remove();
+        productosNuevos = productosNuevos.filter(function (p) { return p.key !== key; });
+        actualizarContadorCambios();
+      });
+
+      actualizarContadorCambios();
+      tr.querySelector('[data-campo="nombre"]').focus();
+    });
+
+    // ── Construir payload y enviar ─────────────────────────────────
+    function buildPayload() {
+      var tbody = document.getElementById('tbody-stock');
+      var productos = [];
+
+      // 1. Productos existentes modificados
+      productosOriginales.forEach(function (cols) {
+        var id = cols[COL.id_producto];
+        if (!productosModificados[id]) return;
+        var tr = tbody.querySelector('tr[data-id="' + id + '"]');
+        if (!tr) return;
+
+        productos.push({
+          id_producto:              id,
+          nombre:                   cols[COL.nombre],
+          unidad:                   cols[COL.unidad_venta],
+          precio:                   parseFloat(tr.querySelector('[data-campo="precio"]').value) || null,
+          stock_estimado:           parseFloat(tr.querySelector('[data-campo="stock"]').value) || null,
+          disponible:               tr.querySelector('[data-campo="disponible"]').checked,
+          es_oferta:                tr.querySelector('[data-campo="es_oferta"]').checked,
+          accion:                   'actualizar',
+        });
+      });
+
+      // 2. Productos nuevos
+      productosNuevos.forEach(function (p) {
+        var tr = p.tr;
+        var nombre = tr.querySelector('[data-campo="nombre"]').value.trim();
+        if (!nombre) return;
+        productos.push({
+          id_producto:   null,  // Make genera el ID
+          nombre:        nombre,
+          unidad:        tr.querySelector('[data-campo="unidad"]').value,
+          precio:        parseFloat(tr.querySelector('[data-campo="precio"]').value) || null,
+          stock_estimado:parseFloat(tr.querySelector('[data-campo="stock"]').value) || null,
+          disponible:    tr.querySelector('[data-campo="disponible"]').checked,
+          es_oferta:     tr.querySelector('[data-campo="es_oferta"]').checked,
+          accion:        'nuevo',
+        });
+      });
+
+      if (productos.length === 0) {
+        alert('No hay cambios para enviar.');
+        return null;
+      }
+
+      return {
+        id_productor: idProductor,
+        enviado_en:   new Date().toISOString(),
+        productos:    productos,
+        notas:        document.getElementById('notas').value.trim(),
+      };
+    }
+
+    function enviar() {
+      var payload = buildPayload();
+      if (!payload) return;
+
+      var btns = document.querySelectorAll('#btn-enviar, #btn-enviar-bottom');
+      btns.forEach(function (b) {
+        b.disabled = true;
+        b.innerHTML = '<span class="spinner"></span><span>Enviando…</span>';
+      });
+
+      fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        mode: 'no-cors',  // evita error CORS; Make sí recibe el POST
+      })
+      .then(function () {
+        // Con no-cors no podemos leer la respuesta, asumimos éxito
+        document.getElementById('contenido-principal').innerHTML =
+          '<div class="note note--success" style="margin-top: var(--s-7)">' +
+          '<strong>¡Listo!</strong> Recibimos tu actualización de stock. ' +
+          'En breve la equipa del Nodo la revisa. ' +
+          'Si agregaste productos nuevos, te confirmamos la asignación por WhatsApp.' +
+          '</div>';
+      })
+      .catch(function () {
+        btns.forEach(function (b) {
+          b.disabled = false;
+          b.textContent = 'Enviar actualización';
+        });
+        alert('No pudimos enviar. Verificá tu conexión y probá de nuevo, o avisanos al Nodo.');
+      });
+    }
+
+    document.getElementById('btn-enviar').addEventListener('click', enviar);
+    document.getElementById('btn-enviar-bottom').addEventListener('click', enviar);
+
+    // ── Helpers ───────────────────────────────────────────────────
+    function escH(s) {
+      return String(s || '')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Arrancar ─────────────────────────────────────────────────
+    cargarProductos();
+
+  })();
   </script>
 </body>
 </html>
