@@ -265,8 +265,12 @@
           Revisá y actualizá tus productos. Los cambios no se guardan hasta que
           hagas clic en <strong>Enviar actualización</strong>.
         </p>
-        <div id="info-productor" class="note note--info" style="display:none">
-          Cargando datos de tu productor…
+        <div id="info-productor" class="note note--info">
+          <span>Estás cargando stock como: </span>
+          <strong id="nombre-productor">…</strong>
+          <small style="display:block; margin-top:4px; opacity:0.7;">
+            Identificador interno: <code id="id-productor-visible"></code>
+          </small>
         </div>
       </section>
 
@@ -349,8 +353,8 @@
     var NM = window.NodoMatriz;
 
     // ── Configuración ──────────────────────────────────────────────
-    var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
-    var WEBHOOK_URL    = 'https://hook.us2.make.com/thlpwqa9epg354ekwp44ijr1fhpg5xsq';
+    var SPREADSHEET_ID = 'REEMPLAZAR_SPREADSHEET_ID';
+    var WEBHOOK_URL    = 'REEMPLAZAR_WEBHOOK_A2';
 
     // Columnas de la hoja Productos_API_Stock (en orden, 0-based):
     // 0:id_producto, 1:id_productor, 2:nombre, 3:unidad_venta,
@@ -379,12 +383,46 @@
     }
 
     document.getElementById('contenido-principal').classList.remove('hidden');
+    document.getElementById('id-productor-visible').textContent = idProductor;
 
     // Estado mutable
     var productosOriginales = [];  // snapshot de lo que vino de gviz
     var productosModificados = {}; // id_producto → true si hay cambios
     var productosNuevos = [];      // productos sin id_producto (a crear)
     var productosQuitados = {};    // id_producto → true si se quitó de esta edición
+
+    // ── Cargar nombre del productor desde Productores_API ──────────
+    function cargarNombreProductor() {
+      var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
+        '/gviz/tq?tqx=out:json&sheet=Productores_API&headers=1';
+
+      fetch(url)
+        .then(function (r) { return r.text(); })
+        .then(function (text) {
+          var match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+          if (!match) return;
+          var data = JSON.parse(match[1]);
+          var rows = data.table.rows;
+
+          // Buscar la fila que corresponde a este id_productor
+          var fila = rows.find(function (row) {
+            var id = row.c[0] ? row.c[0].v : null;
+            return String(id).trim() === idProductor.trim();
+          });
+
+          if (fila && fila.c[1] && fila.c[1].v) {
+            document.getElementById('nombre-productor').textContent = fila.c[1].v;
+          } else {
+            document.getElementById('nombre-productor').textContent =
+              '(productor sin nombre registrado)';
+          }
+        })
+        .catch(function (err) {
+          console.warn('No se pudo cargar el nombre del productor:', err);
+          document.getElementById('nombre-productor').textContent =
+            '(no pudimos identificarte)';
+        });
+    }
 
     // ── Cargar datos desde gviz ────────────────────────────────────
     function cargarProductos() {
@@ -733,6 +771,7 @@
     }
 
     // ── Arrancar ─────────────────────────────────────────────────
+    cargarNombreProductor();
     cargarProductos();
 
   })();
