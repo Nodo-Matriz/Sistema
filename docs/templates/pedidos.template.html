@@ -364,7 +364,17 @@
       //     → en este caso los agrupa por categoría acá, en el navegador.
       function normalizarCatalogo(arr) {
         if (!Array.isArray(arr) || arr.length === 0) return [];
-
+      // Convertir "Sí"/"No" (texto de la planilla) a booleanos reales
+        function esSi(v) {
+          if (v === true) return true;
+          if (v === null || v === undefined) return false;
+          var s = String(v).trim().toLowerCase();
+          return s === 'sí' || s === 'si' || s === 'true';
+        }
+        arr.forEach(function (p) {
+          p.fraccionable = esSi(p.fraccionable);
+          p.es_oferta = esSi(p.es_oferta);
+        });
         // Si el primer elemento ya tiene .productos, es el formato anidado
         if (arr[0] && Array.isArray(arr[0].productos)) return arr;
 
