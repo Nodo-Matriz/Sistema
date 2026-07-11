@@ -346,7 +346,8 @@ __CATEGORIAS_JSON__
       var catalogoRaw = document.getElementById('categorias-json').textContent.trim();
       var categorias;
       try {
-        categorias = JSON.parse(catalogoRaw);
+        var parsed = JSON.parse(catalogoRaw);
+        categorias = normalizarCatalogo(parsed);
       } catch (err) {
         // Datos de prueba para desarrollo cuando el template no fue procesado
         if (/^__CATEGORIAS/.test(catalogoRaw) || /^\{\{/.test(catalogoRaw)) {
@@ -355,6 +356,46 @@ __CATEGORIAS_JSON__
           console.error('JSON inválido', err);
           categorias = [];
         }
+      }
+
+      // Acepta dos formatos:
+      //  a) Array de categorías anidadas: [{id, nombre, productos:[...]}, ...]
+      //  b) Array plano de productos con campo "categoria": [{nombre, precio, categoria}, ...]
+      //     → en este caso los agrupa por categoría acá, en el navegador.
+      function normalizarCatalogo(arr) {
+        if (!Array.isArray(arr) || arr.length === 0) return [];
+
+        // Si el primer elemento ya tiene .productos, es el formato anidado
+        if (arr[0] && Array.isArray(arr[0].productos)) return arr;
+
+        // Formato plano: agrupar por campo "categoria"
+        var grupos = {};
+        var orden = [];
+        arr.forEach(function (p) {
+          var cat = (p.categoria && String(p.categoria).trim()) || 'Otros';
+          if (!grupos[cat]) {
+            grupos[cat] = [];
+            orden.push(cat);
+          }
+          // Derivar fracciones si el producto es fraccionable y no las trae
+          if (p.fraccionable && !p.fracciones) {
+            p.fracciones = ['1/4', '1/2', '1', '2'];
+          }
+          grupos[cat].push(p);
+        });
+
+        // Orden alfabético de categorías, con "Ofertas" primero si existiera
+        orden.sort(function (a, b) {
+          return a.localeCompare(b, 'es');
+        });
+
+        return orden.map(function (cat) {
+          return {
+            id: cat.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+            nombre: cat,
+            productos: grupos[cat],
+          };
+        });
       }
 
       function makeDemoData() {
@@ -608,6 +649,43 @@ __CATEGORIAS_JSON__
       if (emailParam) {
         var emailField = document.getElementById('email');
         if (emailField) emailField.value = decodeURIComponent(emailParam);
+        cargarDatosConsumidor(decodeURIComponent(emailParam));
+      }
+
+      // Si el email viene en el link y el consumidor ya existe en el padrón,
+      // pre-llenamos nombre y teléfono, y marcamos "ya pedí antes".
+      function cargarDatosConsumidor(email) {
+        var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
+        var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
+          '/gviz/tq?tqx=out:json&sheet=Consumidores_API&headers=1';
+
+        fetch(url)
+          .then(function (r) { return r.text(); })
+          .then(function (text) {
+            var m = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+            if (!m) return;
+            var data = JSON.parse(m[1]);
+            var fila = data.table.rows.find(function (row) {
+              var mail = row.c[3] ? String(row.c[3].v).trim().toLowerCase() : '';
+              return mail === email.trim().toLowerCase();
+            });
+            if (!fila) return; // consumidor nuevo, no pasa nada
+
+            var nombre = fila.c[1] ? fila.c[1].v : '';
+            var tel    = fila.c[2] ? fila.c[2].v : '';
+
+            var nombreField = document.getElementById('nombre');
+            var telField    = document.getElementById('telefono');
+            if (nombreField && nombre && !nombreField.value) nombreField.value = nombre;
+            if (telField && tel && !telField.value) telField.value = tel;
+
+            // Marcar "No, ya pedí antes"
+            var radioNo = document.querySelector('input[name="primera_vez"][value="no"]');
+            if (radioNo) radioNo.checked = true;
+          })
+          .catch(function (err) {
+            console.warn('No se pudieron precargar los datos del consumidor:', err);
+          });
       }
 
       // Mostrar/ocultar campo de dirección según la entrega
