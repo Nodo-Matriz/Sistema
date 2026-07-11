@@ -379,7 +379,7 @@
           }
           // Derivar fracciones si el producto es fraccionable y no las trae
           if (p.fraccionable && !p.fracciones) {
-            p.fracciones = ['1/4', '1/2', '1', '2'];
+            p.fracciones = ['1/4', '1/2', '1'];
           }
           grupos[cat].push(p);
         });
@@ -466,16 +466,26 @@
         meta += 'por ' + escapeHtml(p.unidad);
 
         var control = '';
+
+        // Cantidad: combo de 0 a 5 (0 = no pedir), sin escritura libre
+        control += '<label class="product__ctl-label">Cantidad ';
+        control += '<select class="select" data-product="' + p.id_producto + '" data-field="cantidad" style="width:auto;">';
+        for (var i = 0; i <= 5; i++) {
+          control += '<option value="' + i + '">' + i + '</option>';
+        }
+        control += '</select></label>';
+
+        // Fracción: SOLO si el producto es fraccionable.
+        // Por defecto queda seleccionada la fracción más grande (la última de la lista).
         if (p.fraccionable && p.fracciones && p.fracciones.length) {
-          control += '<select class="select" data-product="' + p.id_producto + '" data-field="fraccion" style="width: auto;">';
-          control += '<option value="0">— sin elegir —</option>';
-          p.fracciones.forEach(function (f) {
-            control += '<option value="' + f + '">' + f + ' ' + escapeHtml(p.unidad) + '</option>';
+          var ultima = p.fracciones.length - 1;
+          control += '<label class="product__ctl-label">Fracción ';
+          control += '<select class="select" data-product="' + p.id_producto + '" data-field="fraccion" style="width:auto;">';
+          p.fracciones.forEach(function (f, idx) {
+            var sel = (idx === ultima) ? ' selected' : '';
+            control += '<option value="' + f + '"' + sel + '>' + f + ' ' + escapeHtml(p.unidad) + '</option>';
           });
-          control += '</select>';
-          control += '<input class="input" type="number" min="0" step="1" value="0" data-product="' + p.id_producto + '" data-field="cantidad" placeholder="cant." style="width: 80px;">';
-        } else {
-          control += '<input class="input" type="number" min="0" step="1" value="0" data-product="' + p.id_producto + '" data-field="cantidad" placeholder="0" style="width: 100px;">';
+          control += '</select></label>';
         }
 
         return '' +
@@ -492,7 +502,6 @@
           '  </div>' +
           '</div>';
       }
-
       function escapeHtml(s) {
         if (s === null || s === undefined) return '';
         return String(s)
@@ -534,7 +543,7 @@
       // ----------------------------------------------------------------
       // 4. Captura de cantidades y fracciones
       // ----------------------------------------------------------------
-      stepsContainer.addEventListener('input', function (e) {
+      function onControlChange(e) {
         var t = e.target;
         if (!t.dataset || !t.dataset.product) return;
         var id = t.dataset.product;
@@ -548,6 +557,8 @@
         } else if (field === 'fraccion') {
           stateProductos[id].fraccion = t.value === '0' ? null : t.value;
         }
+        stepsContainer.addEventListener('input', onControlChange);
+      stepsContainer.addEventListener('change', onControlChange);
       });
 
       // ----------------------------------------------------------------
