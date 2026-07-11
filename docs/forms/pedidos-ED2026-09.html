@@ -557,9 +557,9 @@
         } else if (field === 'fraccion') {
           stateProductos[id].fraccion = t.value === '0' ? null : t.value;
         }
-        stepsContainer.addEventListener('input', onControlChange);
+      }
+      stepsContainer.addEventListener('input', onControlChange);
       stepsContainer.addEventListener('change', onControlChange);
-      });
 
       // ----------------------------------------------------------------
       // 5. Cálculo del resumen
