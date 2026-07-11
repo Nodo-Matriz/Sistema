@@ -374,6 +374,11 @@
         arr.forEach(function (p) {
           p.fraccionable = esSi(p.fraccionable);
           p.es_oferta = esSi(p.es_oferta);
+          // Fracciones propias del producto: texto "1/4,1/2,1" → lista de opciones
+          if (typeof p.fracciones === 'string') {
+            var lista = p.fracciones.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+            p.fracciones = lista.length ? lista : null;
+          }
         });
         // Si el primer elemento ya tiene .productos, es el formato anidado
         if (arr[0] && Array.isArray(arr[0].productos)) return arr;
