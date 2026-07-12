@@ -350,7 +350,7 @@
         categorias = normalizarCatalogo(parsed);
       } catch (err) {
         // Datos de prueba para desarrollo cuando el template no fue procesado
-        if (/^__CATEGORIAS/.test(catalogoRaw) || /^\{\{/.test(catalogoRaw)) {
+        if (/^\[?\s*\{\{/.test(catalogoRaw) || /^__CATEGORIAS/.test(catalogoRaw)) {
           categorias = makeDemoData();
         } else {
           console.error('JSON inválido', err);
