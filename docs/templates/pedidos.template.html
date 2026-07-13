@@ -537,7 +537,8 @@
           stepEl.querySelectorAll('.product').forEach(function (p) {
             p.classList.add('is-active');
           });
-          window.scrollTo(0, 0);
+          var y = stepEl.getBoundingClientRect().top + window.pageYOffset - 90;
+          window.scrollTo({ top: y, behavior: 'smooth' });
         }
       });
 
