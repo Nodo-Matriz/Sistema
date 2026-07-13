@@ -541,7 +541,7 @@
           window.scrollTo({ top: y, behavior: 'smooth' });
         }
       });
-
+      window.scrollTo(0, 0);
       // El botón "Revisar pedido" muestra la sección final
       var btnFinish = wizardEl.querySelector('[data-action="wizard-finish"]');
       btnFinish.addEventListener('click', function () {
