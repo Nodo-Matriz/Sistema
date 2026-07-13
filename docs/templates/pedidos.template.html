@@ -478,7 +478,11 @@
 
         var meta = '';
         if (p.descripcion) meta += escapeHtml(p.descripcion) + ' · ';
-        if (p.origen) meta += escapeHtml(p.origen) + ' · ';
+        if (p.origen) {
+          meta += escapeHtml(p.origen);
+          if (p.distancia_km) meta += ' (a ' + escapeHtml(p.distancia_km) + ' km)';
+          meta += ' · ';
+        }
         if (p.productor) meta += escapeHtml(p.productor) + ' · ';
         meta += 'por ' + escapeHtml(p.unidad);
 
