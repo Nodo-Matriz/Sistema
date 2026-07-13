@@ -477,7 +477,9 @@
         }
 
         var meta = '';
+        if (p.descripcion) meta += escapeHtml(p.descripcion) + ' · ';
         if (p.origen) meta += escapeHtml(p.origen) + ' · ';
+        if (p.productor) meta += escapeHtml(p.productor) + ' · ';
         meta += 'por ' + escapeHtml(p.unidad);
 
         var control = '';
@@ -535,7 +537,7 @@
           stepEl.querySelectorAll('.product').forEach(function (p) {
             p.classList.add('is-active');
           });
-          window.scrollTo({ top: wizardEl.offsetTop - 16, behavior: 'smooth' });
+          window.scrollTo(0, 0);
         }
       });
 
