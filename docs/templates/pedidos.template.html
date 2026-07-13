@@ -532,10 +532,10 @@
 
       var wizard = NM.initWizard(wizardEl, {
         onStepChange: function (idx, stepEl) {
-          // Marcar productos en este paso como "activos" visualmente
           stepEl.querySelectorAll('.product').forEach(function (p) {
             p.classList.add('is-active');
           });
+          window.scrollTo({ top: wizardEl.offsetTop - 16, behavior: 'smooth' });
         }
       });
 
@@ -587,7 +587,11 @@
           cat.productos.forEach(function (p) {
             var s = stateProductos[p.id_producto];
             if (!s || s.cantidad <= 0) return;
-
+            // Leer la fracción directamente del combo (el default no dispara "change")
+            if (p.fraccionable && !s.fraccion) {
+              var sel = document.querySelector('select[data-product="' + p.id_producto + '"][data-field="fraccion"]');
+              if (sel && sel.value && sel.value !== '0') s.fraccion = sel.value;
+            }
             // Si es fraccionable y eligió fracción, multiplicar por la fracción
             var multiplicador = 1;
             if (p.fraccionable && s.fraccion) {
@@ -659,7 +663,7 @@
 
       function actualizarTotales(subtotal) {
         var aportePorc = getAportePorc();
-        var aporte = subtotal * (aportePorc / 100);
+        var aporte = Math.round(subtotal * (aportePorc / 100));
         var total = subtotal + aporte;
 
         document.getElementById('subtotal').textContent = formatMoney(subtotal);
