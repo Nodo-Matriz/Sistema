@@ -260,7 +260,7 @@
     <div id="contenido-principal" class="hidden">
 
       <section class="fade-in" data-delay="1">
-        <h1>Tu stock para la próxima edición</h1>
+        <h1>Tus productos para la próxima edición</h1>
         <p class="lead">
           Revisá y actualizá tus productos. Los cambios no se guardan hasta que
           hagas clic en <strong>Enviar actualización</strong>.
@@ -486,6 +486,11 @@
         var esOferta    = String(cols[COL.es_oferta] || 'No').trim() === 'Sí';
         var disponible  = String(cols[COL.disponible_edicion_actual] || 'No').trim() === 'Sí';
         var ultimaAct   = cols[COL.ultima_actualizacion] || '';
+var mD = String(ultimaAct).match(/^Date\((\d+),(\d+),(\d+)/);
+if (mD) {
+  ultimaAct = ('0' + mD[3]).slice(-2) + '/' +
+              ('0' + (parseInt(mD[2], 10) + 1)).slice(-2) + '/' + mD[1];
+}
 
         var tr = document.createElement('tr');
         tr.dataset.id = idProd;
