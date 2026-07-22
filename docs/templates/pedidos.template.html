@@ -80,19 +80,19 @@
       <!-- Las categorías se renderizan acá vía JS desde categorias_json -->
       <div id="wizard-steps"></div>
 
-      <div class="wizard__nav">
-        <button type="button" class="btn btn--ghost" data-action="wizard-prev">
-          ← Categoría anterior
-        </button>
-        <span class="wizard__nav-info">
-          Recorré todas las categorías para poder cerrar el pedido.
-        </span>
+      <div class="wizard__nav" style="display:flex; flex-direction:column; align-items:stretch; gap:10px;">
         <button type="button" class="btn btn--primary" data-action="wizard-next">
           Siguiente categoría →
         </button>
         <button type="button" class="btn btn--primary hidden" data-action="wizard-finish">
           Revisar pedido →
         </button>
+        <button type="button" class="btn btn--ghost" data-action="wizard-prev">
+          ← Categoría anterior
+        </button>
+        <span class="wizard__nav-info" style="text-align:center;">
+          Recorré todas las categorías para poder cerrar el pedido.
+        </span>
       </div>
     </div>
 
