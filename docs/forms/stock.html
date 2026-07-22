@@ -250,10 +250,10 @@
 
       .stock-table tr {
         display: grid;
-        grid-template-columns: 34px 1fr 1fr 1fr;
+        grid-template-columns: 34px 1.2fr 1fr;
         grid-template-areas:
-          "disp nombre nombre nombre"
-          ".    precio stock  oferta";
+          "disp nombre nombre"
+          ".    precio oferta";
         align-items: start;
         gap: 4px var(--s-2);
         padding: var(--s-3);
@@ -269,11 +269,9 @@
       .td-disp   { grid-area: disp; padding-top: 2px; }
       .td-nombre { grid-area: nombre; }
       .td-precio { grid-area: precio; }
-      .td-stock  { grid-area: stock; }
       .td-oferta { grid-area: oferta; align-self: end; padding-bottom: 4px; }
 
-      .td-precio::before,
-      .td-stock::before {
+      .td-precio::before {
         display: block;
         font-size: 0.68rem;
         font-weight: 700;
@@ -281,13 +279,10 @@
         text-transform: uppercase;
         color: var(--c-tierra);
         margin-bottom: 2px;
+        content: 'Precio';
       }
 
-      .td-precio::before { content: 'Precio'; }
-      .td-stock::before  { content: 'Stock estimado'; }
-
-      .celda-editable.precio,
-      .celda-editable.stock { max-width: none; width: 100%; }
+      .celda-editable.precio { max-width: none; width: 100%; }
     }
   </style>
 </head>
@@ -315,9 +310,9 @@
       <section class="fade-in" data-delay="1">
         <h1>Tus productos para la próxima edición</h1>
         <p class="lead">
-          Todos tus productos arrancan <strong>incluidos</strong> en esta edición.
-          Destildá los que no vas a traer, ajustá precios si hace falta, y
-          confirmá con <strong>Enviar actualización</strong>.
+          Indicá qué productos vas a tener disponibles para esta nueva edición,
+          ajustá los precios si hace falta y marcá cuáles están en oferta.
+          Cuando termines, confirmá con <strong>Enviar actualización</strong>.
         </p>
         <div id="info-productor" class="note note--info">
           <span>Estás actualizando como: </span>
@@ -353,22 +348,21 @@
         <table class="stock-table" id="tabla-stock">
           <thead>
             <tr>
-              <th></th>
+              <th>Disponible</th>
               <th>Producto</th>
               <th>Precio</th>
-              <th>Stock estimado</th>
               <th>Oferta</th>
             </tr>
           </thead>
           <tbody id="tbody-stock">
             <!-- Filas del skeleton de carga -->
-            <tr><td colspan="5"><span class="skeleton" style="width:80%"></span></td></tr>
-            <tr><td colspan="5"><span class="skeleton" style="width:65%"></span></td></tr>
-            <tr><td colspan="5"><span class="skeleton" style="width:72%"></span></td></tr>
+            <tr><td colspan="4"><span class="skeleton" style="width:80%"></span></td></tr>
+            <tr><td colspan="4"><span class="skeleton" style="width:65%"></span></td></tr>
+            <tr><td colspan="4"><span class="skeleton" style="width:72%"></span></td></tr>
           </tbody>
         </table>
       </div>
-      <p><small class="muted">✓ tildado = va en esta edición · destildá lo que no traigas</small></p>
+      <p><small class="muted">✓ tildado = disponible en esta edición · los tildados son los que estuvieron la edición pasada</small></p>
 
       <!-- Botón agregar nuevo producto -->
       <div class="mt-4">
@@ -497,7 +491,7 @@
         .catch(function (err) {
           console.error('Error cargando productos:', err);
           document.getElementById('tbody-stock').innerHTML =
-            '<tr><td colspan="5" class="center muted">No pudimos cargar tus productos. ' +
+            '<tr><td colspan="4" class="center muted">No pudimos cargar tus productos. ' +
             'Recargá la página o avisanos al Nodo.</td></tr>';
         });
     }
@@ -519,7 +513,7 @@
 
       if (misProd.length === 0) {
         document.getElementById('tbody-stock').innerHTML =
-          '<tr><td colspan="5" class="center muted">' +
+          '<tr><td colspan="4" class="center muted">' +
           'No encontramos productos en tu catálogo. ' +
           'Usá el botón de abajo para agregar tu primer producto.</td></tr>';
       } else {
@@ -540,8 +534,8 @@
         var nombre = cols[COL.nombre] || '';
         var unidad = cols[COL.unidad_venta] || 'unidad';
         var precio = cols[COL.precio_unitario] || '';
-        var stock  = cols[COL.stock_estimado] || '';
         var esOferta = String(cols[COL.es_oferta] || 'No').trim() === 'Sí';
+        var disponible = String(cols[COL.disponible_edicion_actual] || 'No').trim() === 'Sí';
         var ultimaAct = cols[COL.ultima_actualizacion] || '';
         var mD = String(ultimaAct).match(/^Date\((\d+),(\d+),(\d+)/);
         if (mD) {
@@ -554,19 +548,20 @@
           nombre: nombre,
           unidad: unidad,
           precio: parseFloat(precio) || null,
-          stock:  parseFloat(stock) || null,
           oferta: esOferta,
+          disponible: disponible,
         };
 
         var tr = document.createElement('tr');
         tr.dataset.id = idProd;
+        if (!disponible) tr.classList.add('is-quitado');
 
-        // TODOS los productos arrancan incluidos en la edición:
-        // el productor destilda los que no va a traer.
+        // Arrancan tildados SOLO los productos que estuvieron en la edición
+        // anterior; el productor tilda/destilda según lo que vaya a traer.
         tr.innerHTML =
           '<td class="td-disp center">' +
-            '<input type="checkbox" class="chk" data-campo="disponible" checked ' +
-              'title="Incluido en esta edición">' +
+            '<input type="checkbox" class="chk" data-campo="disponible"' +
+              (disponible ? ' checked' : '') + ' title="Disponible en esta edición">' +
           '</td>' +
 
           '<td class="td-nombre">' +
@@ -579,21 +574,15 @@
           '</td>' +
 
           '<td class="td-precio">' +
-            '<input class="celda-editable precio" type="number" min="0" step="50" ' +
-              'value="' + (precio || '') + '" data-campo="precio" ' +
+            '<input class="celda-editable precio" type="number" inputmode="numeric" ' +
+              'min="0" step="50" value="' + (precio || '') + '" data-campo="precio" ' +
               'placeholder="$ precio" title="Editá el precio">' +
-          '</td>' +
-
-          '<td class="td-stock">' +
-            '<input class="celda-editable stock" type="number" min="0" step="1" ' +
-              'value="' + (stock || '') + '" data-campo="stock" ' +
-              'placeholder="—" title="Stock estimado">' +
           '</td>' +
 
           '<td class="td-oferta">' +
             '<label class="toggle-oferta" title="¿Está en oferta?">' +
               '<input type="checkbox" data-campo="es_oferta"' + (esOferta ? ' checked' : '') + '>' +
-              '<span>Oferta</span>' +
+              '<span>En Oferta</span>' +
             '</label>' +
           '</td>';
 
@@ -633,23 +622,28 @@
         if (!tr || !base) return;
 
         var disponible = tr.querySelector('[data-campo="disponible"]').checked;
+
+        // Salió de la edición (estaba la vez pasada y ahora no)
         if (!disponible) {
-          items.push('<span class="nom">' + escH(base.nombre) + '</span> — ' +
-            '<span class="quitado">no va en esta edición</span>');
+          if (base.disponible) {
+            items.push('<span class="nom">' + escH(base.nombre) + '</span> — ' +
+              '<span class="quitado">no va en esta edición</span>');
+          }
           return; // si no va, el resto de los ajustes no importa
         }
 
         var difs = [];
+
+        // Se suma a la edición (no estaba la vez pasada y ahora sí)
+        if (!base.disponible) {
+          difs.push('<span class="nuevo">se suma a esta edición</span>');
+        }
+
         var precioAct = parseFloat(tr.querySelector('[data-campo="precio"]').value) || null;
-        var stockAct  = parseFloat(tr.querySelector('[data-campo="stock"]').value) || null;
         var ofertaAct = tr.querySelector('[data-campo="es_oferta"]').checked;
 
         if (precioAct !== base.precio) {
           difs.push('precio ' + fmtMonto(base.precio) + ' → <strong>' + fmtMonto(precioAct) + '</strong>');
-        }
-        if (stockAct !== base.stock) {
-          difs.push('stock estimado ' + (base.stock === null ? '—' : base.stock) +
-            ' → <strong>' + (stockAct === null ? '—' : stockAct) + '</strong>');
         }
         if (ofertaAct !== base.oferta) {
           difs.push(ofertaAct ? '<strong>entra en Oferta</strong> 🏷️' : 'deja de estar en Oferta');
@@ -731,14 +725,12 @@
           '</select>' +
           '<button type="button" class="btn-cancelar-nuevo" data-accion="eliminar-nuevo">✕ Cancelar</button>' +
         '</td>' +
-        '<td class="td-precio"><input class="celda-editable precio" type="number" min="0" step="50" ' +
-          'placeholder="$ precio" data-campo="precio"></td>' +
-        '<td class="td-stock"><input class="celda-editable stock" type="number" min="0" step="1" ' +
-          'placeholder="—" data-campo="stock"></td>' +
+        '<td class="td-precio"><input class="celda-editable precio" type="number" inputmode="numeric" ' +
+          'min="0" step="50" placeholder="$ precio" data-campo="precio"></td>' +
         '<td class="td-oferta">' +
           '<label class="toggle-oferta">' +
             '<input type="checkbox" data-campo="es_oferta">' +
-            '<span>Oferta</span>' +
+            '<span>En Oferta</span>' +
           '</label>' +
         '</td>';
 
@@ -776,7 +768,7 @@
           nombre:         cols[COL.nombre],
           unidad:         cols[COL.unidad_venta],
           precio:         parseFloat(tr.querySelector('[data-campo="precio"]').value) || null,
-          stock_estimado: parseFloat(tr.querySelector('[data-campo="stock"]').value) || null,
+          stock_estimado: null,  // columna reservada para más adelante
           disponible:     tr.querySelector('[data-campo="disponible"]').checked,
           es_oferta:      tr.querySelector('[data-campo="es_oferta"]').checked,
           accion:         'actualizar',
@@ -793,7 +785,7 @@
           nombre:         nombre,
           unidad:         tr.querySelector('[data-campo="unidad"]').value,
           precio:         parseFloat(tr.querySelector('[data-campo="precio"]').value) || null,
-          stock_estimado: parseFloat(tr.querySelector('[data-campo="stock"]').value) || null,
+          stock_estimado: null,  // columna reservada para más adelante
           disponible:     tr.querySelector('[data-campo="disponible"]').checked,
           es_oferta:      tr.querySelector('[data-campo="es_oferta"]').checked,
           accion:         'nuevo',
@@ -860,6 +852,14 @@
     var tbodyEl = document.getElementById('tbody-stock');
     tbodyEl.addEventListener('input', onCambioInput);
     tbodyEl.addEventListener('change', onCambioInput);
+
+    // El campo de precio solo acepta dígitos (bloquea e, +, -, . y ,)
+    tbodyEl.addEventListener('keydown', function (e) {
+      if (e.target.classList && e.target.classList.contains('precio') &&
+          ['e', 'E', '+', '-', '.', ','].indexOf(e.key) !== -1) {
+        e.preventDefault();
+      }
+    });
 
     cargarNombreProductor();
     cargarProductos();
