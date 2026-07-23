@@ -4,163 +4,867 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex">
-  <title>Generar edición · Nodo Matriz (equipa)</title>
+  <title>Mis productos · Nodo Matríz</title>
   <link rel="stylesheet" href="../assets/styles.css">
+  <link rel="icon" type="image/png" href="../assets/logo-nodo-verde.png">
   <style>
-    /* Estilos de respaldo por si styles.css no carga */
-    body { font-family: Georgia, serif; background: #f4efe6; color: #2e3a26; margin: 0; }
-    .wrap { max-width: 560px; margin: 0 auto; padding: 24px 16px 64px; }
-    .card { background: #fff; border: 1px solid #d8d2c4; border-radius: 14px; padding: 20px; margin-top: 16px; }
-    .field { margin-bottom: 16px; }
-    .field label { display: block; font-weight: bold; margin-bottom: 6px; font-size: 0.95rem; }
-    .field input { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #c9c2b2; border-radius: 8px; font-size: 1rem; }
-    .field small { color: #7a6f58; }
-    .preview { background: #eef2e6; border-left: 4px solid #4a6b3a; border-radius: 8px; padding: 12px 14px; margin: 16px 0; font-size: 0.95rem; }
-    .btn { display: inline-block; width: 100%; box-sizing: border-box; text-align: center; background: #3c5230; color: #fff; border: none; border-radius: 999px; padding: 14px 20px; font-size: 1.05rem; cursor: pointer; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .ok { background: #eef2e6; border-left: 4px solid #4a6b3a; padding: 12px 14px; border-radius: 8px; margin-top: 16px; display: none; }
-    .ok a { color: #3c5230; font-weight: bold; }
-    h1 { margin-bottom: 4px; }
-    .muted { color: #7a6f58; }
+    /* ── Tabla de productos ─────────────────────────────────────── */
+    .stock-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.95rem;
+    }
+
+    .stock-table thead th {
+      font-family: var(--f-body);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--c-tierra);
+      padding: var(--s-2) var(--s-3);
+      border-bottom: 2px solid var(--c-salvia);
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    .stock-table tbody tr {
+      transition: background-color 0.15s;
+    }
+
+    .stock-table tbody tr:hover {
+      background-color: rgba(110, 142, 85, 0.05);
+    }
+
+    .stock-table tbody tr.is-quitado {
+      opacity: 0.4;
+    }
+
+    .stock-table tbody tr.is-nuevo {
+      background-color: rgba(110, 142, 85, 0.07);
+    }
+
+    .stock-table td {
+      padding: var(--s-3) var(--s-3);
+      border-bottom: 1px solid rgba(107, 93, 79, 0.10);
+      vertical-align: middle;
+    }
+
+    /* Celdas editables inline */
+    .celda-editable {
+      background: transparent;
+      border: 1.5px solid var(--c-salvia);
+      border-radius: 8px;
+      padding: 6px 8px;
+      font-family: var(--f-body);
+      font-size: 0.95rem;
+      color: var(--c-suelo);
+      width: 100%;
+      min-width: 60px;
+      transition: border-color 0.15s, background-color 0.15s;
+    }
+
+    .celda-editable:hover {
+      background: var(--c-leche);
+    }
+
+    .celda-editable:focus {
+      outline: none;
+      border-color: var(--c-oliva);
+      background: var(--c-leche);
+      box-shadow: var(--sh-foco);
+    }
+
+    .celda-editable.precio {
+      text-align: right;
+      font-weight: 700;
+      color: var(--c-musgo);
+      max-width: 110px;
+    }
+
+    .celda-editable.stock {
+      max-width: 90px;
+      text-align: center;
+    }
+
+    /* Checkboxes */
+    .chk {
+      width: 22px;
+      height: 22px;
+      accent-color: var(--c-musgo);
+      cursor: pointer;
+    }
+
+    .toggle-oferta {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--s-2);
+      cursor: pointer;
+      font-size: 0.88rem;
+      white-space: nowrap;
+    }
+
+    .toggle-oferta input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--c-mostaza);
+      cursor: pointer;
+    }
+
+    /* Nombre del producto */
+    .nombre-producto {
+      font-weight: 700;
+      color: var(--c-suelo);
+      display: block;
+    }
+
+    .nombre-producto small,
+    .sub-producto {
+      font-weight: 400;
+      font-size: 0.8rem;
+      color: var(--c-tierra);
+      display: block;
+    }
+
+    .btn-cancelar-nuevo {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      color: var(--c-arcilla);
+    }
+
+    .btn-cancelar-nuevo:hover {
+      background: rgba(176, 125, 98, 0.12);
+    }
+
+    /* Estado de cambios */
+    .badge-modificado {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: var(--c-mostaza);
+      border-radius: 50%;
+      margin-left: var(--s-2);
+      vertical-align: middle;
+    }
+
+    .tabla-wrap {
+      border: 1px solid rgba(74, 107, 58, 0.12);
+      border-radius: var(--r-card);
+      background: var(--c-leche);
+      overflow: hidden;
+    }
+
+    /* Barra de estado fija arriba */
+    .barra-estado {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: var(--c-leche);
+      border: 1px solid rgba(74, 107, 58, 0.15);
+      border-radius: 12px;
+      padding: var(--s-3) var(--s-5);
+      margin-bottom: var(--s-5);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--s-3);
+      flex-wrap: wrap;
+      box-shadow: var(--sh-suave);
+    }
+
+    .barra-estado__info {
+      font-size: 0.9rem;
+      color: var(--c-corteza);
+    }
+
+    .barra-estado__cambios {
+      font-weight: 700;
+      color: var(--c-mostaza);
+    }
+
+    /* Log en vivo de cambios */
+    .log-cambios {
+      border: 1px solid rgba(74, 107, 58, 0.15);
+      border-left: 4px solid var(--c-mostaza);
+      border-radius: 12px;
+      background: var(--c-leche);
+      padding: var(--s-3) var(--s-5);
+      margin-bottom: var(--s-5);
+    }
+
+    .log-cambios h2 {
+      font-size: 1rem;
+      margin: 0 0 var(--s-2);
+    }
+
+    .lista-cambios {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      font-size: 0.9rem;
+    }
+
+    .lista-cambios li {
+      padding: 5px 0;
+      border-bottom: 1px dashed rgba(107, 93, 79, 0.15);
+    }
+
+    .lista-cambios li:last-child { border-bottom: none; }
+
+    .lista-cambios .nom { font-weight: 700; }
+    .lista-cambios .quitado { color: var(--c-arcilla, #b07d62); }
+    .lista-cambios .nuevo   { color: var(--c-musgo, #4a6b3a); }
+
+    .link-detalle {
+      color: var(--c-mostaza);
+      font-weight: 700;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    /* Loading skeleton */
+    .skeleton {
+      background: linear-gradient(90deg, var(--c-crema-osc) 25%, var(--c-leche) 50%, var(--c-crema-osc) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 6px;
+      height: 1em;
+      display: block;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ── Vista celular: cada producto como tarjeta de alto fijo ── */
+    @media (max-width: 640px) {
+      .stock-table thead { display: none; }
+
+      .stock-table, .stock-table tbody { display: block; width: 100%; }
+
+      .stock-table tr {
+        display: grid;
+        grid-template-columns: 34px 1.2fr 1fr;
+        grid-template-areas:
+          "disp nombre nombre"
+          ".    precio oferta";
+        align-items: start;
+        gap: 4px var(--s-2);
+        padding: var(--s-3);
+        border-bottom: 1px solid rgba(107, 93, 79, 0.15);
+      }
+
+      .stock-table td {
+        display: block;
+        padding: 0;
+        border-bottom: none;
+      }
+
+      .td-disp   { grid-area: disp; padding-top: 2px; }
+      .td-nombre { grid-area: nombre; }
+      .td-precio { grid-area: precio; }
+      .td-oferta { grid-area: oferta; align-self: end; padding-bottom: 4px; }
+
+      .td-precio::before {
+        display: block;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--c-tierra);
+        margin-bottom: 2px;
+        content: 'Precio';
+      }
+
+      .celda-editable.precio { max-width: none; width: 100%; }
+    }
   </style>
 </head>
 <body>
   <main class="wrap">
-    <h1>🌿 Generar formulario de edición</h1>
-    <p class="muted">Herramienta interna de la equipa. Completá los datos de la edición y
-    el sistema genera y publica el formulario público de pedidos (escenario A3).</p>
 
-    <div class="card">
-      <div class="field">
-        <label for="numero">Número de edición *</label>
-        <input type="number" id="numero" min="1" max="99" placeholder="Ej: 10">
-      </div>
+<header class="site-header fade-in">
+  <a class="site-mark" href="../">
+    <img src="../assets/logo-nodo-verde.png" alt="Nodo Matríz" style="width:48px; height:48px;">
+    <span>
+      <span class="site-mark__name">Nodo Matríz</span>
+      <span class="site-mark__sub">actualización de productos</span>
+    </span>
+  </a>
+</header>
 
-      <div class="field">
-        <label for="anio">Año *</label>
-        <input type="number" id="anio" min="2026" max="2099">
-      </div>
-
-      <div class="field">
-        <label for="cierre">Fecha y hora de cierre del formulario *</label>
-        <input type="datetime-local" id="cierre">
-        <small>Pasada esa hora los pedidos no pueden modificarse.</small>
-      </div>
-
-      <div class="field">
-        <label for="aporte">Aporte solidario por defecto (%) *</label>
-        <input type="number" id="aporte" min="0" max="100" value="10">
-      </div>
-
-      <div class="field">
-        <label for="alias">Alias de pago del Nodo *</label>
-        <input type="text" id="alias" value="nodomatriz.mp">
-      </div>
-
-      <div class="field">
-        <label for="clave">Clave de equipa *</label>
-        <input type="password" id="clave" placeholder="La clave compartida de la equipa">
-        <small>Evita disparos accidentales o ajenos.</small>
-      </div>
-
-      <div class="preview" id="preview">Completá los campos para ver el resumen…</div>
-
-      <button type="button" class="btn" id="btn-generar" disabled>Generar formulario de la edición</button>
-
-      <div class="ok" id="resultado">
-        ✅ Disparado. En 1-2 minutos el formulario queda publicado en:<br>
-        <a id="link-form" href="#" target="_blank" rel="noopener"></a><br>
-        <small>Abrilo con Ctrl+Shift+R para saltear la caché y verificá productos, fecha y edición.</small>
-      </div>
+    <!-- Estado de validación del link -->
+    <div id="error-link" class="note note--error hidden fade-in">
+      <strong>Link incompleto.</strong> Este link no tiene tu identificador de productor.
+      Pedile al Nodo el link correcto.
     </div>
+
+    <div id="contenido-principal" class="hidden">
+
+      <section class="fade-in" data-delay="1">
+        <h1>Tus productos para la próxima edición</h1>
+        <p class="lead">
+          Indicá qué productos vas a tener disponibles para esta nueva edición,
+          ajustá los precios si hace falta y marcá cuáles están en oferta.
+          Cuando termines, confirmá con <strong>Enviar actualización</strong>.
+        </p>
+        <div id="info-productor" class="note note--info">
+          <span>Estás actualizando como: </span>
+          <strong id="nombre-productor">…</strong>
+          <small style="display:block; margin-top:4px; opacity:0.7;">
+            Identificador interno: <code id="id-productor-visible"></code>
+          </small>
+        </div>
+      </section>
+
+      <!-- Barra de estado sticky -->
+      <div class="barra-estado fade-in" data-delay="2">
+        <span class="barra-estado__info">
+          <span id="contador-productos">0</span> productos ·
+          <a id="toggle-log" class="link-detalle" style="display:none">
+            <span id="num-cambios">0</span> cambio(s) — ver detalle
+          </a>
+          <span id="sin-cambios" class="muted">sin ajustes todavía</span>
+        </span>
+        <button id="btn-enviar" class="btn btn--primary" disabled>
+          Enviar actualización
+        </button>
+      </div>
+
+      <!-- Log en vivo: resumen repasable de lo que va en esta edición -->
+      <div id="log-cambios" class="log-cambios fade-in" style="display:none">
+        <h2>📋 Cambios de esta edición</h2>
+        <ul class="lista-cambios" id="lista-cambios"></ul>
+      </div>
+
+      <!-- Tabla principal -->
+      <div class="tabla-wrap fade-in" data-delay="3">
+        <table class="stock-table" id="tabla-stock">
+          <thead>
+            <tr>
+              <th>Disponible</th>
+              <th>Producto</th>
+              <th>Precio</th>
+              <th>Oferta</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-stock">
+            <!-- Filas del skeleton de carga -->
+            <tr><td colspan="4"><span class="skeleton" style="width:80%"></span></td></tr>
+            <tr><td colspan="4"><span class="skeleton" style="width:65%"></span></td></tr>
+            <tr><td colspan="4"><span class="skeleton" style="width:72%"></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><small class="muted">✓ tildado = disponible en esta edición · los tildados son los que estuvieron la edición pasada</small></p>
+
+      <!-- Botón agregar nuevo producto -->
+      <div class="mt-4">
+        <button type="button" id="btn-agregar" class="btn btn--ghost">
+          + Agregar producto nuevo
+        </button>
+        <p><small class="muted">
+          Para productos que nunca publicaste antes. El Nodo les asignará un identificador.
+        </small></p>
+      </div>
+
+      <!-- Notas para el Nodo -->
+      <div class="card mt-4 fade-in" data-delay="4">
+        <h2>Comentarios para el Nodo</h2>
+        <div class="field">
+          <label class="field__label" for="notas">Notas opcionales</label>
+          <textarea class="textarea" id="notas" rows="3"
+            placeholder="Demoras, productos por volver, cambios de presentación, lo que necesitemos saber…"></textarea>
+        </div>
+      </div>
+
+      <div class="mt-4 center fade-in" data-delay="4">
+        <button id="btn-enviar-bottom" class="btn btn--primary" disabled>
+          Enviar actualización de productos
+        </button>
+        <p><small>Al enviar recibirás confirmación por WhatsApp.</small></p>
+      </div>
+
+    </div>
+
+    <footer class="site-footer">
+      <p>Nodo Matríz Agroecológico · Unquillo, Sierras Chicas</p>
+    </footer>
+
   </main>
 
+  <script src="../assets/form-logic.js"></script>
   <script>
-    (function () {
-      'use strict';
+  (function () {
+    'use strict';
+    var NM = window.NodoMatriz;
 
-      // ============================================================
-      // CONFIGURACIÓN — completar antes de publicar
-      // ============================================================
-      var WEBHOOK_A3 = 'https://hook.us2.make.com/qqx2z7g17eq2ihpq2euvr7gqmpm0uhq3';
-      var BASE_FORMS = 'https://nodo-matriz.github.io/Sistema/forms/';
-      var OFFSET = '-03:00'; // Argentina
+    // ── Configuración ──────────────────────────────────────────────
+    var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
+    var WEBHOOK_URL    = 'https://hook.us2.make.com/qqx2z7g17eq2ihpq2euvr7gqmpm0uhq3';
 
-      var $ = function (id) { return document.getElementById(id); };
-      var campos = ['numero', 'anio', 'cierre', 'aporte', 'alias', 'clave'];
+    // Columnas de la hoja Productos_API_Stock (en orden, 0-based):
+    // 0:id_producto, 1:id_productor, 2:nombre, 3:unidad_venta,
+    // 4:precio_unitario, 5:disponible_edicion_actual, 6:stock_estimado,
+    // 7:es_oferta, 8:es_intercambio_directo, 9:ultima_actualizacion, 10:notas
+    var COL = {
+      id_producto:              0,
+      id_productor:             1,
+      nombre:                   2,
+      unidad_venta:             3,
+      precio_unitario:          4,
+      disponible_edicion_actual:5,
+      stock_estimado:           6,
+      es_oferta:                7,
+      es_intercambio_directo:   8,
+      ultima_actualizacion:     9,
+      notas:                   10,
+    };
 
-      // Año por defecto: el actual
-      $('anio').value = new Date().getFullYear();
+    // ── Init ───────────────────────────────────────────────────────
+    var idProductor = NM.getQueryParam('id_productor');
 
-      function pad2(n) { return (n < 10 ? '0' : '') + n; }
+    if (!idProductor) {
+      document.getElementById('error-link').classList.remove('hidden');
+      return;
+    }
 
-      function idEdicion() {
-        var n = parseInt($('numero').value, 10);
-        var a = $('anio').value;
-        if (!n || !a) return null;
-        return 'ED' + a + '-' + pad2(n);
-      }
+    document.getElementById('contenido-principal').classList.remove('hidden');
+    document.getElementById('id-productor-visible').textContent = idProductor;
 
-      function fechaHuman(d) {
-        // "martes 4 de agosto, 12:00 hs"
-        var f = new Intl.DateTimeFormat('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }).format(d);
-        return f + ', ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ' hs';
-      }
+    // Estado mutable
+    var productosOriginales = [];  // snapshot de lo que vino de gviz
+    var productosNuevos = [];      // productos sin id_producto (a crear)
+    var baseline = {};             // id_producto → valores al abrir (para el log de cambios)
 
-      function fechaIso(d) {
-        return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) +
-          'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':00' + OFFSET;
-      }
+    // ── Cargar nombre del productor desde Productores_API ──────────
+    function cargarNombreProductor() {
+      var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
+        '/gviz/tq?tqx=out:json&sheet=Productores_API&headers=1';
 
-      function leerCierre() {
-        var v = $('cierre').value;
-        return v ? new Date(v) : null;
-      }
+      fetch(url)
+        .then(function (r) { return r.text(); })
+        .then(function (text) {
+          var match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+          if (!match) return;
+          var data = JSON.parse(match[1]);
+          var rows = data.table.rows;
 
-      function refrescar() {
-        var id = idEdicion();
-        var d = leerCierre();
-        var completos = campos.every(function (c) { return $(c).value.trim() !== ''; });
+          var fila = rows.find(function (row) {
+            var id = row.c[0] ? row.c[0].v : null;
+            return String(id).trim() === idProductor.trim();
+          });
 
-        if (id && d) {
-          $('preview').innerHTML =
-            'Se va a generar la edición <strong>' + id + '</strong><br>' +
-            'Cierre del formulario: <strong>' + fechaHuman(d) + '</strong><br>' +
-            'Aporte por defecto: <strong>' + $('aporte').value + '%</strong> · Alias: <strong>' + $('alias').value + '</strong>';
-        } else {
-          $('preview').textContent = 'Completá los campos para ver el resumen…';
-        }
-        $('btn-generar').disabled = !completos;
-      }
+          if (fila && fila.c[1] && fila.c[1].v) {
+            document.getElementById('nombre-productor').textContent = fila.c[1].v;
+          } else {
+            document.getElementById('nombre-productor').textContent =
+              '(productor sin nombre registrado)';
+          }
+        })
+        .catch(function (err) {
+          console.warn('No se pudo cargar el nombre del productor:', err);
+          document.getElementById('nombre-productor').textContent =
+            '(no pudimos identificarte)';
+        });
+    }
 
-      campos.forEach(function (c) { $(c).addEventListener('input', refrescar); });
+    // ── Cargar datos desde gviz ────────────────────────────────────
+    function cargarProductos() {
+      var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
+        '/gviz/tq?tqx=out:json&sheet=Productos_API_Stock&headers=1';
 
-      $('btn-generar').addEventListener('click', function () {
-        var id = idEdicion();
-        var d = leerCierre();
-        if (!id || !d) return;
+      fetch(url)
+        .then(function (r) { return r.text(); })
+        .then(function (text) {
+          var jsonStr = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+          if (!jsonStr) throw new Error('Respuesta inesperada de gviz');
+          var data = JSON.parse(jsonStr[1]);
+          procesarRespuestaGviz(data);
+        })
+        .catch(function (err) {
+          console.error('Error cargando productos:', err);
+          document.getElementById('tbody-stock').innerHTML =
+            '<tr><td colspan="4" class="center muted">No pudimos cargar tus productos. ' +
+            'Recargá la página o avisanos al Nodo.</td></tr>';
+        });
+    }
 
-        var params = new URLSearchParams({
-          id_edicion: id,
-          numero_edicion: String(parseInt($('numero').value, 10)),
-          anio_edicion: $('anio').value,
-          fecha_cierre_human: fechaHuman(d),
-          fecha_cierre_iso: fechaIso(d),
-          aporte_default_porcent: $('aporte').value,
-          alias_pago_nodo: $('alias').value.trim(),
-          clave: $('clave').value.trim()
+    function procesarRespuestaGviz(data) {
+      var rows = data.table.rows;
+
+      var misProd = rows
+        .map(function (row) {
+          return row.c.map(function (c) { return c ? c.v : null; });
+        })
+        .filter(function (cols) {
+          return String(cols[COL.id_productor]).trim() === idProductor.trim();
         });
 
-        // Se abre en otra pestaña: la equipa ve el "Accepted" de Make como confirmación
-        window.open(WEBHOOK_A3 + '?' + params.toString(), '_blank');
+      productosOriginales = misProd;
 
-        $('link-form').textContent = BASE_FORMS + 'pedidos-' + id + '.html';
-        $('link-form').href = BASE_FORMS + 'pedidos-' + id + '.html';
-        $('resultado').style.display = 'block';
+      document.getElementById('contador-productos').textContent = misProd.length;
+
+      if (misProd.length === 0) {
+        document.getElementById('tbody-stock').innerHTML =
+          '<tr><td colspan="4" class="center muted">' +
+          'No encontramos productos en tu catálogo. ' +
+          'Usá el botón de abajo para agregar tu primer producto.</td></tr>';
+      } else {
+        renderizarTabla(misProd);
+      }
+
+      // Con productos cargados (o la opción de crear nuevos), se puede enviar
+      habilitarEnvio(true);
+    }
+
+    // ── Render de la tabla ─────────────────────────────────────────
+    function renderizarTabla(productos) {
+      var tbody = document.getElementById('tbody-stock');
+      tbody.innerHTML = '';
+
+      productos.forEach(function (cols) {
+        var idProd = cols[COL.id_producto];
+        var nombre = cols[COL.nombre] || '';
+        var unidad = cols[COL.unidad_venta] || 'unidad';
+        var precio = cols[COL.precio_unitario] || '';
+        var esOferta = String(cols[COL.es_oferta] || 'No').trim() === 'Sí';
+        var disponible = String(cols[COL.disponible_edicion_actual] || 'No').trim() === 'Sí';
+        var ultimaAct = cols[COL.ultima_actualizacion] || '';
+        var mD = String(ultimaAct).match(/^Date\((\d+),(\d+),(\d+)/);
+        if (mD) {
+          ultimaAct = ('0' + mD[3]).slice(-2) + '/' +
+                      ('0' + (parseInt(mD[2], 10) + 1)).slice(-2) + '/' + mD[1];
+        }
+
+        // Guardar el estado inicial para poder mostrar el log de cambios
+        baseline[idProd] = {
+          nombre: nombre,
+          unidad: unidad,
+          precio: parseFloat(precio) || null,
+          oferta: esOferta,
+          disponible: disponible,
+        };
+
+        var tr = document.createElement('tr');
+        tr.dataset.id = idProd;
+        if (!disponible) tr.classList.add('is-quitado');
+
+        // Arrancan tildados SOLO los productos que estuvieron en la edición
+        // anterior; el productor tilda/destilda según lo que vaya a traer.
+        tr.innerHTML =
+          '<td class="td-disp center">' +
+            '<input type="checkbox" class="chk" data-campo="disponible"' +
+              (disponible ? ' checked' : '') + ' title="Disponible en esta edición">' +
+          '</td>' +
+
+          '<td class="td-nombre">' +
+            '<span class="nombre-producto">' + escH(nombre) +
+              '<span class="badge-modificado" style="display:none" title="Modificado"></span>' +
+            '</span>' +
+            '<span class="sub-producto">por ' + escH(unidad) +
+              (ultimaAct ? ' · act. ' + escH(String(ultimaAct).slice(0, 10)) : '') +
+            '</span>' +
+          '</td>' +
+
+          '<td class="td-precio">' +
+            '<input class="celda-editable precio" type="number" inputmode="numeric" ' +
+              'min="0" step="50" value="' + (precio || '') + '" data-campo="precio" ' +
+              'placeholder="$ precio" title="Editá el precio">' +
+          '</td>' +
+
+          '<td class="td-oferta">' +
+            '<label class="toggle-oferta" title="¿Está en oferta?">' +
+              '<input type="checkbox" data-campo="es_oferta"' + (esOferta ? ' checked' : '') + '>' +
+              '<span>En Oferta</span>' +
+            '</label>' +
+          '</td>';
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    function onCambioInput(e) {
+      var target = e.target;
+      var tr = target.closest('tr[data-id]');
+      if (!tr) return;
+
+      if (target.dataset.campo === 'disponible') {
+        tr.classList.toggle('is-quitado', !target.checked);
+      }
+
+      var badge = tr.querySelector('.badge-modificado');
+      if (badge) badge.style.display = 'inline-block';
+
+      actualizarResumen();
+    }
+
+    // ── Log en vivo: comparar estado actual contra el de apertura ──
+    function fmtMonto(n) {
+      if (n === null || isNaN(n)) return '—';
+      return '$ ' + Number(n).toLocaleString('es-AR');
+    }
+
+    function calcularCambios() {
+      var tbody = document.getElementById('tbody-stock');
+      var items = [];
+
+      productosOriginales.forEach(function (cols) {
+        var id = cols[COL.id_producto];
+        var tr = tbody.querySelector('tr[data-id="' + id + '"]');
+        var base = baseline[id];
+        if (!tr || !base) return;
+
+        var disponible = tr.querySelector('[data-campo="disponible"]').checked;
+
+        // Salió de la edición (estaba la vez pasada y ahora no)
+        if (!disponible) {
+          if (base.disponible) {
+            items.push('<span class="nom">' + escH(base.nombre) + '</span> — ' +
+              '<span class="quitado">no va en esta edición</span>');
+          }
+          return; // si no va, el resto de los ajustes no importa
+        }
+
+        var difs = [];
+
+        // Se suma a la edición (no estaba la vez pasada y ahora sí)
+        if (!base.disponible) {
+          difs.push('<span class="nuevo">se suma a esta edición</span>');
+        }
+
+        var precioAct = parseFloat(tr.querySelector('[data-campo="precio"]').value) || null;
+        var ofertaAct = tr.querySelector('[data-campo="es_oferta"]').checked;
+
+        if (precioAct !== base.precio) {
+          difs.push('precio ' + fmtMonto(base.precio) + ' → <strong>' + fmtMonto(precioAct) + '</strong>');
+        }
+        if (ofertaAct !== base.oferta) {
+          difs.push(ofertaAct ? '<strong>entra en Oferta</strong> 🏷️' : 'deja de estar en Oferta');
+        }
+
+        if (difs.length) {
+          items.push('<span class="nom">' + escH(base.nombre) + '</span> — ' + difs.join(' · '));
+        }
       });
 
-      refrescar();
-    })();
+      productosNuevos.forEach(function (p) {
+        var tr = p.tr;
+        var nombre = tr.querySelector('[data-campo="nombre"]').value.trim();
+        if (!nombre) return;
+        var precio = parseFloat(tr.querySelector('[data-campo="precio"]').value) || null;
+        var unidad = tr.querySelector('[data-campo="unidad"]').value;
+        items.push('<span class="nom">' + escH(nombre) + '</span> — ' +
+          '<span class="nuevo">producto nuevo</span> · ' + fmtMonto(precio) + ' por ' + escH(unidad));
+      });
+
+      return items;
+    }
+
+    function actualizarResumen() {
+      var items = calcularCambios();
+      var n = items.length;
+
+      document.getElementById('num-cambios').textContent = n;
+      document.getElementById('toggle-log').style.display = n > 0 ? '' : 'none';
+      document.getElementById('sin-cambios').style.display = n > 0 ? 'none' : '';
+
+      var lista = document.getElementById('lista-cambios');
+      lista.innerHTML = items.map(function (it) { return '<li>' + it + '</li>'; }).join('');
+
+      // Si el panel está abierto y ya no hay cambios, cerrarlo
+      if (n === 0) document.getElementById('log-cambios').style.display = 'none';
+    }
+
+    document.getElementById('toggle-log').addEventListener('click', function () {
+      var panel = document.getElementById('log-cambios');
+      panel.style.display = (panel.style.display === 'none') ? '' : 'none';
+    });
+
+    function habilitarEnvio(on) {
+      document.getElementById('btn-enviar').disabled = !on;
+      document.getElementById('btn-enviar-bottom').disabled = !on;
+    }
+
+    // ── Agregar producto nuevo ─────────────────────────────────────
+    document.getElementById('btn-agregar').addEventListener('click', function () {
+      var tbody = document.getElementById('tbody-stock');
+      var idx = productosNuevos.length;
+      var key = '__nuevo__' + idx;
+
+      var tr = document.createElement('tr');
+      tr.dataset.id = key;
+      tr.classList.add('is-nuevo');
+
+      tr.innerHTML =
+        '<td class="td-disp center">' +
+          '<input type="checkbox" class="chk" data-campo="disponible" checked>' +
+        '</td>' +
+        '<td class="td-nombre">' +
+          '<input class="celda-editable" type="text" placeholder="Nombre del producto *" ' +
+            'data-campo="nombre" style="min-width: 160px; margin-bottom: 4px;" required>' +
+          '<select class="celda-editable" data-campo="unidad" title="Unidad de venta" style="max-width:140px;">' +
+            '<option value="unidad">por unidad</option>' +
+            '<option value="kg">por kg</option>' +
+            '<option value="gr">por gramos</option>' +
+            '<option value="atado">por atado</option>' +
+            '<option value="docena">por docena</option>' +
+            '<option value="bolsa">por bolsa</option>' +
+            '<option value="botella">por botella</option>' +
+            '<option value="frasco">por frasco</option>' +
+            '<option value="litro">por litro</option>' +
+            '<option value="maple">por maple</option>' +
+            '<option value="pack">por pack</option>' +
+            '<option value="ramito">por ramito</option>' +
+          '</select>' +
+          '<button type="button" class="btn-cancelar-nuevo" data-accion="eliminar-nuevo">✕ Cancelar</button>' +
+        '</td>' +
+        '<td class="td-precio"><input class="celda-editable precio" type="number" inputmode="numeric" ' +
+          'min="0" step="50" placeholder="$ precio" data-campo="precio"></td>' +
+        '<td class="td-oferta">' +
+          '<label class="toggle-oferta">' +
+            '<input type="checkbox" data-campo="es_oferta">' +
+            '<span>En Oferta</span>' +
+          '</label>' +
+        '</td>';
+
+      tbody.appendChild(tr);
+      productosNuevos.push({ key: key, tr: tr });
+
+      tr.querySelector('[data-campo="nombre"]').addEventListener('input', actualizarResumen);
+
+      tr.querySelector('[data-accion="eliminar-nuevo"]').addEventListener('click', function () {
+        tr.remove();
+        productosNuevos = productosNuevos.filter(function (p) { return p.key !== key; });
+        actualizarResumen();
+      });
+
+      actualizarResumen();
+      habilitarEnvio(true);
+      tr.querySelector('[data-campo="nombre"]').focus();
+    });
+
+    // ── Construir payload y enviar ─────────────────────────────────
+    // Se envían TODOS los productos con su estado final (tildado o no),
+    // así la hoja queda exactamente como el productor dejó la pantalla.
+    function buildPayload() {
+      var tbody = document.getElementById('tbody-stock');
+      var productos = [];
+
+      // 1. Todos los productos existentes, con su estado actual
+      productosOriginales.forEach(function (cols) {
+        var id = cols[COL.id_producto];
+        var tr = tbody.querySelector('tr[data-id="' + id + '"]');
+        if (!tr) return;
+
+        productos.push({
+          id_producto:    id,
+          nombre:         cols[COL.nombre],
+          unidad:         cols[COL.unidad_venta],
+          precio:         parseFloat(tr.querySelector('[data-campo="precio"]').value) || null,
+          stock_estimado: null,  // columna reservada para más adelante
+          disponible:     tr.querySelector('[data-campo="disponible"]').checked,
+          es_oferta:      tr.querySelector('[data-campo="es_oferta"]').checked,
+          accion:         'actualizar',
+        });
+      });
+
+      // 2. Productos nuevos (solo si tienen nombre)
+      productosNuevos.forEach(function (p) {
+        var tr = p.tr;
+        var nombre = tr.querySelector('[data-campo="nombre"]').value.trim();
+        if (!nombre) return;
+        productos.push({
+          id_producto:    null,  // Make genera el ID
+          nombre:         nombre,
+          unidad:         tr.querySelector('[data-campo="unidad"]').value,
+          precio:         parseFloat(tr.querySelector('[data-campo="precio"]').value) || null,
+          stock_estimado: null,  // columna reservada para más adelante
+          disponible:     tr.querySelector('[data-campo="disponible"]').checked,
+          es_oferta:      tr.querySelector('[data-campo="es_oferta"]').checked,
+          accion:         'nuevo',
+        });
+      });
+
+      if (productos.length === 0) {
+        alert('No hay productos para enviar.');
+        return null;
+      }
+
+      return {
+        id_productor: idProductor,
+        enviado_en:   new Date().toISOString(),
+        productos:    productos,
+        notas:        document.getElementById('notas').value.trim(),
+      };
+    }
+
+    function enviar() {
+      var payload = buildPayload();
+      if (!payload) return;
+
+      var btns = document.querySelectorAll('#btn-enviar, #btn-enviar-bottom');
+      btns.forEach(function (b) {
+        b.disabled = true;
+        b.innerHTML = '<span class="spinner"></span><span>Enviando…</span>';
+      });
+
+      fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        mode: 'no-cors',  // evita error CORS; Make sí recibe el POST
+      })
+      .then(function () {
+        document.getElementById('contenido-principal').innerHTML =
+          '<div class="note note--success" style="margin-top: var(--s-7)">' +
+          '<strong>¡Listo!</strong> Recibimos tu actualización de productos. ' +
+          'En breve la equipa del Nodo la revisa. ' +
+          'Si agregaste productos nuevos, te confirmamos la asignación por WhatsApp.' +
+          '</div>';
+      })
+      .catch(function () {
+        btns.forEach(function (b) {
+          b.disabled = false;
+          b.textContent = 'Enviar actualización';
+        });
+        alert('No pudimos enviar. Verificá tu conexión y probá de nuevo, o avisanos al Nodo.');
+      });
+    }
+
+    document.getElementById('btn-enviar').addEventListener('click', enviar);
+    document.getElementById('btn-enviar-bottom').addEventListener('click', enviar);
+
+    // ── Helpers ───────────────────────────────────────────────────
+    function escH(s) {
+      return String(s || '')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Arrancar ─────────────────────────────────────────────────
+    var tbodyEl = document.getElementById('tbody-stock');
+    tbodyEl.addEventListener('input', onCambioInput);
+    tbodyEl.addEventListener('change', onCambioInput);
+
+    // El campo de precio solo acepta dígitos (bloquea e, +, -, . y ,)
+    tbodyEl.addEventListener('keydown', function (e) {
+      if (e.target.classList && e.target.classList.contains('precio') &&
+          ['e', 'E', '+', '-', '.', ','].indexOf(e.key) !== -1) {
+        e.preventDefault();
+      }
+    });
+
+    cargarNombreProductor();
+    cargarProductos();
+
+  })();
   </script>
 </body>
 </html>
