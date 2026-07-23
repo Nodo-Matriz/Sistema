@@ -4,75 +4,210 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex">
-  <title>Generar edición · Nodo Matriz (equipa)</title>
+  <title>Generar edición · Nodo Matríz (equipa)</title>
   <link rel="stylesheet" href="../assets/styles.css">
+  <link rel="icon" type="image/png" href="../assets/logo-nodo-verde.png">
   <style>
-    /* Estilos de respaldo por si styles.css no carga */
+    /* Respaldo por si styles.css no carga */
     body { font-family: Georgia, serif; background: #f4efe6; color: #2e3a26; margin: 0; }
-    .wrap { max-width: 560px; margin: 0 auto; padding: 24px 16px 64px; }
-    .card { background: #fff; border: 1px solid #d8d2c4; border-radius: 14px; padding: 20px; margin-top: 16px; }
-    .field { margin-bottom: 16px; }
-    .field label { display: block; font-weight: bold; margin-bottom: 6px; font-size: 0.95rem; }
-    .field input { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #c9c2b2; border-radius: 8px; font-size: 1rem; }
-    .field small { color: #7a6f58; }
-    .preview { background: #eef2e6; border-left: 4px solid #4a6b3a; border-radius: 8px; padding: 12px 14px; margin: 16px 0; font-size: 0.95rem; }
-    .btn { display: inline-block; width: 100%; box-sizing: border-box; text-align: center; background: #3c5230; color: #fff; border: none; border-radius: 999px; padding: 14px 20px; font-size: 1.05rem; cursor: pointer; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .ok { background: #eef2e6; border-left: 4px solid #4a6b3a; padding: 12px 14px; border-radius: 8px; margin-top: 16px; display: none; }
-    .ok a { color: #3c5230; font-weight: bold; }
-    h1 { margin-bottom: 4px; }
-    .muted { color: #7a6f58; }
+    .wrap { max-width: 620px; margin: 0 auto; padding: 24px 16px 64px; }
+
+    .card-eq {
+      background: var(--c-leche, #fff);
+      border: 1px solid rgba(74, 107, 58, 0.15);
+      border-radius: 14px;
+      padding: var(--s-5, 20px);
+      margin-top: var(--s-4, 16px);
+    }
+
+    .campo { margin-bottom: var(--s-4, 16px); }
+    .campo label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 6px;
+      font-size: 0.92rem;
+      color: var(--c-suelo, #2e3a26);
+    }
+    .campo input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px;
+      border: 1.5px solid var(--c-salvia, #c9c2b2);
+      border-radius: 8px;
+      font-size: 1rem;
+      font-family: var(--f-body, inherit);
+      background: transparent;
+    }
+    .campo input:focus {
+      outline: none;
+      border-color: var(--c-oliva, #4a6b3a);
+      background: var(--c-leche, #fff);
+    }
+    .campo small { color: var(--c-tierra, #7a6f58); }
+
+    .preview {
+      background: rgba(110, 142, 85, 0.10);
+      border-left: 4px solid var(--c-oliva, #4a6b3a);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: var(--s-4, 16px) 0;
+      font-size: 0.95rem;
+    }
+
+    .ok {
+      background: rgba(110, 142, 85, 0.10);
+      border-left: 4px solid var(--c-oliva, #4a6b3a);
+      padding: 12px 14px;
+      border-radius: 8px;
+      margin-top: var(--s-4, 16px);
+      display: none;
+    }
+    .ok a { color: var(--c-musgo, #3c5230); font-weight: 700; }
+
+    /* ── Lista de categorías arrastrables ── */
+    .lista-cat {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .lista-cat li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--c-leche, #fff);
+      border: 1px solid rgba(74, 107, 58, 0.18);
+      border-radius: 10px;
+      padding: 9px 12px;
+      margin-bottom: 6px;
+      font-size: 0.95rem;
+      cursor: grab;
+      user-select: none;
+      transition: box-shadow 0.15s, opacity 0.15s;
+    }
+    .lista-cat li.arrastrando {
+      opacity: 0.4;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .lista-cat .grip {
+      color: var(--c-tierra, #7a6f58);
+      font-size: 1.1rem;
+      cursor: grab;
+      line-height: 1;
+    }
+    .lista-cat .pos {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--c-tierra, #7a6f58);
+      min-width: 20px;
+      text-align: right;
+    }
+    .lista-cat .nom-cat { flex: 1; font-weight: 700; }
+    .lista-cat .flechas { display: flex; gap: 2px; }
+    .lista-cat .flechas button {
+      background: none;
+      border: 1px solid rgba(74, 107, 58, 0.25);
+      border-radius: 6px;
+      width: 30px;
+      height: 30px;
+      cursor: pointer;
+      color: var(--c-musgo, #3c5230);
+      font-size: 0.9rem;
+    }
+    .lista-cat .flechas button:hover { background: rgba(110, 142, 85, 0.12); }
+
+    .cat-estado { font-size: 0.85rem; color: var(--c-tierra, #7a6f58); margin-top: 8px; }
   </style>
 </head>
 <body>
   <main class="wrap">
-    <h1>🌿 Generar formulario de edición</h1>
-    <p class="muted">Herramienta interna de la equipa. Completá los datos de la edición y
-    el sistema genera y publica el formulario público de pedidos (escenario A3).</p>
 
-    <div class="card">
-      <div class="field">
+    <header class="site-header fade-in">
+      <a class="site-mark" href="../">
+        <img src="../assets/logo-nodo-verde.png" alt="Nodo Matríz" style="width:48px; height:48px;">
+        <span>
+          <span class="site-mark__name">Nodo Matríz</span>
+          <span class="site-mark__sub">herramienta de la equipa</span>
+        </span>
+      </a>
+    </header>
+
+    <section class="fade-in" data-delay="1">
+      <h1>Generar edición</h1>
+      <p class="lead">
+        Completá los datos de la edición, acomodá el orden de las categorías
+        si hace falta, y generá el formulario público de pedidos.
+      </p>
+    </section>
+
+    <!-- ── Datos de la edición ── -->
+    <div class="card-eq fade-in" data-delay="2">
+      <h2>Datos de la edición</h2>
+
+      <div class="campo">
         <label for="numero">Número de edición *</label>
-        <input type="number" id="numero" min="1" max="99" placeholder="Ej: 10">
+        <input type="number" id="numero" inputmode="numeric" min="1" max="99" placeholder="Ej: 11">
       </div>
 
-      <div class="field">
+      <div class="campo">
         <label for="anio">Año *</label>
-        <input type="number" id="anio" min="2026" max="2099">
+        <input type="number" id="anio" inputmode="numeric" min="2026" max="2099">
       </div>
 
-      <div class="field">
+      <div class="campo">
         <label for="cierre">Fecha y hora de cierre del formulario *</label>
         <input type="datetime-local" id="cierre">
         <small>Pasada esa hora los pedidos no pueden modificarse.</small>
       </div>
 
-      <div class="field">
+      <div class="campo">
         <label for="aporte">Aporte solidario por defecto (%) *</label>
-        <input type="number" id="aporte" min="0" max="100" value="10">
+        <input type="number" id="aporte" inputmode="numeric" min="0" max="100" value="10">
       </div>
 
-      <div class="field">
+      <div class="campo">
         <label for="alias">Alias de pago del Nodo *</label>
         <input type="text" id="alias" value="nodomatriz.mp">
       </div>
+    </div>
 
-      <div class="field">
+    <!-- ── Orden de categorías ── -->
+    <div class="card-eq fade-in" data-delay="3">
+      <h2>Orden de las categorías</h2>
+      <p class="muted" style="font-size:0.9rem;">
+        Así van a aparecer en el formulario, de arriba hacia abajo.
+        <strong>Arrastrá</strong> para reordenar (o usá las flechas).
+        El orden queda guardado para las próximas ediciones.
+      </p>
+      <ul class="lista-cat" id="lista-cat">
+        <li><span class="muted">Cargando categorías de la planilla…</span></li>
+      </ul>
+      <p class="cat-estado" id="cat-estado"></p>
+    </div>
+
+    <!-- ── Confirmación ── -->
+    <div class="card-eq fade-in" data-delay="4">
+      <div class="campo">
         <label for="clave">Clave de equipa *</label>
         <input type="password" id="clave" placeholder="La clave compartida de la equipa">
-        <small>Evita disparos accidentales o ajenos.</small>
       </div>
 
       <div class="preview" id="preview">Completá los campos para ver el resumen…</div>
 
-      <button type="button" class="btn" id="btn-generar" disabled>Generar formulario de la edición</button>
+      <button type="button" class="btn btn--primary" id="btn-generar" disabled style="width:100%;">
+        Generar formulario de la edición
+      </button>
 
       <div class="ok" id="resultado">
         ✅ Disparado. En 1-2 minutos el formulario queda publicado en:<br>
         <a id="link-form" href="#" target="_blank" rel="noopener"></a><br>
-        <small>Abrilo con Ctrl+Shift+R para saltear la caché y verificá productos, fecha y edición.</small>
+        <small>Abrilo con Ctrl+Shift+R para saltear la caché y verificá productos, orden de categorías, fecha y edición.</small>
       </div>
     </div>
+
+    <footer class="site-footer">
+      <p>Nodo Matríz Agroecológico · Unquillo, Sierras Chicas</p>
+    </footer>
+
   </main>
 
   <script>
@@ -82,18 +217,137 @@
       // ============================================================
       // CONFIGURACIÓN — completar antes de publicar
       // ============================================================
-      var WEBHOOK_A3 = 'https://hook.us2.make.com/qqx2z7g17eq2ihpq2euvr7gqmpm0uhq3';
-      var BASE_FORMS = 'https://nodo-matriz.github.io/Sistema/forms/';
-      var OFFSET = '-03:00'; // Argentina
+      var WEBHOOK_A3     = 'REEMPLAZAR_URL_WEBHOOK_A3';
+      var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
+      var BASE_FORMS     = 'https://nodo-matriz.github.io/Sistema/forms/';
+      var OFFSET         = '-03:00'; // Argentina
+      var LS_KEY         = 'nm_orden_categorias';
 
       var $ = function (id) { return document.getElementById(id); };
       var campos = ['numero', 'anio', 'cierre', 'aporte', 'alias', 'clave'];
+      var ordenCategorias = [];   // estado actual del orden
 
-      // Año por defecto: el actual
       $('anio').value = new Date().getFullYear();
 
       function pad2(n) { return (n < 10 ? '0' : '') + n; }
 
+      // ── Categorías: cargar desde la planilla + orden guardado ────
+      function cargarCategorias() {
+        var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
+          '/gviz/tq?tqx=out:json&sheet=Productos&headers=1';
+
+        fetch(url)
+          .then(function (r) { return r.text(); })
+          .then(function (text) {
+            var m = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+            if (!m) throw new Error('gviz');
+            var data = JSON.parse(m[1]);
+
+            // Columna I (índice 8) = categoria
+            var vistas = {};
+            var enPlanilla = [];
+            data.table.rows.forEach(function (row) {
+              var c = row.c[8] ? row.c[8].v : null;
+              if (!c) return;
+              c = String(c).trim();
+              if (c && !vistas[c]) { vistas[c] = true; enPlanilla.push(c); }
+            });
+
+            // Combinar con el orden guardado: primero las guardadas (que
+            // sigan existiendo), después las nuevas en orden alfabético
+            var guardado = [];
+            try { guardado = JSON.parse(localStorage.getItem(LS_KEY)) || []; } catch (e) {}
+
+            var resultado = guardado.filter(function (c) { return vistas[c]; });
+            var nuevas = enPlanilla.filter(function (c) { return resultado.indexOf(c) === -1; });
+            nuevas.sort(function (a, b) { return a.localeCompare(b, 'es'); });
+
+            ordenCategorias = resultado.concat(nuevas);
+            renderLista();
+            $('cat-estado').textContent = ordenCategorias.length + ' categorías' +
+              (nuevas.length && guardado.length ? ' · ' + nuevas.length + ' nueva(s) agregada(s) al final' : '');
+          })
+          .catch(function () {
+            $('lista-cat').innerHTML =
+              '<li><span class="muted">No pudimos cargar las categorías. ' +
+              'El formulario se generará con el orden alfabético.</span></li>';
+          });
+      }
+
+      // ── Render de la lista con drag & drop + flechas ─────────────
+      function renderLista() {
+        var ul = $('lista-cat');
+        ul.innerHTML = '';
+
+        ordenCategorias.forEach(function (cat, i) {
+          var li = document.createElement('li');
+          li.draggable = true;
+          li.dataset.cat = cat;
+          li.innerHTML =
+            '<span class="grip">⠿</span>' +
+            '<span class="pos">' + (i + 1) + '</span>' +
+            '<span class="nom-cat"></span>' +
+            '<span class="flechas">' +
+              '<button type="button" data-mover="-1" title="Subir">▲</button>' +
+              '<button type="button" data-mover="1" title="Bajar">▼</button>' +
+            '</span>';
+          li.querySelector('.nom-cat').textContent = cat;
+          ul.appendChild(li);
+        });
+      }
+
+      // Flechas ▲▼ (sirven también en celular, donde arrastrar es incómodo)
+      $('lista-cat').addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-mover]');
+        if (!btn) return;
+        var li = btn.closest('li');
+        var i = ordenCategorias.indexOf(li.dataset.cat);
+        var j = i + parseInt(btn.dataset.mover, 10);
+        if (i < 0 || j < 0 || j >= ordenCategorias.length) return;
+        var tmp = ordenCategorias[i];
+        ordenCategorias[i] = ordenCategorias[j];
+        ordenCategorias[j] = tmp;
+        guardarOrden();
+        renderLista();
+      });
+
+      // Drag & drop (escritorio)
+      var liArrastrado = null;
+
+      $('lista-cat').addEventListener('dragstart', function (e) {
+        liArrastrado = e.target.closest('li');
+        if (liArrastrado) liArrastrado.classList.add('arrastrando');
+      });
+
+      $('lista-cat').addEventListener('dragover', function (e) {
+        e.preventDefault();
+        var sobre = e.target.closest('li');
+        if (!sobre || !liArrastrado || sobre === liArrastrado) return;
+        var rect = sobre.getBoundingClientRect();
+        var despues = (e.clientY - rect.top) > rect.height / 2;
+        sobre.parentNode.insertBefore(liArrastrado, despues ? sobre.nextSibling : sobre);
+      });
+
+      $('lista-cat').addEventListener('drop', function (e) { e.preventDefault(); });
+
+      $('lista-cat').addEventListener('dragend', function () {
+        if (!liArrastrado) return;
+        liArrastrado.classList.remove('arrastrando');
+        liArrastrado = null;
+        // Reconstruir el orden desde el DOM
+        ordenCategorias = Array.prototype.map.call(
+          $('lista-cat').querySelectorAll('li[data-cat]'),
+          function (li) { return li.dataset.cat; }
+        );
+        guardarOrden();
+        renderLista();
+      });
+
+      function guardarOrden() {
+        try { localStorage.setItem(LS_KEY, JSON.stringify(ordenCategorias)); } catch (e) {}
+      }
+
+      // ── Datos de la edición ──────────────────────────────────────
       function idEdicion() {
         var n = parseInt($('numero').value, 10);
         var a = $('anio').value;
@@ -102,7 +356,6 @@
       }
 
       function fechaHuman(d) {
-        // "martes 4 de agosto, 12:00 hs"
         var f = new Intl.DateTimeFormat('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }).format(d);
         return f + ', ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ' hs';
       }
@@ -135,10 +388,13 @@
 
       campos.forEach(function (c) { $(c).addEventListener('input', refrescar); });
 
+      // ── Generar ──────────────────────────────────────────────────
       $('btn-generar').addEventListener('click', function () {
         var id = idEdicion();
         var d = leerCierre();
         if (!id || !d) return;
+
+        guardarOrden();
 
         var params = new URLSearchParams({
           id_edicion: id,
@@ -148,10 +404,10 @@
           fecha_cierre_iso: fechaIso(d),
           aporte_default_porcent: $('aporte').value,
           alias_pago_nodo: $('alias').value.trim(),
+          orden_categorias: ordenCategorias.join('|'),
           clave: $('clave').value.trim()
         });
 
-        // Se abre en otra pestaña: la equipa ve el "Accepted" de Make como confirmación
         window.open(WEBHOOK_A3 + '?' + params.toString(), '_blank');
 
         $('link-form').textContent = BASE_FORMS + 'pedidos-' + id + '.html';
@@ -159,7 +415,9 @@
         $('resultado').style.display = 'block';
       });
 
+      // ── Arrancar ─────────────────────────────────────────────────
       refrescar();
+      cargarCategorias();
     })();
   </script>
 </body>
