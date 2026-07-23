@@ -401,32 +401,13 @@
 
         // Orden alfabético de categorías, con "Ofertas" primero si existiera
         // ══════════════════════════════════════════════════════════
-        // ORDEN DE CATEGORÍAS — editable por la equipa del Nodo
-        // Se muestran en este orden. Una categoría que no esté en la
-        // lista va al final, en orden alfabético. Para reordenar:
-        // mover las líneas de lugar y commitear.
-        // ══════════════════════════════════════════════════════════
-        var ORDEN_CATEGORIAS = [
-          'Hortalizas',
-          'Frutas',
-          'Granja',
-          'Lácteos',
-          'Fiambres',
-          'Panificados',
-          'Elaborados',
-          'Almacén',
-          'Granos',
-          'Moliendas',
-          'Dulces',
-          'Especias',
-          'Aromáticas',
-          'Infusiones',
-          'Frutos Secos',
-          'Hongos',
-          'Bebidas',
-          'Medicina Natural',
-          'Cosmética'
-        ];
+        // Orden de categorías: llega desde la herramienta de la equipa
+        // (generar-edicion.html). Si no llegó, orden alfabético.
+        var ORDEN_RAW = '{{orden_categorias}}';
+        var ORDEN_CATEGORIAS = [];
+        if (ORDEN_RAW && ORDEN_RAW.indexOf('{{') === -1) {
+          ORDEN_CATEGORIAS = ORDEN_RAW.split('|').map(function (s) { return s.trim(); }).filter(Boolean);
+        }
         orden.sort(function (a, b) {
           var ia = ORDEN_CATEGORIAS.indexOf(a);
           var ib = ORDEN_CATEGORIAS.indexOf(b);
