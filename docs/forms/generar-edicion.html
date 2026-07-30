@@ -204,6 +204,34 @@
       </div>
     </div>
 
+    <!-- ── Generar comandas ── -->
+    <div class="card-eq fade-in" data-delay="5">
+      <h2>Generar comandas por productor</h2>
+      <p class="muted" style="font-size:0.9rem;">
+        Para usar <strong>después del cierre del formulario</strong>. Usa el número
+        de edición, el año y la clave cargados arriba. Genera las comandas, las
+        registra en la planilla y manda a la equipa un correo con el mensaje de
+        WhatsApp listo para enviar a cada productor.
+      </p>
+
+      <div class="campo">
+        <label for="entrega">Fecha y hora de entrega en el galpón *</label>
+        <input type="datetime-local" id="entrega">
+        <small>Los productores la ven en su comanda de WhatsApp.</small>
+      </div>
+
+      <div class="preview" id="preview-com">Completá edición, fecha de entrega y clave…</div>
+
+      <button type="button" class="btn btn--primary" id="btn-comandas" disabled style="width:100%;">
+        Generar comandas de la edición
+      </button>
+
+      <div class="ok" id="resultado-com">
+        ✅ Disparado. En un minuto llega el correo a la equipa con las comandas
+        y sus links de WhatsApp, y quedan registradas en la pestaña Comandas.
+      </div>
+    </div>
+
     <footer class="site-footer">
       <p>Nodo Matríz Agroecológico · Unquillo, Sierras Chicas</p>
     </footer>
@@ -218,6 +246,7 @@
       // CONFIGURACIÓN — completar antes de publicar
       // ============================================================
       var WEBHOOK_A3     = 'https://hook.us2.make.com/qqx2z7g17eq2ihpq2euvr7gqmpm0uhq3';
+      var WEBHOOK_C2     = 'https://hook.us2.make.com/eexf11kq69s6e5dxsn7ef6urq5iqnrc8';
       var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
       var BASE_FORMS     = 'https://nodo-matriz.github.io/Sistema/forms/';
       var OFFSET         = '-03:00'; // Argentina
@@ -415,8 +444,47 @@
         $('resultado').style.display = 'block';
       });
 
+      // ── Comandas (C2) ────────────────────────────────────────────
+      var camposCom = ['numero', 'anio', 'entrega', 'clave'];
+
+      function refrescarComandas() {
+        var id = idEdicion();
+        var v = $('entrega').value;
+        var d = v ? new Date(v) : null;
+        var completos = camposCom.every(function (c) { return $(c).value.trim() !== ''; });
+
+        if (id && d) {
+          $('preview-com').innerHTML =
+            'Comandas de la edición <strong>' + id + '</strong><br>' +
+            'Entrega en el galpón: <strong>' + fechaHuman(d) + '</strong>';
+        } else {
+          $('preview-com').textContent = 'Completá edición, fecha de entrega y clave…';
+        }
+        $('btn-comandas').disabled = !completos;
+      }
+
+      camposCom.forEach(function (c) { $(c).addEventListener('input', refrescarComandas); });
+
+      $('btn-comandas').addEventListener('click', function () {
+        var id = idEdicion();
+        var v = $('entrega').value;
+        if (!id || !v) return;
+        var d = new Date(v);
+
+        var params = new URLSearchParams({
+          id_edicion: id,
+          fecha_entrega_human: fechaHuman(d),
+          fecha_entrega_iso: fechaIso(d),
+          clave: $('clave').value.trim()
+        });
+
+        window.open(WEBHOOK_C2 + '?' + params.toString(), '_blank');
+        $('resultado-com').style.display = 'block';
+      });
+
       // ── Arrancar ─────────────────────────────────────────────────
       refrescar();
+      refrescarComandas();
       cargarCategorias();
     })();
   </script>
