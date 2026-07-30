@@ -18,11 +18,11 @@
          ED2026-11              ej: ED2026-09
          11          ej: 9
          2026            ej: 2026
-         miércoles, 22 de julio, 10:00 hs      ej: martes 14 de mayo, 12:00 hs
-         2026-07-22T10:00:00-03:00        ej: 2026-05-14T12:00:00-03:00
-         https://hook.us2.make.com/2jxawiuq920ut1mcu6jvgbvkoq89kpgm             ej: https://hook.eu2.make.com/abc123
+         sábado, 1 de agosto, 10:25 hs      ej: martes 14 de mayo, 12:00 hs
+         2026-08-01T10:25:00-03:00        ej: 2026-05-14T12:00:00-03:00
+         REEMPLAZAR_WEBHOOK_B1_DESPUES             ej: https://hook.eu2.make.com/abc123
          10  ej: 10
-         nodomatriz.11         ej: nodomatriz.mp
+         nodomatriz.mp         ej: nodomatriz.mp
          categorias_json            JSON con todas las categorías y
                                      productos de la edición (ver
                                      formato esperado al pie del archivo).
@@ -56,7 +56,7 @@
       </p>
 
       <div class="note note--info">
-        <strong>Cierre del formulario:</strong> miércoles, 22 de julio, 10:00 hs.
+        <strong>Cierre del formulario:</strong> sábado, 1 de agosto, 10:25 hs.
         Pasada esa hora, los pedidos no pueden modificarse ni agregarse.
       </div>
     </section>
@@ -80,19 +80,19 @@
       <!-- Las categorías se renderizan acá vía JS desde categorias_json -->
       <div id="wizard-steps"></div>
 
-      <div class="wizard__nav">
-        <button type="button" class="btn btn--ghost" data-action="wizard-prev">
-          ← Categoría anterior
-        </button>
-        <span class="wizard__nav-info">
-          Recorré todas las categorías para poder cerrar el pedido.
-        </span>
+      <div class="wizard__nav" style="display:flex; flex-direction:column; align-items:stretch; gap:10px;">
         <button type="button" class="btn btn--primary" data-action="wizard-next">
           Siguiente categoría →
         </button>
         <button type="button" class="btn btn--primary hidden" data-action="wizard-finish">
           Revisar pedido →
         </button>
+        <button type="button" class="btn btn--ghost" data-action="wizard-prev">
+          ← Categoría anterior
+        </button>
+        <span class="wizard__nav-info" style="text-align:center;">
+          Recorré todas las categorías para poder cerrar el pedido.
+        </span>
       </div>
     </div>
 
@@ -135,7 +135,7 @@
       </div>
 
       <form id="pedido-form"
-            data-webhook="https://hook.us2.make.com/2jxawiuq920ut1mcu6jvgbvkoq89kpgm"
+            data-webhook="REEMPLAZAR_WEBHOOK_B1_DESPUES"
             novalidate>
 
         <div class="card">
@@ -259,7 +259,7 @@
           <h2>Forma de pago</h2>
           <p class="muted">
             Una vez confirmado tu pedido recibirás los datos para abonar al alias
-            <strong>nodomatriz.11</strong>. También aceptamos efectivo al retirar.
+            <strong>nodomatriz.mp</strong>. También aceptamos efectivo al retirar.
           </p>
           <div class="field">
             <label class="field__label">¿Cómo vas a abonar?</label>
@@ -308,7 +308,7 @@
 
   <script src="../assets/form-logic.js"></script>
   <script id="categorias-json" type="application/json">
-[{"nombre":"CEBOLLA COBRIZA","origen":"Mendoza","precio":1280,"unidad":"kg","categoria":"Hortalizas","es_oferta":"No","productor":"Macollando / Las Rositas","fracciones":null,"descripcion":null,"id_producto":"P0002","distancia_km":"630","fraccionable":"No","id_productor":"PROD002"},{"nombre":"BATATA MORADA","origen":"Córdoba","precio":2500,"unidad":"kg","categoria":"Hortalizas","es_oferta":"No","productor":"Macollando / Las Rositas","fracciones":null,"descripcion":null,"id_producto":"P0004","distancia_km":"30","fraccionable":"No","id_productor":"PROD002"},{"nombre":"BATATA BONIATO","origen":"Córdoba","precio":1600,"unidad":"kg","categoria":"Hortalizas","es_oferta":"No","productor":"Macollando / Las Rositas","fracciones":null,"descripcion":null,"id_producto":"P0005","distancia_km":"30","fraccionable":"No","id_productor":"PROD002"},{"nombre":"ZAPALLO BRASILERO","origen":"Mendoza","precio":1500,"unidad":"kg","categoria":"Hortalizas","es_oferta":"Sí","productor":"Macollando / Las Rositas","fracciones":null,"descripcion":null,"id_producto":"P0006","distancia_km":"630","fraccionable":"No","id_productor":"PROD002"},{"nombre":"ZAPALLO ANCO","origen":"Córdoba","precio":1300,"unidad":"kg","categoria":"Hortalizas","es_oferta":"No","productor":"Macollando / Las Rositas","fracciones":null,"descripcion":null,"id_producto":"P0007","distancia_km":"30","fraccionable":"No","id_productor":"PROD002"},{"nombre":"REPOLLO BLANCO","origen":"Mendoza","precio":3000,"unidad":"unidad","categoria":"Hortalizas","es_oferta":"No","productor":"Macollando / Las Rositas","fracciones":null,"descripcion":null,"id_producto":"P0008","distancia_km":"630","fraccionable":"No","id_productor":"PROD002"},{"nombre":"DULCE DE LECHE","origen":null,"precio":8050,"unidad":"kg","categoria":"Dulces","es_oferta":"No","productor":"La Higuera","fracciones":null,"descripcion":null,"id_producto":"P0075","distancia_km":null,"fraccionable":"No","id_productor":"PROD013"},{"nombre":"SEMILLAS DE GIRASOL CON CÁSCARA 20 GR","origen":null,"precio":3000,"unidad":"unidad","categoria":"Frutos Secos","es_oferta":"Sí","productor":"Verdelandia ","fracciones":null,"descripcion":null,"id_producto":"P0147","distancia_km":null,"fraccionable":"Sí","id_productor":"PROD003"},{"nombre":"QUESO TYBO","origen":"Entre Ríos","precio":14600,"unidad":"kg","categoria":"Lácteos","es_oferta":"No","productor":"La Higuera","fracciones":null,"descripcion":null,"id_producto":"P0211","distancia_km":"7 / 630","fraccionable":"No","id_productor":"PROD013"},{"nombre":"QUESO CREMOSO","origen":"Entre Ríos","precio":15000,"unidad":"kg","categoria":"Lácteos","es_oferta":"No","productor":"La Higuera","fracciones":null,"descripcion":null,"id_producto":"P0212","distancia_km":"7 / 630","fraccionable":"No","id_productor":"PROD013"},{"nombre":"SARDO FRESCO","origen":"Entre Ríos","precio":19766,"unidad":"kg","categoria":"Lácteos","es_oferta":"No","productor":"La Higuera","fracciones":"1, 1/2","descripcion":null,"id_producto":"P0214","distancia_km":"7 / 630","fraccionable":"Sí","id_productor":"PROD013"},{"nombre":"PROVOLETA AJI","origen":"Entre Ríos","precio":3700,"unidad":"unidad","categoria":"Lácteos","es_oferta":"Sí","productor":"La Higuera","fracciones":null,"descripcion":null,"id_producto":"P0216","distancia_km":"7 / 630","fraccionable":"No","id_productor":"PROD013"},{"nombre":"GRANOLA","origen":"Río Ceballos","precio":35000,"unidad":"kg","categoria":"Frutos Secos","es_oferta":"No","productor":"Verdelandia ","fracciones":"1, 1/2, 1/4","descripcion":null,"id_producto":"P0255","distancia_km":"870","fraccionable":"Sí","id_productor":"PROD003"},{"nombre":"PAN INTEGRAL MULTISEMILLAS","origen":"Río Ceballos","precio":7000,"unidad":"unidad","categoria":"Panificados","es_oferta":"No","productor":"Verdelandia ","fracciones":null,"descripcion":null,"id_producto":"P0292","distancia_km":"870","fraccionable":"No","id_productor":"PROD003"},{"nombre":"PAN INTEGRAL MULTICEREAL","origen":"Río Ceballos","precio":7000,"unidad":"unidad","categoria":"Panificados","es_oferta":"No","productor":"Verdelandia ","fracciones":null,"descripcion":null,"id_producto":"P0293","distancia_km":"870","fraccionable":"No","id_productor":"PROD003"},{"nombre":"PAN DE CENTENO, ESPELTA Y MIEL.","origen":"Río Ceballos","precio":7000,"unidad":"unidad","categoria":"Panificados","es_oferta":"No","productor":"Verdelandia ","fracciones":null,"descripcion":null,"id_producto":"P0294","distancia_km":"870","fraccionable":"No","id_productor":"PROD003"},{"nombre":"HOGAZA DE NUEZ CARAMELIZADA Y MAÍZ MORADO.","origen":"Río Ceballos","precio":7000,"unidad":"unidad","categoria":"Panificados","es_oferta":"No","productor":"Verdelandia ","fracciones":null,"descripcion":null,"id_producto":"P0295","distancia_km":"870","fraccionable":"No","id_productor":"PROD003"}]
+[{"nombre":"CEBOLLA COBRIZA","origen":"Mendoza","precio":1280,"unidad":"kg","categoria":"Hortalizas","es_oferta":"No","productor":"Macollando / Las Rositas","fracciones":null,"descripcion":null,"id_producto":"P0002","distancia_km":"630","fraccionable":"No","id_productor":"PROD002"},{"nombre":"BATATA MORADA","origen":"Córdoba","precio":2500,"unidad":"kg","categoria":"Hortalizas","es_oferta":"No","productor":"Macollando / Las Rositas","fracciones":null,"descripcion":null,"id_producto":"P0004","distancia_km":"26","fraccionable":"No","id_productor":"PROD002"},{"nombre":"BATATA BONIATO","origen":"Córdoba","precio":1600,"unidad":"kg","categoria":"Hortalizas","es_oferta":"No","productor":"Macollando / Las Rositas","fracciones":null,"descripcion":null,"id_producto":"P0005","distancia_km":"26","fraccionable":"No","id_productor":"PROD002"},{"nombre":"ZAPALLO BRASILERO","origen":"Mendoza","precio":1500,"unidad":"kg","categoria":"Hortalizas","es_oferta":"Sí","productor":"Macollando / Las Rositas","fracciones":null,"descripcion":null,"id_producto":"P0006","distancia_km":"630","fraccionable":"No","id_productor":"PROD002"},{"nombre":"ZAPALLO ANCO","origen":"Córdoba","precio":1300,"unidad":"kg","categoria":"Hortalizas","es_oferta":"No","productor":"Macollando / Las Rositas","fracciones":null,"descripcion":null,"id_producto":"P0007","distancia_km":"26","fraccionable":"No","id_productor":"PROD002"},{"nombre":"REPOLLO BLANCO","origen":"Mendoza","precio":3000,"unidad":"unidad","categoria":"Hortalizas","es_oferta":"No","productor":"Macollando / Las Rositas","fracciones":null,"descripcion":null,"id_producto":"P0008","distancia_km":"630","fraccionable":"No","id_productor":"PROD002"},{"nombre":"QUESO TYBO","origen":"Entre Ríos","precio":14600,"unidad":"kg","categoria":"Lácteos","es_oferta":"No","productor":"La Higuera","fracciones":null,"descripcion":null,"id_producto":"P0211","distancia_km":"570","fraccionable":"No","id_productor":"PROD013"},{"nombre":"QUESO CREMOSO","origen":"Entre Ríos","precio":15000,"unidad":"kg","categoria":"Lácteos","es_oferta":"No","productor":"La Higuera","fracciones":null,"descripcion":null,"id_producto":"P0212","distancia_km":"570","fraccionable":"No","id_productor":"PROD013"},{"nombre":"SARDO FRESCO","origen":"Entre Ríos","precio":19766,"unidad":"kg","categoria":"Lácteos","es_oferta":"No","productor":"La Higuera","fracciones":"1, 1/2","descripcion":null,"id_producto":"P0214","distancia_km":"570","fraccionable":"Sí","id_productor":"PROD013"},{"nombre":"PROVOLETA AJI","origen":"Entre Ríos","precio":3700,"unidad":"unidad","categoria":"Lácteos","es_oferta":"Sí","productor":"La Higuera","fracciones":null,"descripcion":null,"id_producto":"P0216","distancia_km":"570","fraccionable":"No","id_productor":"PROD013"},{"nombre":"GRANOLA","origen":"Río Ceballos","precio":35000,"unidad":"kg","categoria":"Frutos Secos","es_oferta":"No","productor":"Verdelandia ","fracciones":"1, 1/2, 1/4","descripcion":null,"id_producto":"P0255","distancia_km":"12","fraccionable":"Sí","id_productor":"PROD003"},{"nombre":"PAN INTEGRAL MULTISEMILLAS","origen":"Río Ceballos","precio":7000,"unidad":"unidad","categoria":"Panificados","es_oferta":"No","productor":"Verdelandia ","fracciones":null,"descripcion":null,"id_producto":"P0292","distancia_km":"12","fraccionable":"No","id_productor":"PROD003"},{"nombre":"PAN INTEGRAL MULTICEREAL","origen":"Río Ceballos","precio":7000,"unidad":"unidad","categoria":"Panificados","es_oferta":"No","productor":"Verdelandia ","fracciones":null,"descripcion":null,"id_producto":"P0293","distancia_km":"12","fraccionable":"No","id_productor":"PROD003"},{"nombre":"PAN DE CENTENO, ESPELTA Y MIEL.","origen":"Río Ceballos","precio":7000,"unidad":"unidad","categoria":"Panificados","es_oferta":"No","productor":"Verdelandia ","fracciones":null,"descripcion":null,"id_producto":"P0294","distancia_km":"12","fraccionable":"No","id_productor":"PROD003"},{"nombre":"HOGAZA DE NUEZ CARAMELIZADA Y MAÍZ MORADO.","origen":"Río Ceballos","precio":7000,"unidad":"unidad","categoria":"Panificados","es_oferta":"No","productor":"Verdelandia ","fracciones":null,"descripcion":null,"id_producto":"P0295","distancia_km":"12","fraccionable":"No","id_productor":"PROD003"}]
   </script>
   <script>
     (function () {
@@ -400,8 +400,21 @@
         });
 
         // Orden alfabético de categorías, con "Ofertas" primero si existiera
+        // ══════════════════════════════════════════════════════════
+        // Orden de categorías: llega desde la herramienta de la equipa
+        // (generar-edicion.html). Si no llegó, orden alfabético.
+        var ORDEN_RAW = 'Panificados|Lácteos|Bebidas|Almacén|Aromáticas|Dulces|Cosmética|Elaborados|Especias|Fiambres|Frutas|Frutos Secos|Granja|Granos|Hongos|Hortalizas|Infusiones|Medicina Natural|Moliendas';
+        var ORDEN_CATEGORIAS = [];
+        if (ORDEN_RAW && ORDEN_RAW.indexOf('{{') === -1) {
+          ORDEN_CATEGORIAS = ORDEN_RAW.split('|').map(function (s) { return s.trim(); }).filter(Boolean);
+        }
         orden.sort(function (a, b) {
-          return a.localeCompare(b, 'es');
+          var ia = ORDEN_CATEGORIAS.indexOf(a);
+          var ib = ORDEN_CATEGORIAS.indexOf(b);
+          if (ia === -1 && ib === -1) return a.localeCompare(b, 'es');
+          if (ia === -1) return 1;
+          if (ib === -1) return -1;
+          return ia - ib;
         });
 
         return orden.map(function (cat) {
