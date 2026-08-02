@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Recepción en galpón · Nodo Matríz (equipa)</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+  <link rel="icon" type="image/png" href="../assets/logo-nodo-verde.png">
+  <style>
+    body { font-family: Georgia, serif; background: #f4efe6; color: #2e3a26; margin: 0; }
+    .wrap { max-width: 620px; margin: 0 auto; padding: 24px 16px 64px; }
+
+    .card-eq {
+      background: var(--c-leche, #fff);
+      border: 1px solid rgba(74, 107, 58, 0.15);
+      border-radius: 14px;
+      padding: var(--s-5, 20px);
+      margin-top: var(--s-4, 16px);
+    }
+
+    .campo { margin-bottom: var(--s-4, 16px); }
+    .campo label { display: block; font-weight: 700; margin-bottom: 6px; font-size: 0.92rem; }
+    .campo input, .campo select {
+      width: 100%; box-sizing: border-box; padding: 10px;
+      border: 1.5px solid var(--c-salvia, #c9c2b2); border-radius: 8px;
+      font-size: 1rem; font-family: inherit; background: #fff;
+    }
+    .campo input:focus, .campo select:focus { outline: none; border-color: var(--c-oliva, #4a6b3a); }
+
+    .aviso {
+      background: rgba(110, 142, 85, 0.10);
+      border-left: 4px solid var(--c-oliva, #4a6b3a);
+      border-radius: 8px; padding: 12px 14px; margin: 16px 0; font-size: 0.95rem;
+    }
+    .aviso.rojo { background: rgba(160, 60, 40, 0.08); border-left-color: #a03c28; }
+
+    /* Línea de producto */
+    .item {
+      display: flex; align-items: flex-start; gap: 10px;
+      border: 1px solid rgba(74, 107, 58, 0.18); border-radius: 10px;
+      padding: 10px 12px; margin-bottom: 8px; background: #fff;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .item.tildado { background: rgba(110, 142, 85, 0.10); border-color: var(--c-oliva, #4a6b3a); }
+    .item input[type="checkbox"] {
+      width: 26px; height: 26px; margin-top: 2px; accent-color: #3c5230; flex-shrink: 0; cursor: pointer;
+    }
+    .item .cuerpo { flex: 1; min-width: 0; }
+    .item .linea-nombre { font-weight: 700; font-size: 0.98rem; }
+    .item .detalle { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; align-items: center; }
+    .item .detalle label { font-size: 0.8rem; color: #7a6f58; }
+    .item .detalle input[type="number"] {
+      width: 90px; padding: 7px; border: 1.5px solid #c9c2b2; border-radius: 8px;
+      font-size: 1rem; font-family: inherit;
+    }
+    .item .detalle select {
+      padding: 7px; border: 1.5px solid #c9c2b2; border-radius: 8px;
+      font-size: 0.9rem; font-family: inherit; background: #fff;
+    }
+    .item .detalle input[type="text"] {
+      flex: 1; min-width: 140px; padding: 7px; border: 1.5px solid #c9c2b2;
+      border-radius: 8px; font-size: 0.9rem; font-family: inherit;
+    }
+    .item.no-llego .linea-nombre { text-decoration: none; color: #7a6f58; }
+
+    .progreso { font-size: 0.9rem; color: #7a6f58; margin: 10px 0; }
+
+    .btn-conf {
+      display: inline-block; width: 100%; box-sizing: border-box; text-align: center;
+      background: #3c5230; color: #fff; border: none; border-radius: 999px;
+      padding: 14px 20px; font-size: 1.05rem; cursor: pointer; font-family: inherit;
+    }
+    .btn-conf:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .ok-box {
+      background: rgba(110, 142, 85, 0.12); border-left: 4px solid #4a6b3a;
+      padding: 12px 14px; border-radius: 8px; margin-top: 16px; display: none;
+    }
+
+    .chip-reg {
+      display: inline-block; font-size: 0.8rem; background: rgba(110,142,85,0.15);
+      border-radius: 999px; padding: 2px 10px; margin-left: 6px; color: #3c5230; font-weight: 700;
+    }
+    h1 { margin-bottom: 4px; }
+    .muted { color: #7a6f58; }
+
+    /* Solapas */
+    .tabs { display: flex; gap: 8px; margin-top: 16px; }
+    .tabs button {
+      flex: 1; padding: 12px 8px; border-radius: 999px; font-size: 1rem;
+      font-family: inherit; cursor: pointer; border: 1.5px solid rgba(74,107,58,0.35);
+      background: transparent; color: #3c5230; font-weight: 700;
+    }
+    .tabs button.activa { background: #3c5230; color: #fff; border-color: #3c5230; }
+
+    .item.preparado { background: rgba(110,142,85,0.14); border-color: #4a6b3a; opacity: 0.75; }
+    .item .quien { font-size: 0.8rem; color: #3c5230; font-weight: 700; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+
+    <header class="site-header fade-in">
+      <a class="site-mark" href="../">
+        <img src="../assets/logo-nodo-verde.png" alt="Nodo Matríz" style="width:48px; height:48px;">
+        <span>
+          <span class="site-mark__name">Nodo Matríz</span>
+          <span class="site-mark__sub">recepción en galpón</span>
+        </span>
+      </a>
+    </header>
+
+    <section class="fade-in" data-delay="1">
+      <h1>Galpón</h1>
+      <p class="lead">
+        Recepción de productores y armado de fracciones de la edición vigente.
+      </p>
+    </section>
+
+    <div class="aviso" id="estado-edicion">Cargando la edición vigente…</div>
+
+    <div class="tabs">
+      <button type="button" id="tab-recepcion" class="activa">📥 Recepción</button>
+      <button type="button" id="tab-fracc">🔪 Fraccionamiento</button>
+      <button type="button" id="tab-retiro">🛍 Retiro</button>
+    </div>
+
+    <div id="vista-recepcion">
+
+    <div class="card-eq fade-in" data-delay="2">
+      <div class="campo">
+        <label for="recibido-por">¿Quién recibe? *</label>
+        <input type="text" id="recibido-por" placeholder="Tu nombre" autocomplete="name">
+      </div>
+
+      <div class="campo">
+        <label for="sel-productor">Productor que llega *</label>
+        <select id="sel-productor" disabled>
+          <option value="">Cargando…</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card-eq" id="card-items" style="display:none;">
+      <h2 id="titulo-productor"></h2>
+      <p class="muted" style="font-size:0.9rem;">
+        Tildá cada renglón a medida que lo confirmás. Lo que quede sin tildar
+        se registra como <strong>no recibido</strong> (cantidad 0).
+      </p>
+      <div id="lista-items"></div>
+      <p class="progreso" id="progreso"></p>
+
+      <div class="campo">
+        <label for="clave">Clave de equipa *</label>
+        <input type="password" id="clave" placeholder="La clave compartida de la equipa">
+      </div>
+
+      <button type="button" class="btn-conf" id="btn-confirmar" disabled>Registrar recepción</button>
+
+      <div class="ok-box" id="ok-box">
+        ✅ Recepción registrada. Podés elegir el próximo productor que llegue.
+      </div>
+    </div>
+
+    </div><!-- /vista-recepcion -->
+
+    <!-- ── Vista Fraccionamiento ── -->
+    <div id="vista-fracc" style="display:none;">
+      <div class="card-eq">
+        <h2>Plan de fraccionamiento</h2>
+        <p class="muted" style="font-size:0.9rem;">
+          Estas son las porciones que hay que armar para esta edición.
+          Tildá cada renglón cuando esté <strong>empaquetado</strong> y registrá.
+        </p>
+
+        <div class="campo">
+          <label for="preparado-por">¿Quién prepara? *</label>
+          <input type="text" id="preparado-por" placeholder="Tu nombre" autocomplete="name">
+        </div>
+
+        <div id="lista-fracc"></div>
+        <p class="progreso" id="progreso-fracc"></p>
+
+        <div class="campo">
+          <label for="clave-fracc">Clave de equipa *</label>
+          <input type="password" id="clave-fracc" placeholder="La clave compartida de la equipa">
+        </div>
+
+        <button type="button" class="btn-conf" id="btn-fracc" disabled>Registrar fracciones preparadas</button>
+
+        <div class="ok-box" id="ok-fracc">
+          ✅ Fracciones registradas como preparadas.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Vista Retiro ── -->
+    <div id="vista-retiro" style="display:none;">
+      <div class="card-eq">
+        <h2>Retiro de pedidos</h2>
+        <p class="muted" style="font-size:0.9rem;">
+          Tildá cada pedido cuando el consumidor lo <strong>retira del galpón</strong> y registrá.
+          Reemplaza las marcas de color de la planilla heladera.
+        </p>
+
+        <div class="campo">
+          <label for="entregado-por">¿Quién entrega? *</label>
+          <input type="text" id="entregado-por" placeholder="Tu nombre" autocomplete="name">
+        </div>
+
+        <div class="campo">
+          <label for="buscar-retiro">Buscar consumidor</label>
+          <input type="text" id="buscar-retiro" placeholder="Escribí parte del nombre…">
+        </div>
+
+        <div id="lista-retiro"></div>
+        <p class="progreso" id="progreso-retiro"></p>
+
+        <div class="campo">
+          <label for="clave-retiro">Clave de equipa *</label>
+          <input type="password" id="clave-retiro" placeholder="La clave compartida de la equipa">
+        </div>
+
+        <button type="button" class="btn-conf" id="btn-retiro" disabled>Registrar retiros</button>
+
+        <div class="ok-box" id="ok-retiro">
+          ✅ Retiros registrados.
+        </div>
+      </div>
+    </div>
+
+    <footer class="site-footer">
+      <p>Nodo Matríz Agroecológico · Unquillo, Sierras Chicas</p>
+    </footer>
+
+  </main>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // ============================================================
+      // CONFIGURACIÓN — completar antes de publicar
+      // ============================================================
+      var WEBHOOK_D1     = 'https://hook.us2.make.com/wh4waco8hddd4qvggwfpul8wxyo2s9xo';
+      var WEBHOOK_FRAC   = 'https://hook.us2.make.com/pnu4revwv7cpba73qpnif4bsa0cuw86i';
+      var WEBHOOK_RETIRO = 'REEMPLAZAR_URL_WEBHOOK_RETIRO';
+      var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
+
+      var $ = function (id) { return document.getElementById(id); };
+
+      var idEdicion = '';
+      var productores = {};   // id -> nombre
+      var lineas = [];        // filas de Comandas_Calc A:H
+      var registrados = {};   // id_productor -> true (en esta sesión)
+      var planFracc = [];     // filas de Plan_Fraccionamiento de la edición
+      var pedidos = [];       // pedidos de la edición (para Retiro)
+      var consumidores = {};  // id -> nombre
+
+      // ── Solapas ──────────────────────────────────────────────────
+      var VISTAS = ['recepcion', 'fracc', 'retiro'];
+      function mostrarVista(cual) {
+        VISTAS.forEach(function (v) {
+          document.getElementById('vista-' + v).style.display = (v === cual) ? 'block' : 'none';
+          document.getElementById('tab-' + v).className = (v === cual) ? 'activa' : '';
+        });
+      }
+      VISTAS.forEach(function (v) {
+        document.getElementById('tab-' + v).addEventListener('click', function () { mostrarVista(v); });
+      });
+
+      // ── util gviz ────────────────────────────────────────────────
+      function gviz(params) {
+        var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
+          '/gviz/tq?tqx=out:json&' + params;
+        return fetch(url)
+          .then(function (r) { return r.text(); })
+          .then(function (t) {
+            var m = t.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+            if (!m) throw new Error('gviz');
+            return JSON.parse(m[1]);
+          });
+      }
+      function celda(row, i) {
+        var c = row.c[i];
+        if (!c || c.v === null || c.v === undefined) return '';
+        return c.v;
+      }
+
+      // ── factor de fracción: "1/2" → 0.5 · "2" → 2 · "100grs" → 1 ─
+      function factorFraccion(f) {
+        f = String(f || '').trim();
+        if (!f) return 1;
+        var m = f.match(/^(\d+)\s*\/\s*(\d+)$/);
+        if (m) return parseInt(m[1], 10) / parseInt(m[2], 10);
+        var n = parseFloat(f.replace(',', '.'));
+        return isNaN(n) ? 1 : n;
+      }
+
+      // ── carga inicial ────────────────────────────────────────────
+      function cargar() {
+        // Edición vigente (Comandas_Calc!K1) + tabla de comandas + nombres
+        Promise.all([
+          gviz('sheet=Comandas_Calc&range=K1&headers=0'),
+          gviz('sheet=Comandas_Calc&range=A1:H500&headers=1'),
+          gviz('sheet=Productores&range=A1:B300&headers=1'),
+          gviz('sheet=Plan_Fraccionamiento&range=A1:L500&headers=1'),
+          gviz('sheet=Pedidos&range=A1:U3000&headers=1'),
+          gviz('sheet=Consumidores&range=A1:B2000&headers=1')
+        ]).then(function (res) {
+          var rowsK = res[0].table.rows;
+          idEdicion = rowsK.length ? String(celda(rowsK[0], 0)).trim() : '';
+
+          res[2].table.rows.forEach(function (r) {
+            var id = String(celda(r, 0)).trim();
+            if (id) productores[id] = String(celda(r, 1)).trim();
+          });
+
+          lineas = [];
+          res[1].table.rows.forEach(function (r) {
+            var idProd = String(celda(r, 0)).trim();
+            if (!idProd) return;
+            lineas.push({
+              id_productor: idProd,
+              id_producto: String(celda(r, 1)).trim(),
+              fraccion: String(celda(r, 2)).trim(),
+              cant_efectiva: parseFloat(celda(r, 3)) || 0,
+              cant_paquetes: parseFloat(celda(r, 4)) || 0,
+              producto: String(celda(r, 5)).trim(),
+              unidad: String(celda(r, 6)).trim(),
+              linea: String(celda(r, 7)).trim()
+            });
+          });
+
+          if (!idEdicion || !lineas.length) {
+            $('estado-edicion').className = 'aviso rojo';
+            $('estado-edicion').textContent = 'No hay comandas generadas. Primero generá las comandas de la edición desde la herramienta de equipa.';
+            return;
+          }
+
+          // Plan de fraccionamiento de esta edición
+          planFracc = [];
+          res[3].table.rows.forEach(function (r) {
+            if (String(celda(r, 1)).trim() !== idEdicion) return;
+            planFracc.push({
+              id_plan: String(celda(r, 0)).trim(),
+              id_producto: String(celda(r, 2)).trim(),
+              nombre: String(celda(r, 3)).trim(),
+              fraccion: String(celda(r, 4)).trim(),
+              porciones: celda(r, 5),
+              unidades: celda(r, 6),
+              estado: String(celda(r, 8)).trim(),
+              preparado_por: String(celda(r, 9)).trim()
+            });
+          });
+
+          // Consumidores (nombres)
+          res[5].table.rows.forEach(function (r) {
+            var id = String(celda(r, 0)).trim();
+            if (id) consumidores[id] = String(celda(r, 1)).trim();
+          });
+
+          // Pedidos de la edición
+          pedidos = [];
+          res[4].table.rows.forEach(function (r) {
+            if (String(celda(r, 1)).trim() !== idEdicion) return;
+            pedidos.push({
+              id_pedido: String(celda(r, 0)).trim(),
+              id_consumidor: String(celda(r, 2)).trim(),
+              correlativo: parseInt(celda(r, 3), 10) || 0,
+              estado: String(celda(r, 5)).trim(),
+              total: parseFloat(celda(r, 10)) || 0
+            });
+          });
+          pedidos.sort(function (a, b) { return a.correlativo - b.correlativo; });
+
+          $('estado-edicion').innerHTML = 'Edición vigente: <strong>' + idEdicion +
+            '</strong> · ' + contarProductores() + ' productores · ' +
+            planFracc.length + ' fracciones · ' + pedidos.length + ' pedidos';
+          armarSelect();
+          renderFracc();
+          renderRetiro();
+        }).catch(function () {
+          $('estado-edicion').className = 'aviso rojo';
+          $('estado-edicion').textContent = 'No pudimos leer la planilla. Revisá la conexión y recargá.';
+        });
+      }
+
+      function contarProductores() {
+        var s = {};
+        lineas.forEach(function (l) { s[l.id_productor] = true; });
+        return Object.keys(s).length;
+      }
+
+      function armarSelect() {
+        var sel = $('sel-productor');
+        sel.innerHTML = '<option value="">— Elegir productor —</option>';
+        var vistos = {};
+        lineas.forEach(function (l) {
+          if (vistos[l.id_productor]) return;
+          vistos[l.id_productor] = true;
+          var op = document.createElement('option');
+          op.value = l.id_productor;
+          op.textContent = (productores[l.id_productor] || l.id_productor) +
+            (registrados[l.id_productor] ? ' ✓ registrado' : '');
+          sel.appendChild(op);
+        });
+        sel.disabled = false;
+      }
+
+      // ── render de la lista del productor elegido ─────────────────
+      $('sel-productor').addEventListener('change', function () {
+        var id = this.value;
+        if (!id) { $('card-items').style.display = 'none'; return; }
+        renderItems(id);
+      });
+
+      function renderItems(idProd) {
+        var cont = $('lista-items');
+        cont.innerHTML = '';
+        $('ok-box').style.display = 'none';
+
+        var propias = lineas.filter(function (l) { return l.id_productor === idProd; });
+
+        propias.forEach(function (l, i) {
+          var esperado = l.fraccion ? l.cant_paquetes : l.cant_efectiva;
+          var unidadMuestra = l.fraccion
+            ? 'paquetes de ' + l.fraccion + ' ' + l.unidad
+            : l.unidad;
+
+          var div = document.createElement('div');
+          div.className = 'item no-llego';
+          div.dataset.idx = String(i);
+          div.innerHTML =
+            '<input type="checkbox" class="chk" aria-label="Recibido">' +
+            '<div class="cuerpo">' +
+              '<div class="linea-nombre"></div>' +
+              '<div class="detalle" style="display:none;">' +
+                '<label>Recibido:</label>' +
+                '<input type="number" class="cant" inputmode="decimal" min="0" step="any">' +
+                '<span class="muted" style="font-size:0.8rem;"></span>' +
+                '<select class="calidad">' +
+                  '<option value="OK">Calidad OK</option>' +
+                  '<option value="Con observaciones">Con observaciones</option>' +
+                  '<option value="Rechazado">Rechazado</option>' +
+                '</select>' +
+                '<input type="text" class="obs" placeholder="Observación (opcional)">' +
+              '</div>' +
+            '</div>';
+
+          div.querySelector('.linea-nombre').textContent =
+            (l.producto || l.id_producto) + ' — esperado: ' + esperado + ' ' + unidadMuestra;
+          div.querySelector('.cant').value = esperado;
+          div.querySelector('.detalle .muted').textContent = unidadMuestra;
+
+          cont.appendChild(div);
+        });
+
+        $('titulo-productor').textContent = productores[idProd] || idProd;
+        $('card-items').style.display = 'block';
+        $('card-items').dataset.idProd = idProd;
+        actualizarProgreso();
+      }
+
+      // Tildar / destildar
+      $('lista-items').addEventListener('change', function (e) {
+        if (!e.target.classList.contains('chk')) return;
+        var item = e.target.closest('.item');
+        var det = item.querySelector('.detalle');
+        if (e.target.checked) {
+          item.classList.add('tildado');
+          item.classList.remove('no-llego');
+          det.style.display = 'flex';
+        } else {
+          item.classList.remove('tildado');
+          item.classList.add('no-llego');
+          det.style.display = 'none';
+        }
+        actualizarProgreso();
+      });
+
+      function actualizarProgreso() {
+        var total = $('lista-items').querySelectorAll('.item').length;
+        var tildados = $('lista-items').querySelectorAll('.chk:checked').length;
+        $('progreso').textContent = tildados + ' de ' + total + ' renglones confirmados';
+        validar();
+      }
+
+      function validar() {
+        var ok = $('recibido-por').value.trim() !== '' && $('clave').value.trim() !== '';
+        $('btn-confirmar').disabled = !ok;
+      }
+      $('recibido-por').addEventListener('input', validar);
+      $('clave').addEventListener('input', validar);
+
+      // ── envío ────────────────────────────────────────────────────
+      $('btn-confirmar').addEventListener('click', function () {
+        var idProd = $('card-items').dataset.idProd;
+        var propias = lineas.filter(function (l) { return l.id_productor === idProd; });
+        var divs = $('lista-items').querySelectorAll('.item');
+
+        var items = [];
+        propias.forEach(function (l, i) {
+          var div = divs[i];
+          var tildado = div.querySelector('.chk').checked;
+          var factor = l.fraccion ? factorFraccion(l.fraccion) : 1;
+          var pedidaEf = l.cant_efectiva;
+          var recibidaMostrada = tildado ? (parseFloat(div.querySelector('.cant').value) || 0) : 0;
+          var recibidaEf = l.fraccion ? recibidaMostrada * factor : recibidaMostrada;
+          recibidaEf = Math.round(recibidaEf * 1000) / 1000;
+
+          var obs = tildado ? div.querySelector('.obs').value.trim() : 'No recibido';
+          if (l.fraccion && tildado) {
+            obs = (obs ? obs + ' · ' : '') + recibidaMostrada + ' × ' + l.fraccion + ' ' + l.unidad;
+          }
+
+          items.push({
+            id_recepcion: 'REC' + idEdicion + '-' + idProd + '-' + l.id_producto + (l.fraccion ? '-' + l.fraccion : ''),
+            id_producto: l.id_producto,
+            producto: l.producto,
+            cantidad_pedida: pedidaEf,
+            cantidad_recibida: recibidaEf,
+            diferencia: Math.round((recibidaEf - pedidaEf) * 1000) / 1000,
+            calidad: tildado ? div.querySelector('.calidad').value : 'No llegó',
+            observaciones: obs
+          });
+        });
+
+        var payload = {
+          id_edicion: idEdicion,
+          id_productor: idProd,
+          recibido_por: $('recibido-por').value.trim(),
+          clave: $('clave').value.trim(),
+          items: items
+        };
+
+        var btn = $('btn-confirmar');
+        btn.disabled = true;
+        btn.textContent = 'Registrando…';
+
+        fetch(WEBHOOK_D1, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload)
+        }).then(fin).catch(fin);
+
+        function fin() {
+          btn.textContent = 'Registrar recepción';
+          btn.disabled = false;
+          $('ok-box').style.display = 'block';
+          registrados[idProd] = true;
+          armarSelect();
+          $('sel-productor').value = idProd;
+          window.scrollTo(0, document.body.scrollHeight);
+        }
+      });
+
+      // ── Fraccionamiento ──────────────────────────────────────────
+      function renderFracc() {
+        var cont = $('lista-fracc');
+        cont.innerHTML = '';
+
+        if (!planFracc.length) {
+          cont.innerHTML = '<p class="muted">No hay fracciones pendientes para esta edición 🎉</p>';
+          $('progreso-fracc').textContent = '';
+          return;
+        }
+
+        planFracc.forEach(function (p, i) {
+          var yaPreparado = (p.estado === 'Preparado');
+          var div = document.createElement('div');
+          div.className = 'item' + (yaPreparado ? ' preparado' : ' no-llego');
+          div.dataset.idx = String(i);
+          div.innerHTML =
+            '<input type="checkbox" class="chk-f" aria-label="Preparado"' +
+              (yaPreparado ? ' checked disabled' : '') + '>' +
+            '<div class="cuerpo">' +
+              '<div class="linea-nombre"></div>' +
+              '<div class="quien"></div>' +
+            '</div>';
+          div.querySelector('.linea-nombre').textContent =
+            'Armar ' + p.porciones + ' porciones de ' + p.fraccion +
+            ' — ' + (p.nombre || p.id_producto) + ' (= ' + p.unidades + ' en total)';
+          div.querySelector('.quien').textContent =
+            yaPreparado ? '✓ Preparado' + (p.preparado_por ? ' por ' + p.preparado_por : '') : '';
+          cont.appendChild(div);
+        });
+        actualizarProgresoFracc();
+      }
+
+      $('lista-fracc').addEventListener('change', function (e) {
+        if (!e.target.classList.contains('chk-f') || e.target.disabled) return;
+        var item = e.target.closest('.item');
+        if (e.target.checked) { item.classList.add('tildado'); item.classList.remove('no-llego'); }
+        else { item.classList.remove('tildado'); item.classList.add('no-llego'); }
+        actualizarProgresoFracc();
+      });
+
+      function actualizarProgresoFracc() {
+        var hechas = planFracc.filter(function (p) { return p.estado === 'Preparado'; }).length;
+        var nuevas = $('lista-fracc').querySelectorAll('.chk-f:checked:not(:disabled)').length;
+        $('progreso-fracc').textContent = hechas + ' ya preparadas · ' + nuevas + ' por registrar ahora';
+        validarFracc();
+      }
+
+      function validarFracc() {
+        var nuevas = $('lista-fracc').querySelectorAll('.chk-f:checked:not(:disabled)').length;
+        var ok = $('preparado-por').value.trim() !== '' &&
+                 $('clave-fracc').value.trim() !== '' && nuevas > 0;
+        $('btn-fracc').disabled = !ok;
+      }
+      $('preparado-por').addEventListener('input', validarFracc);
+      $('clave-fracc').addEventListener('input', validarFracc);
+
+      $('btn-fracc').addEventListener('click', function () {
+        var divs = $('lista-fracc').querySelectorAll('.item');
+        var items = [];
+        planFracc.forEach(function (p, i) {
+          var chk = divs[i].querySelector('.chk-f');
+          if (chk.checked && !chk.disabled) items.push({ id_plan: p.id_plan });
+        });
+        if (!items.length) return;
+
+        var payload = {
+          tipo: 'fraccionamiento',
+          id_edicion: idEdicion,
+          preparado_por: $('preparado-por').value.trim(),
+          clave: $('clave-fracc').value.trim(),
+          items: items
+        };
+
+        var btn = $('btn-fracc');
+        btn.disabled = true;
+        btn.textContent = 'Registrando…';
+
+        fetch(WEBHOOK_FRAC, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload)
+        }).then(finF).catch(finF);
+
+        function finF() {
+          btn.textContent = 'Registrar fracciones preparadas';
+          $('ok-fracc').style.display = 'block';
+          // Marcar localmente como preparadas
+          planFracc.forEach(function (p, i) {
+            var chk = divs[i].querySelector('.chk-f');
+            if (chk.checked && !chk.disabled) {
+              p.estado = 'Preparado';
+              p.preparado_por = $('preparado-por').value.trim();
+            }
+          });
+          renderFracc();
+        }
+      });
+
+      // ── Retiro ───────────────────────────────────────────────────
+      function nombreConsumidor(p) {
+        return consumidores[p.id_consumidor] || p.id_consumidor || '(sin nombre)';
+      }
+
+      function renderRetiro() {
+        var cont = $('lista-retiro');
+        cont.innerHTML = '';
+
+        if (!pedidos.length) {
+          cont.innerHTML = '<p class="muted">No hay pedidos para esta edición.</p>';
+          $('progreso-retiro').textContent = '';
+          return;
+        }
+
+        var filtro = $('buscar-retiro').value.trim().toLowerCase();
+
+        pedidos.forEach(function (p, i) {
+          var nombre = nombreConsumidor(p);
+          if (filtro && nombre.toLowerCase().indexOf(filtro) === -1) return;
+
+          var yaEntregado = (p.estado === 'Entregado');
+          var div = document.createElement('div');
+          div.className = 'item' + (yaEntregado ? ' preparado' : ' no-llego');
+          div.dataset.idx = String(i);
+          div.innerHTML =
+            '<input type="checkbox" class="chk-r" aria-label="Retirado"' +
+              (yaEntregado ? ' checked disabled' : '') + '>' +
+            '<div class="cuerpo">' +
+              '<div class="linea-nombre"></div>' +
+              '<div class="quien"></div>' +
+            '</div>';
+          div.querySelector('.linea-nombre').textContent =
+            'N° ' + p.correlativo + ' · ' + nombre +
+            ' — $' + Math.round(p.total).toLocaleString('es-AR');
+          div.querySelector('.quien').textContent = yaEntregado ? '✓ Entregado' : '';
+          cont.appendChild(div);
+        });
+        actualizarProgresoRetiro();
+      }
+
+      $('buscar-retiro').addEventListener('input', renderRetiro);
+
+      $('lista-retiro').addEventListener('change', function (e) {
+        if (!e.target.classList.contains('chk-r') || e.target.disabled) return;
+        var item = e.target.closest('.item');
+        if (e.target.checked) { item.classList.add('tildado'); item.classList.remove('no-llego'); }
+        else { item.classList.remove('tildado'); item.classList.add('no-llego'); }
+        actualizarProgresoRetiro();
+      });
+
+      function actualizarProgresoRetiro() {
+        var hechos = pedidos.filter(function (p) { return p.estado === 'Entregado'; }).length;
+        var nuevos = $('lista-retiro').querySelectorAll('.chk-r:checked:not(:disabled)').length;
+        $('progreso-retiro').textContent = hechos + ' de ' + pedidos.length +
+          ' ya entregados · ' + nuevos + ' por registrar ahora';
+        validarRetiro();
+      }
+
+      function validarRetiro() {
+        var nuevos = $('lista-retiro').querySelectorAll('.chk-r:checked:not(:disabled)').length;
+        var ok = $('entregado-por').value.trim() !== '' &&
+                 $('clave-retiro').value.trim() !== '' && nuevos > 0;
+        $('btn-retiro').disabled = !ok;
+      }
+      $('entregado-por').addEventListener('input', validarRetiro);
+      $('clave-retiro').addEventListener('input', validarRetiro);
+
+      $('btn-retiro').addEventListener('click', function () {
+        var divs = $('lista-retiro').querySelectorAll('.item');
+        var items = [];
+        Array.prototype.forEach.call(divs, function (div) {
+          var chk = div.querySelector('.chk-r');
+          if (chk.checked && !chk.disabled) {
+            items.push({ id_pedido: pedidos[parseInt(div.dataset.idx, 10)].id_pedido });
+          }
+        });
+        if (!items.length) return;
+
+        var payload = {
+          tipo: 'retiro',
+          id_edicion: idEdicion,
+          entregado_por: $('entregado-por').value.trim(),
+          clave: $('clave-retiro').value.trim(),
+          items: items
+        };
+
+        var btn = $('btn-retiro');
+        btn.disabled = true;
+        btn.textContent = 'Registrando…';
+
+        fetch(WEBHOOK_RETIRO, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload)
+        }).then(finR).catch(finR);
+
+        function finR() {
+          btn.textContent = 'Registrar retiros';
+          $('ok-retiro').style.display = 'block';
+          Array.prototype.forEach.call(divs, function (div) {
+            var chk = div.querySelector('.chk-r');
+            if (chk.checked && !chk.disabled) {
+              pedidos[parseInt(div.dataset.idx, 10)].estado = 'Entregado';
+            }
+          });
+          renderRetiro();
+        }
+      });
+
+      cargar();
+    })();
+  </script>
+</body>
+</html>
