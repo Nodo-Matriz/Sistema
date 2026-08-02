@@ -84,6 +84,18 @@
     }
     h1 { margin-bottom: 4px; }
     .muted { color: #7a6f58; }
+
+    /* Solapas */
+    .tabs { display: flex; gap: 8px; margin-top: 16px; }
+    .tabs button {
+      flex: 1; padding: 12px 8px; border-radius: 999px; font-size: 1rem;
+      font-family: inherit; cursor: pointer; border: 1.5px solid rgba(74,107,58,0.35);
+      background: transparent; color: #3c5230; font-weight: 700;
+    }
+    .tabs button.activa { background: #3c5230; color: #fff; border-color: #3c5230; }
+
+    .item.preparado { background: rgba(110,142,85,0.14); border-color: #4a6b3a; opacity: 0.75; }
+    .item .quien { font-size: 0.8rem; color: #3c5230; font-weight: 700; margin-top: 4px; }
   </style>
 </head>
 <body>
@@ -100,14 +112,20 @@
     </header>
 
     <section class="fade-in" data-delay="1">
-      <h1>Recepción en galpón</h1>
+      <h1>Galpón</h1>
       <p class="lead">
-        Elegí el productor que llegó, tildá lo que trae y ajustá cantidades si difieren.
-        Al confirmar, todo queda registrado.
+        Recepción de productores y armado de fracciones de la edición vigente.
       </p>
     </section>
 
     <div class="aviso" id="estado-edicion">Cargando la edición vigente…</div>
+
+    <div class="tabs">
+      <button type="button" id="tab-recepcion" class="activa">📥 Recepción</button>
+      <button type="button" id="tab-fracc">🔪 Fraccionamiento</button>
+    </div>
+
+    <div id="vista-recepcion">
 
     <div class="card-eq fade-in" data-delay="2">
       <div class="campo">
@@ -144,6 +162,38 @@
       </div>
     </div>
 
+    </div><!-- /vista-recepcion -->
+
+    <!-- ── Vista Fraccionamiento ── -->
+    <div id="vista-fracc" style="display:none;">
+      <div class="card-eq">
+        <h2>Plan de fraccionamiento</h2>
+        <p class="muted" style="font-size:0.9rem;">
+          Estas son las porciones que hay que armar para esta edición.
+          Tildá cada renglón cuando esté <strong>empaquetado</strong> y registrá.
+        </p>
+
+        <div class="campo">
+          <label for="preparado-por">¿Quién prepara? *</label>
+          <input type="text" id="preparado-por" placeholder="Tu nombre" autocomplete="name">
+        </div>
+
+        <div id="lista-fracc"></div>
+        <p class="progreso" id="progreso-fracc"></p>
+
+        <div class="campo">
+          <label for="clave-fracc">Clave de equipa *</label>
+          <input type="password" id="clave-fracc" placeholder="La clave compartida de la equipa">
+        </div>
+
+        <button type="button" class="btn-conf" id="btn-fracc" disabled>Registrar fracciones preparadas</button>
+
+        <div class="ok-box" id="ok-fracc">
+          ✅ Fracciones registradas como preparadas.
+        </div>
+      </div>
+    </div>
+
     <footer class="site-footer">
       <p>Nodo Matríz Agroecológico · Unquillo, Sierras Chicas</p>
     </footer>
@@ -158,6 +208,7 @@
       // CONFIGURACIÓN — completar antes de publicar
       // ============================================================
       var WEBHOOK_D1     = 'https://hook.us2.make.com/wh4waco8hddd4qvggwfpul8wxyo2s9xo';
+      var WEBHOOK_FRAC   = 'REEMPLAZAR_URL_WEBHOOK_FRAC';
       var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
 
       var $ = function (id) { return document.getElementById(id); };
@@ -166,6 +217,18 @@
       var productores = {};   // id -> nombre
       var lineas = [];        // filas de Comandas_Calc A:H
       var registrados = {};   // id_productor -> true (en esta sesión)
+      var planFracc = [];     // filas de Plan_Fraccionamiento de la edición
+
+      // ── Solapas ──────────────────────────────────────────────────
+      function mostrarVista(cual) {
+        var esRec = (cual === 'recepcion');
+        document.getElementById('vista-recepcion').style.display = esRec ? 'block' : 'none';
+        document.getElementById('vista-fracc').style.display = esRec ? 'none' : 'block';
+        document.getElementById('tab-recepcion').className = esRec ? 'activa' : '';
+        document.getElementById('tab-fracc').className = esRec ? '' : 'activa';
+      }
+      document.getElementById('tab-recepcion').addEventListener('click', function () { mostrarVista('recepcion'); });
+      document.getElementById('tab-fracc').addEventListener('click', function () { mostrarVista('fracc'); });
 
       // ── util gviz ────────────────────────────────────────────────
       function gviz(params) {
@@ -201,7 +264,8 @@
         Promise.all([
           gviz('sheet=Comandas_Calc&range=K1&headers=0'),
           gviz('sheet=Comandas_Calc&range=A1:H500&headers=1'),
-          gviz('sheet=Productores&range=A1:B300&headers=1')
+          gviz('sheet=Productores&range=A1:B300&headers=1'),
+          gviz('sheet=Plan_Fraccionamiento&range=A1:L500&headers=1')
         ]).then(function (res) {
           var rowsK = res[0].table.rows;
           idEdicion = rowsK.length ? String(celda(rowsK[0], 0)).trim() : '';
@@ -233,9 +297,27 @@
             return;
           }
 
+          // Plan de fraccionamiento de esta edición
+          planFracc = [];
+          res[3].table.rows.forEach(function (r) {
+            if (String(celda(r, 1)).trim() !== idEdicion) return;
+            planFracc.push({
+              id_plan: String(celda(r, 0)).trim(),
+              id_producto: String(celda(r, 2)).trim(),
+              nombre: String(celda(r, 3)).trim(),
+              fraccion: String(celda(r, 4)).trim(),
+              porciones: celda(r, 5),
+              unidades: celda(r, 6),
+              estado: String(celda(r, 8)).trim(),
+              preparado_por: String(celda(r, 9)).trim()
+            });
+          });
+
           $('estado-edicion').innerHTML = 'Edición vigente: <strong>' + idEdicion +
-            '</strong> · ' + contarProductores() + ' productores esperados';
+            '</strong> · ' + contarProductores() + ' productores esperados · ' +
+            planFracc.length + ' fracciones por armar';
           armarSelect();
+          renderFracc();
         }).catch(function () {
           $('estado-edicion').className = 'aviso rojo';
           $('estado-edicion').textContent = 'No pudimos leer la planilla. Revisá la conexión y recargá.';
@@ -409,6 +491,106 @@
           armarSelect();
           $('sel-productor').value = idProd;
           window.scrollTo(0, document.body.scrollHeight);
+        }
+      });
+
+      // ── Fraccionamiento ──────────────────────────────────────────
+      function renderFracc() {
+        var cont = $('lista-fracc');
+        cont.innerHTML = '';
+
+        if (!planFracc.length) {
+          cont.innerHTML = '<p class="muted">No hay fracciones pendientes para esta edición 🎉</p>';
+          $('progreso-fracc').textContent = '';
+          return;
+        }
+
+        planFracc.forEach(function (p, i) {
+          var yaPreparado = (p.estado === 'Preparado');
+          var div = document.createElement('div');
+          div.className = 'item' + (yaPreparado ? ' preparado' : ' no-llego');
+          div.dataset.idx = String(i);
+          div.innerHTML =
+            '<input type="checkbox" class="chk-f" aria-label="Preparado"' +
+              (yaPreparado ? ' checked disabled' : '') + '>' +
+            '<div class="cuerpo">' +
+              '<div class="linea-nombre"></div>' +
+              '<div class="quien"></div>' +
+            '</div>';
+          div.querySelector('.linea-nombre').textContent =
+            'Armar ' + p.porciones + ' porciones de ' + p.fraccion +
+            ' — ' + (p.nombre || p.id_producto) + ' (= ' + p.unidades + ' en total)';
+          div.querySelector('.quien').textContent =
+            yaPreparado ? '✓ Preparado' + (p.preparado_por ? ' por ' + p.preparado_por : '') : '';
+          cont.appendChild(div);
+        });
+        actualizarProgresoFracc();
+      }
+
+      $('lista-fracc').addEventListener('change', function (e) {
+        if (!e.target.classList.contains('chk-f') || e.target.disabled) return;
+        var item = e.target.closest('.item');
+        if (e.target.checked) { item.classList.add('tildado'); item.classList.remove('no-llego'); }
+        else { item.classList.remove('tildado'); item.classList.add('no-llego'); }
+        actualizarProgresoFracc();
+      });
+
+      function actualizarProgresoFracc() {
+        var hechas = planFracc.filter(function (p) { return p.estado === 'Preparado'; }).length;
+        var nuevas = $('lista-fracc').querySelectorAll('.chk-f:checked:not(:disabled)').length;
+        $('progreso-fracc').textContent = hechas + ' ya preparadas · ' + nuevas + ' por registrar ahora';
+        validarFracc();
+      }
+
+      function validarFracc() {
+        var nuevas = $('lista-fracc').querySelectorAll('.chk-f:checked:not(:disabled)').length;
+        var ok = $('preparado-por').value.trim() !== '' &&
+                 $('clave-fracc').value.trim() !== '' && nuevas > 0;
+        $('btn-fracc').disabled = !ok;
+      }
+      $('preparado-por').addEventListener('input', validarFracc);
+      $('clave-fracc').addEventListener('input', validarFracc);
+
+      $('btn-fracc').addEventListener('click', function () {
+        var divs = $('lista-fracc').querySelectorAll('.item');
+        var items = [];
+        planFracc.forEach(function (p, i) {
+          var chk = divs[i].querySelector('.chk-f');
+          if (chk.checked && !chk.disabled) items.push({ id_plan: p.id_plan });
+        });
+        if (!items.length) return;
+
+        var payload = {
+          tipo: 'fraccionamiento',
+          id_edicion: idEdicion,
+          preparado_por: $('preparado-por').value.trim(),
+          clave: $('clave-fracc').value.trim(),
+          items: items
+        };
+
+        var btn = $('btn-fracc');
+        btn.disabled = true;
+        btn.textContent = 'Registrando…';
+
+        fetch(WEBHOOK_FRAC, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload)
+        }).then(finF).catch(finF);
+
+        function finF() {
+          btn.textContent = 'Registrar fracciones preparadas';
+          $('ok-fracc').style.display = 'block';
+          // Marcar localmente como preparadas
+          planFracc.forEach(function (p, i) {
+            var chk = divs[i].querySelector('.chk-f');
+            if (chk.checked && !chk.disabled) {
+              p.estado = 'Preparado';
+              p.preparado_por = $('preparado-por').value.trim();
+            }
+          });
+          renderFracc();
         }
       });
 
