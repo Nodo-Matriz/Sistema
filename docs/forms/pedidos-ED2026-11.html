@@ -18,8 +18,8 @@
          ED2026-11              ej: ED2026-09
          11          ej: 9
          2026            ej: 2026
-         sábado, 1 de agosto, 10:25 hs      ej: martes 14 de mayo, 12:00 hs
-         2026-08-01T10:25:00-03:00        ej: 2026-05-14T12:00:00-03:00
+         martes, 4 de agosto, 10:30 hs      ej: martes 14 de mayo, 12:00 hs
+         2026-08-04T10:30:00-03:00        ej: 2026-05-14T12:00:00-03:00
          REEMPLAZAR_WEBHOOK_B1_DESPUES             ej: https://hook.eu2.make.com/abc123
          10  ej: 10
          nodomatriz.mp         ej: nodomatriz.mp
@@ -56,7 +56,7 @@
       </p>
 
       <div class="note note--info">
-        <strong>Cierre del formulario:</strong> sábado, 1 de agosto, 10:25 hs.
+        <strong>Cierre del formulario:</strong> martes, 4 de agosto, 10:30 hs.
         Pasada esa hora, los pedidos no pueden modificarse ni agregarse.
       </div>
     </section>
@@ -403,7 +403,7 @@
         // ══════════════════════════════════════════════════════════
         // Orden de categorías: llega desde la herramienta de la equipa
         // (generar-edicion.html). Si no llegó, orden alfabético.
-        var ORDEN_RAW = 'Panificados|Lácteos|Bebidas|Almacén|Aromáticas|Dulces|Cosmética|Elaborados|Especias|Fiambres|Frutas|Frutos Secos|Granja|Granos|Hongos|Hortalizas|Infusiones|Medicina Natural|Moliendas';
+        var ORDEN_RAW = 'Lácteos|Panificados|Bebidas|Almacén|Aromáticas|Dulces|Cosmética|Elaborados|Especias|Fiambres|Frutas|Frutos Secos|Granja|Granos|Hongos|Hortalizas|Infusiones|Medicina Natural|Moliendas';
         var ORDEN_CATEGORIAS = [];
         if (ORDEN_RAW && ORDEN_RAW.indexOf('{{') === -1) {
           ORDEN_CATEGORIAS = ORDEN_RAW.split('|').map(function (s) { return s.trim(); }).filter(Boolean);
