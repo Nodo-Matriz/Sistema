@@ -123,6 +123,7 @@
     <div class="tabs">
       <button type="button" id="tab-recepcion" class="activa">📥 Recepción</button>
       <button type="button" id="tab-fracc">🔪 Fraccionamiento</button>
+      <button type="button" id="tab-retiro">🛍 Retiro</button>
     </div>
 
     <div id="vista-recepcion">
@@ -194,6 +195,41 @@
       </div>
     </div>
 
+    <!-- ── Vista Retiro ── -->
+    <div id="vista-retiro" style="display:none;">
+      <div class="card-eq">
+        <h2>Retiro de pedidos</h2>
+        <p class="muted" style="font-size:0.9rem;">
+          Tildá cada pedido cuando el consumidor lo <strong>retira del galpón</strong> y registrá.
+          Reemplaza las marcas de color de la planilla heladera.
+        </p>
+
+        <div class="campo">
+          <label for="entregado-por">¿Quién entrega? *</label>
+          <input type="text" id="entregado-por" placeholder="Tu nombre" autocomplete="name">
+        </div>
+
+        <div class="campo">
+          <label for="buscar-retiro">Buscar consumidor</label>
+          <input type="text" id="buscar-retiro" placeholder="Escribí parte del nombre…">
+        </div>
+
+        <div id="lista-retiro"></div>
+        <p class="progreso" id="progreso-retiro"></p>
+
+        <div class="campo">
+          <label for="clave-retiro">Clave de equipa *</label>
+          <input type="password" id="clave-retiro" placeholder="La clave compartida de la equipa">
+        </div>
+
+        <button type="button" class="btn-conf" id="btn-retiro" disabled>Registrar retiros</button>
+
+        <div class="ok-box" id="ok-retiro">
+          ✅ Retiros registrados.
+        </div>
+      </div>
+    </div>
+
     <footer class="site-footer">
       <p>Nodo Matríz Agroecológico · Unquillo, Sierras Chicas</p>
     </footer>
@@ -209,6 +245,7 @@
       // ============================================================
       var WEBHOOK_D1     = 'https://hook.us2.make.com/wh4waco8hddd4qvggwfpul8wxyo2s9xo';
       var WEBHOOK_FRAC   = 'https://hook.us2.make.com/pnu4revwv7cpba73qpnif4bsa0cuw86i';
+      var WEBHOOK_RETIRO = 'REEMPLAZAR_URL_WEBHOOK_RETIRO';
       var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
 
       var $ = function (id) { return document.getElementById(id); };
@@ -218,17 +255,20 @@
       var lineas = [];        // filas de Comandas_Calc A:H
       var registrados = {};   // id_productor -> true (en esta sesión)
       var planFracc = [];     // filas de Plan_Fraccionamiento de la edición
+      var pedidos = [];       // pedidos de la edición (para Retiro)
+      var consumidores = {};  // id -> nombre
 
       // ── Solapas ──────────────────────────────────────────────────
+      var VISTAS = ['recepcion', 'fracc', 'retiro'];
       function mostrarVista(cual) {
-        var esRec = (cual === 'recepcion');
-        document.getElementById('vista-recepcion').style.display = esRec ? 'block' : 'none';
-        document.getElementById('vista-fracc').style.display = esRec ? 'none' : 'block';
-        document.getElementById('tab-recepcion').className = esRec ? 'activa' : '';
-        document.getElementById('tab-fracc').className = esRec ? '' : 'activa';
+        VISTAS.forEach(function (v) {
+          document.getElementById('vista-' + v).style.display = (v === cual) ? 'block' : 'none';
+          document.getElementById('tab-' + v).className = (v === cual) ? 'activa' : '';
+        });
       }
-      document.getElementById('tab-recepcion').addEventListener('click', function () { mostrarVista('recepcion'); });
-      document.getElementById('tab-fracc').addEventListener('click', function () { mostrarVista('fracc'); });
+      VISTAS.forEach(function (v) {
+        document.getElementById('tab-' + v).addEventListener('click', function () { mostrarVista(v); });
+      });
 
       // ── util gviz ────────────────────────────────────────────────
       function gviz(params) {
@@ -265,7 +305,9 @@
           gviz('sheet=Comandas_Calc&range=K1&headers=0'),
           gviz('sheet=Comandas_Calc&range=A1:H500&headers=1'),
           gviz('sheet=Productores&range=A1:B300&headers=1'),
-          gviz('sheet=Plan_Fraccionamiento&range=A1:L500&headers=1')
+          gviz('sheet=Plan_Fraccionamiento&range=A1:L500&headers=1'),
+          gviz('sheet=Pedidos&range=A1:U3000&headers=1'),
+          gviz('sheet=Consumidores&range=A1:B2000&headers=1')
         ]).then(function (res) {
           var rowsK = res[0].table.rows;
           idEdicion = rowsK.length ? String(celda(rowsK[0], 0)).trim() : '';
@@ -313,11 +355,32 @@
             });
           });
 
+          // Consumidores (nombres)
+          res[5].table.rows.forEach(function (r) {
+            var id = String(celda(r, 0)).trim();
+            if (id) consumidores[id] = String(celda(r, 1)).trim();
+          });
+
+          // Pedidos de la edición
+          pedidos = [];
+          res[4].table.rows.forEach(function (r) {
+            if (String(celda(r, 1)).trim() !== idEdicion) return;
+            pedidos.push({
+              id_pedido: String(celda(r, 0)).trim(),
+              id_consumidor: String(celda(r, 2)).trim(),
+              correlativo: parseInt(celda(r, 3), 10) || 0,
+              estado: String(celda(r, 5)).trim(),
+              total: parseFloat(celda(r, 10)) || 0
+            });
+          });
+          pedidos.sort(function (a, b) { return a.correlativo - b.correlativo; });
+
           $('estado-edicion').innerHTML = 'Edición vigente: <strong>' + idEdicion +
-            '</strong> · ' + contarProductores() + ' productores esperados · ' +
-            planFracc.length + ' fracciones por armar';
+            '</strong> · ' + contarProductores() + ' productores · ' +
+            planFracc.length + ' fracciones · ' + pedidos.length + ' pedidos';
           armarSelect();
           renderFracc();
+          renderRetiro();
         }).catch(function () {
           $('estado-edicion').className = 'aviso rojo';
           $('estado-edicion').textContent = 'No pudimos leer la planilla. Revisá la conexión y recargá.';
@@ -591,6 +654,117 @@
             }
           });
           renderFracc();
+        }
+      });
+
+      // ── Retiro ───────────────────────────────────────────────────
+      function nombreConsumidor(p) {
+        return consumidores[p.id_consumidor] || p.id_consumidor || '(sin nombre)';
+      }
+
+      function renderRetiro() {
+        var cont = $('lista-retiro');
+        cont.innerHTML = '';
+
+        if (!pedidos.length) {
+          cont.innerHTML = '<p class="muted">No hay pedidos para esta edición.</p>';
+          $('progreso-retiro').textContent = '';
+          return;
+        }
+
+        var filtro = $('buscar-retiro').value.trim().toLowerCase();
+
+        pedidos.forEach(function (p, i) {
+          var nombre = nombreConsumidor(p);
+          if (filtro && nombre.toLowerCase().indexOf(filtro) === -1) return;
+
+          var yaEntregado = (p.estado === 'Entregado');
+          var div = document.createElement('div');
+          div.className = 'item' + (yaEntregado ? ' preparado' : ' no-llego');
+          div.dataset.idx = String(i);
+          div.innerHTML =
+            '<input type="checkbox" class="chk-r" aria-label="Retirado"' +
+              (yaEntregado ? ' checked disabled' : '') + '>' +
+            '<div class="cuerpo">' +
+              '<div class="linea-nombre"></div>' +
+              '<div class="quien"></div>' +
+            '</div>';
+          div.querySelector('.linea-nombre').textContent =
+            'N° ' + p.correlativo + ' · ' + nombre +
+            ' — $' + Math.round(p.total).toLocaleString('es-AR');
+          div.querySelector('.quien').textContent = yaEntregado ? '✓ Entregado' : '';
+          cont.appendChild(div);
+        });
+        actualizarProgresoRetiro();
+      }
+
+      $('buscar-retiro').addEventListener('input', renderRetiro);
+
+      $('lista-retiro').addEventListener('change', function (e) {
+        if (!e.target.classList.contains('chk-r') || e.target.disabled) return;
+        var item = e.target.closest('.item');
+        if (e.target.checked) { item.classList.add('tildado'); item.classList.remove('no-llego'); }
+        else { item.classList.remove('tildado'); item.classList.add('no-llego'); }
+        actualizarProgresoRetiro();
+      });
+
+      function actualizarProgresoRetiro() {
+        var hechos = pedidos.filter(function (p) { return p.estado === 'Entregado'; }).length;
+        var nuevos = $('lista-retiro').querySelectorAll('.chk-r:checked:not(:disabled)').length;
+        $('progreso-retiro').textContent = hechos + ' de ' + pedidos.length +
+          ' ya entregados · ' + nuevos + ' por registrar ahora';
+        validarRetiro();
+      }
+
+      function validarRetiro() {
+        var nuevos = $('lista-retiro').querySelectorAll('.chk-r:checked:not(:disabled)').length;
+        var ok = $('entregado-por').value.trim() !== '' &&
+                 $('clave-retiro').value.trim() !== '' && nuevos > 0;
+        $('btn-retiro').disabled = !ok;
+      }
+      $('entregado-por').addEventListener('input', validarRetiro);
+      $('clave-retiro').addEventListener('input', validarRetiro);
+
+      $('btn-retiro').addEventListener('click', function () {
+        var divs = $('lista-retiro').querySelectorAll('.item');
+        var items = [];
+        Array.prototype.forEach.call(divs, function (div) {
+          var chk = div.querySelector('.chk-r');
+          if (chk.checked && !chk.disabled) {
+            items.push({ id_pedido: pedidos[parseInt(div.dataset.idx, 10)].id_pedido });
+          }
+        });
+        if (!items.length) return;
+
+        var payload = {
+          tipo: 'retiro',
+          id_edicion: idEdicion,
+          entregado_por: $('entregado-por').value.trim(),
+          clave: $('clave-retiro').value.trim(),
+          items: items
+        };
+
+        var btn = $('btn-retiro');
+        btn.disabled = true;
+        btn.textContent = 'Registrando…';
+
+        fetch(WEBHOOK_RETIRO, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload)
+        }).then(finR).catch(finR);
+
+        function finR() {
+          btn.textContent = 'Registrar retiros';
+          $('ok-retiro').style.display = 'block';
+          Array.prototype.forEach.call(divs, function (div) {
+            var chk = div.querySelector('.chk-r');
+            if (chk.checked && !chk.disabled) {
+              pedidos[parseInt(div.dataset.idx, 10)].estado = 'Entregado';
+            }
+          });
+          renderRetiro();
         }
       });
 
