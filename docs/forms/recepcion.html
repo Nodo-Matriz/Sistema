@@ -6,96 +6,401 @@
   <meta name="robots" content="noindex">
   <title>Recepción en galpón · Nodo Matríz (equipa)</title>
   <link rel="stylesheet" href="../assets/styles.css">
-  <link rel="icon" type="image/png" href="../assets/logo-nodo-verde.png">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4 Q22 8 22 16 Q22 24 16 28 Q10 24 10 16 Q10 8 16 4 Z' fill='%234A6B3A'/%3E%3Cpath d='M16 6 V28' stroke='%23FAF6EE' stroke-width='1.5' stroke-linecap='round' opacity='0.6'/%3E%3C/svg%3E">
   <style>
-    body { font-family: Georgia, serif; background: #f4efe6; color: #2e3a26; margin: 0; }
-    .wrap { max-width: 620px; margin: 0 auto; padding: 24px 16px 64px; }
+    /* ============================================================
+       Recepción en galpón — hereda el sistema de diseño de
+       ../assets/styles.css (Fraunces + Atkinson Hyperlegible,
+       paleta de tierra). Acá sólo van los componentes propios
+       de la app de la equipa.
+       ============================================================ */
 
+    .wrap {
+      max-width: 680px;
+      padding: var(--s-6) var(--s-4) var(--s-9);
+    }
+
+    @media (min-width: 768px) {
+      .wrap { padding: var(--s-7) var(--s-5) var(--s-9); }
+    }
+
+    h1 { font-size: clamp(2rem, 6vw, 2.8rem); }
+
+    .lead { margin-bottom: var(--s-5); }
+
+    /* ── Tarjeta de la equipa ──────────────────────────────── */
     .card-eq {
-      background: var(--c-leche, #fff);
-      border: 1px solid rgba(74, 107, 58, 0.15);
-      border-radius: 14px;
-      padding: var(--s-5, 20px);
-      margin-top: var(--s-4, 16px);
+      background: var(--c-leche);
+      border: 1px solid rgba(74, 107, 58, 0.14);
+      border-radius: var(--r-card);
+      padding: var(--s-5);
+      margin-top: var(--s-5);
+      box-shadow: var(--sh-suave);
     }
 
-    .campo { margin-bottom: var(--s-4, 16px); }
-    .campo label { display: block; font-weight: 700; margin-bottom: 6px; font-size: 0.92rem; }
-    .campo input, .campo select {
-      width: 100%; box-sizing: border-box; padding: 10px;
-      border: 1.5px solid var(--c-salvia, #c9c2b2); border-radius: 8px;
-      font-size: 1rem; font-family: inherit; background: #fff;
+    @media (min-width: 600px) {
+      .card-eq { padding: var(--s-6); }
     }
-    .campo input:focus, .campo select:focus { outline: none; border-color: var(--c-oliva, #4a6b3a); }
 
+    .card-eq h2 {
+      font-size: 1.5rem;
+      font-variation-settings: 'opsz' 48, 'SOFT' 60;
+      margin-bottom: var(--s-2);
+    }
+
+    .card-eq h2 + .muted { margin-top: 0; }
+
+    .card-eq > .muted {
+      font-size: 0.92rem;
+      line-height: 1.5;
+      margin-bottom: var(--s-5);
+    }
+
+    /* ── Campos ────────────────────────────────────────────── */
+    .campo { margin-bottom: var(--s-5); }
+
+    .campo label {
+      display: block;
+      font-weight: 700;
+      color: var(--c-corteza);
+      margin-bottom: var(--s-2);
+      font-size: 0.95rem;
+    }
+
+    .campo input,
+    .campo select {
+      width: 100%;
+      box-sizing: border-box;
+      font-family: var(--f-body);
+      font-size: 1rem;
+      padding: var(--s-3) var(--s-4);
+      border: 1.5px solid var(--c-salvia);
+      border-radius: var(--r-input);
+      background: var(--c-leche);
+      color: var(--c-suelo);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .campo input:focus,
+    .campo select:focus {
+      outline: none;
+      border-color: var(--c-oliva);
+      box-shadow: var(--sh-foco);
+    }
+
+    .campo select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1L6 6L11 1' stroke='%234A3E2E' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 1rem center;
+      padding-right: 2.5rem;
+    }
+
+    .campo select:disabled {
+      background-color: var(--c-crema-osc);
+      color: var(--c-tierra);
+    }
+
+    /* ── Avisos ────────────────────────────────────────────── */
     .aviso {
       background: rgba(110, 142, 85, 0.10);
-      border-left: 4px solid var(--c-oliva, #4a6b3a);
-      border-radius: 8px; padding: 12px 14px; margin: 16px 0; font-size: 0.95rem;
+      border-left: 4px solid var(--c-oliva);
+      border-radius: 14px;
+      padding: var(--s-4) var(--s-5);
+      margin: var(--s-5) 0;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: var(--c-corteza);
     }
-    .aviso.rojo { background: rgba(160, 60, 40, 0.08); border-left-color: #a03c28; }
 
-    /* Línea de producto */
+    .aviso.rojo {
+      background: rgba(166, 64, 43, 0.10);
+      border-left-color: var(--c-rojo);
+    }
+
+    /* ── Solapas ───────────────────────────────────────────── */
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+      margin-top: var(--s-5);
+      padding: 5px;
+      background: var(--c-crema-osc);
+      border-radius: 26px;
+      border: 1px solid rgba(74, 107, 58, 0.10);
+    }
+
+    .tabs button {
+      padding: 11px 4px;
+      border-radius: var(--r-pill);
+      font-family: var(--f-body);
+      font-size: 0.84rem;
+      font-weight: 700;
+      letter-spacing: 0.005em;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--c-corteza);
+      transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+      white-space: nowrap;
+    }
+
+    .tabs button:hover { background: rgba(110, 142, 85, 0.12); }
+
+    .tabs button.activa {
+      background: var(--c-musgo);
+      color: var(--c-crema);
+      box-shadow: var(--sh-suave);
+    }
+
+    .tabs button:focus-visible { outline: none; box-shadow: var(--sh-foco); }
+
+    @media (min-width: 620px) {
+      .tabs {
+        grid-template-columns: repeat(4, 1fr);
+        border-radius: var(--r-pill);
+      }
+      .tabs button { font-size: 0.94rem; padding: 11px 8px; }
+    }
+
+    /* ── Renglón de producto / pedido ──────────────────────── */
     .item {
-      display: flex; align-items: flex-start; gap: 10px;
-      border: 1px solid rgba(74, 107, 58, 0.18); border-radius: 10px;
-      padding: 10px 12px; margin-bottom: 8px; background: #fff;
+      display: flex;
+      align-items: flex-start;
+      gap: var(--s-3);
+      border: 1.5px solid rgba(74, 107, 58, 0.16);
+      border-radius: 14px;
+      padding: var(--s-3) var(--s-4);
+      margin-bottom: var(--s-2);
+      background: var(--c-leche);
       transition: background 0.15s, border-color 0.15s;
     }
-    .item.tildado { background: rgba(110, 142, 85, 0.10); border-color: var(--c-oliva, #4a6b3a); }
+
+    .item.tildado {
+      background: rgba(110, 142, 85, 0.11);
+      border-color: var(--c-oliva);
+    }
+
     .item input[type="checkbox"] {
-      width: 26px; height: 26px; margin-top: 2px; accent-color: #3c5230; flex-shrink: 0; cursor: pointer;
+      width: 26px;
+      height: 26px;
+      margin-top: 2px;
+      accent-color: var(--c-musgo);
+      flex-shrink: 0;
+      cursor: pointer;
     }
+
     .item .cuerpo { flex: 1; min-width: 0; }
-    .item .linea-nombre { font-weight: 700; font-size: 0.98rem; }
-    .item .detalle { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; align-items: center; }
-    .item .detalle label { font-size: 0.8rem; color: #7a6f58; }
-    .item .detalle input[type="number"] {
-      width: 90px; padding: 7px; border: 1.5px solid #c9c2b2; border-radius: 8px;
-      font-size: 1rem; font-family: inherit;
+
+    .item .linea-nombre {
+      font-family: var(--f-display);
+      font-size: 1.08rem;
+      font-weight: 500;
+      font-variation-settings: 'opsz' 36, 'SOFT' 40;
+      color: var(--c-suelo);
+      line-height: 1.3;
     }
+
+    .item .detalle {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--s-2);
+      margin-top: var(--s-3);
+      align-items: center;
+    }
+
+    .item .detalle label {
+      font-size: 0.82rem;
+      color: var(--c-tierra);
+      font-style: italic;
+    }
+
+    .item .detalle input,
     .item .detalle select {
-      padding: 7px; border: 1.5px solid #c9c2b2; border-radius: 8px;
-      font-size: 0.9rem; font-family: inherit; background: #fff;
+      font-family: var(--f-body);
+      padding: 7px 10px;
+      border: 1.5px solid var(--c-salvia);
+      border-radius: 10px;
+      background: var(--c-leche);
+      color: var(--c-suelo);
     }
-    .item .detalle input[type="text"] {
-      flex: 1; min-width: 140px; padding: 7px; border: 1.5px solid #c9c2b2;
-      border-radius: 8px; font-size: 0.9rem; font-family: inherit;
+
+    .item .detalle input:focus,
+    .item .detalle select:focus {
+      outline: none;
+      border-color: var(--c-oliva);
+      box-shadow: var(--sh-foco);
     }
-    .item.no-llego .linea-nombre { text-decoration: none; color: #7a6f58; }
 
-    .progreso { font-size: 0.9rem; color: #7a6f58; margin: 10px 0; }
+    .item .detalle input[type="number"] { width: 92px; font-size: 1rem; }
+    .item .detalle select { font-size: 0.9rem; }
+    .item .detalle input[type="text"] { flex: 1; min-width: 140px; font-size: 0.9rem; }
 
+    .item.no-llego .linea-nombre { color: var(--c-tierra); }
+
+    .item.preparado {
+      background: rgba(110, 142, 85, 0.14);
+      border-color: var(--c-oliva);
+      opacity: 0.72;
+    }
+
+    .item .quien {
+      font-size: 0.82rem;
+      color: var(--c-musgo);
+      font-weight: 700;
+      margin-top: var(--s-1);
+    }
+
+    .progreso {
+      font-size: 0.9rem;
+      color: var(--c-tierra);
+      font-style: italic;
+      margin: var(--s-3) 0 var(--s-5);
+    }
+
+    /* ── Botón de confirmación ─────────────────────────────── */
     .btn-conf {
-      display: inline-block; width: 100%; box-sizing: border-box; text-align: center;
-      background: #3c5230; color: #fff; border: none; border-radius: 999px;
-      padding: 14px 20px; font-size: 1.05rem; cursor: pointer; font-family: inherit;
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      text-align: center;
+      background: var(--c-musgo);
+      color: var(--c-crema);
+      border: 2px solid var(--c-musgo);
+      border-radius: var(--r-pill);
+      padding: 14px 20px;
+      font-family: var(--f-body);
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, transform 0.15s, box-shadow 0.2s;
     }
-    .btn-conf:disabled { opacity: 0.5; cursor: not-allowed; }
 
+    .btn-conf:hover:not(:disabled) {
+      background: var(--c-oliva);
+      border-color: var(--c-oliva);
+      transform: translateY(-1px);
+      box-shadow: var(--sh-medio);
+    }
+
+    .btn-conf:focus-visible { outline: none; box-shadow: var(--sh-foco); }
+
+    .btn-conf:disabled {
+      background: var(--c-salvia);
+      border-color: var(--c-salvia);
+      color: var(--c-leche);
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* ── Caja de confirmación ──────────────────────────────── */
     .ok-box {
-      background: rgba(110, 142, 85, 0.12); border-left: 4px solid #4a6b3a;
-      padding: 12px 14px; border-radius: 8px; margin-top: 16px; display: none;
+      background: rgba(91, 122, 58, 0.12);
+      border-left: 4px solid var(--c-verde-ok);
+      color: var(--c-corteza);
+      padding: var(--s-4) var(--s-5);
+      border-radius: 14px;
+      margin-top: var(--s-5);
+      font-size: 0.95rem;
+      line-height: 1.5;
+      display: none;
     }
 
     .chip-reg {
-      display: inline-block; font-size: 0.8rem; background: rgba(110,142,85,0.15);
-      border-radius: 999px; padding: 2px 10px; margin-left: 6px; color: #3c5230; font-weight: 700;
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      background: var(--c-oliva-claro);
+      color: var(--c-leche);
+      border-radius: var(--r-pill);
+      padding: 2px 10px;
+      margin-left: 6px;
+      vertical-align: middle;
     }
-    h1 { margin-bottom: 4px; }
-    .muted { color: #7a6f58; }
 
-    /* Solapas */
-    .tabs { display: flex; gap: 8px; margin-top: 16px; }
-    .tabs button {
-      flex: 1; padding: 12px 8px; border-radius: 999px; font-size: 1rem;
-      font-family: inherit; cursor: pointer; border: 1.5px solid rgba(74,107,58,0.35);
-      background: transparent; color: #3c5230; font-weight: 700;
+    /* ── Tarjetas de faltantes (solapa Ajustes) ────────────── */
+    .prop-card {
+      border: 2px dashed var(--c-salvia);
+      background: var(--c-crema-osc);
+      border-radius: var(--r-card);
+      padding: var(--s-5);
+      margin-bottom: var(--s-5);
     }
-    .tabs button.activa { background: #3c5230; color: #fff; border-color: #3c5230; }
 
-    .item.preparado { background: rgba(110,142,85,0.14); border-color: #4a6b3a; opacity: 0.75; }
-    .item .quien { font-size: 0.8rem; color: #3c5230; font-weight: 700; margin-top: 4px; }
+    .prop-card h3 {
+      font-size: 1.15rem;
+      font-variation-settings: 'opsz' 36, 'SOFT' 50;
+      margin: 0 0 var(--s-2);
+      line-height: 1.3;
+    }
+
+    .prop-card .prop-sub {
+      font-size: 0.88rem;
+      color: var(--c-tierra);
+      margin: 0 0 var(--s-4);
+      line-height: 1.45;
+    }
+
+    .prop-fila {
+      display: flex;
+      align-items: center;
+      gap: var(--s-3);
+      flex-wrap: wrap;
+      padding: var(--s-3) 0;
+      border-bottom: 1px dotted rgba(107, 93, 79, 0.28);
+    }
+
+    .prop-fila:last-of-type { border-bottom: none; }
+
+    .prop-quien { flex: 1 1 190px; line-height: 1.35; }
+
+    .prop-fila label {
+      font-size: 0.85rem;
+      color: var(--c-tierra);
+      font-style: italic;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--s-2);
+    }
+
+    .prop-fila input[type="number"] {
+      width: 84px;
+      font-family: var(--f-body);
+      font-size: 1rem;
+      font-style: normal;
+      padding: 7px 8px;
+      border: 1.5px solid var(--c-salvia);
+      border-radius: 10px;
+      background: var(--c-leche);
+      color: var(--c-suelo);
+    }
+
+    .prop-fila input[type="number"]:focus {
+      outline: none;
+      border-color: var(--c-oliva);
+      box-shadow: var(--sh-foco);
+    }
+
+    .queda {
+      font-size: 0.85rem;
+      color: var(--c-tierra);
+      flex: 1 1 100%;
+      font-style: italic;
+    }
+
+    .restante {
+      font-weight: 700;
+      margin: var(--s-4) 0 0;
+      padding-top: var(--s-3);
+      border-top: 1.5px solid var(--c-salvia);
+      color: var(--c-corteza);
+    }
+
+    .restante.completo { color: var(--c-verde-ok); }
+    .restante.pendiente { color: var(--c-arcilla-oscuro); }
   </style>
 </head>
 <body>
@@ -103,10 +408,23 @@
 
     <header class="site-header fade-in">
       <a class="site-mark" href="../">
-        <img src="../assets/logo-nodo-verde.png" alt="Nodo Matríz" style="width:48px; height:48px;">
+        <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#6E8E55"/>
+              <stop offset="100%" stop-color="#4A6B3A"/>
+            </linearGradient>
+          </defs>
+          <path d="M24 4 Q34 10 34 24 Q34 38 24 44 Q14 38 14 24 Q14 10 24 4 Z" fill="url(#leafGrad)"/>
+          <path d="M24 8 V42" stroke="#FAF6EE" stroke-width="1.8" stroke-linecap="round" opacity="0.7"/>
+          <path d="M24 16 Q19 18 17 22" stroke="#FAF6EE" stroke-width="1.4" stroke-linecap="round" opacity="0.5" fill="none"/>
+          <path d="M24 24 Q19 26 17 30" stroke="#FAF6EE" stroke-width="1.4" stroke-linecap="round" opacity="0.5" fill="none"/>
+          <path d="M24 16 Q29 18 31 22" stroke="#FAF6EE" stroke-width="1.4" stroke-linecap="round" opacity="0.5" fill="none"/>
+          <path d="M24 24 Q29 26 31 30" stroke="#FAF6EE" stroke-width="1.4" stroke-linecap="round" opacity="0.5" fill="none"/>
+        </svg>
         <span>
           <span class="site-mark__name">Nodo Matríz</span>
-          <span class="site-mark__sub">recepción en galpón</span>
+          <span class="site-mark__sub">recepción en galpón · equipa</span>
         </span>
       </a>
     </header>
@@ -145,7 +463,7 @@
 
     <div class="card-eq" id="card-items" style="display:none;">
       <h2 id="titulo-productor"></h2>
-      <p class="muted" style="font-size:0.9rem;">
+      <p class="muted">
         Tildá cada renglón a medida que lo confirmás. Lo que quede sin tildar
         se registra como <strong>no recibido</strong> (cantidad 0).
       </p>
@@ -166,7 +484,7 @@
 
     <div class="card-eq" id="card-faltantes">
       <h2>⚠️ Revisar faltantes</h2>
-      <p class="muted" style="font-size:0.9rem;">
+      <p class="muted">
         Cuando ya recibiste a <strong>todos</strong> los productores, tocá acá.
         El sistema compara lo que se pidió contra lo que llegó y le manda a la
         equipa por mail el detalle de qué falta y qué pedidos quedan afectados,
@@ -191,7 +509,7 @@
     <div id="vista-fracc" style="display:none;">
       <div class="card-eq">
         <h2>Plan de fraccionamiento</h2>
-        <p class="muted" style="font-size:0.9rem;">
+        <p class="muted">
           Estas son las porciones que hay que armar para esta edición.
           Tildá cada renglón cuando esté <strong>empaquetado</strong> y registrá.
         </p>
@@ -221,7 +539,7 @@
     <div id="vista-ajustes" style="display:none;">
       <div class="card-eq">
         <h2>Repartir los faltantes</h2>
-        <p class="muted" style="font-size:0.9rem;">
+        <p class="muted">
           Acá aparecen los faltantes que detectó el sistema. Decidan entre todas
           cuánto se le recorta a cada pedido. Lo que recorten se
           <strong>descuenta del total a pagar</strong> de esa persona.
@@ -251,7 +569,7 @@
     <div id="vista-retiro" style="display:none;">
       <div class="card-eq">
         <h2>Retiro de pedidos</h2>
-        <p class="muted" style="font-size:0.9rem;">
+        <p class="muted">
           Tildá cada pedido cuando el consumidor lo <strong>retira del galpón</strong> y registrá.
           Reemplaza las marcas de color de la planilla heladera.
         </p>
@@ -310,8 +628,8 @@
         var caja = $(contenedorId);
         if (caja) {
           caja.style.display = 'block';
-          caja.style.background = '#fdecea';
-          caja.style.color = '#8a1c12';
+          caja.style.background = 'rgba(166, 64, 43, 0.10)';
+          caja.style.color = '#A6402B';
           caja.innerHTML = '🚫 Este botón todavía no está conectado (falta cargar la ' +
             'dirección del escenario ' + nombre + ' en el archivo). Avisale a quien ' +
             'administra el sistema — no se envió nada.';
@@ -920,24 +1238,24 @@
         }
         propuestas.forEach(function (pr, pi) {
           var af = afectadosDe(pr.id_producto);
-          var html = '<div style="border:1px solid #ddd;border-radius:8px;padding:12px;margin-bottom:14px;">';
-          html += '<h3 style="margin:0 0 4px;">⚠️ ' + (pr.detalle || pr.id_producto) + '</h3>';
-          html += '<p class="muted" style="font-size:0.85rem;margin:0 0 10px;">Se pidieron ' + pr.pedida +
+          var html = '<div class="prop-card">';
+          html += '<h3>⚠️ ' + (pr.detalle || pr.id_producto) + '</h3>';
+          html += '<p class="prop-sub">Se pidieron ' + pr.pedida +
             ', llegaron ' + pr.recibida + ' → hay que recortar <strong>' + pr.faltante + '</strong>.</p>';
           if (!af.length) {
             html += '<p class="muted">No encontramos pedidos con este producto.</p>';
           }
           af.forEach(function (a) {
-            html += '<div style="display:flex;align-items:center;gap:8px;margin:6px 0;flex-wrap:wrap;">' +
-              '<span style="flex:1 1 190px;">N° ' + a.ped.correlativo + ' · ' +
+            html += '<div class="prop-fila">' +
+              '<span class="prop-quien">N° ' + a.ped.correlativo + ' · ' +
               (consumidores[a.ped.id_consumidor] || a.ped.id_consumidor) +
               ' — pidió <strong>' + a.item.efectiva + '</strong></span>' +
-              '<label style="font-size:0.85rem;">recortar ' +
+              '<label>recortar ' +
               '<input type="number" class="in-aj" data-pi="' + pi + '" data-idx="' + a.idx +
-              '" min="0" max="' + a.item.efectiva + '" step="0.25" value="0" style="width:80px;padding:4px;">' +
-              '</label><span class="queda" style="font-size:0.85rem;color:#555;flex:1 1 100%;"></span></div>';
+              '" min="0" max="' + a.item.efectiva + '" step="0.25" value="0">' +
+              '</label><span class="queda"></span></div>';
           });
-          html += '<p class="restante" data-pi="' + pi + '" style="font-weight:600;margin:8px 0 0;"></p></div>';
+          html += '<p class="restante" data-pi="' + pi + '"></p></div>';
           cont.insertAdjacentHTML('beforeend', html);
         });
 
@@ -968,9 +1286,9 @@
           if (suma > 0) algo = true;
           var p = cont.querySelector('.restante[data-pi="' + pi + '"]');
           var resto = Math.round((pr.faltante - suma) * 10000) / 10000;
-          if (resto > 0) { p.style.color = '#8a1c12'; p.textContent = 'Falta repartir ' + resto + ' de ' + pr.faltante; }
-          else if (resto < 0) { p.style.color = '#8a1c12'; p.textContent = 'Estás recortando ' + (-resto) + ' de más'; }
-          else { p.style.color = '#1d6b3a'; p.textContent = '✓ Repartido completo'; }
+          if (resto > 0) { p.className = 'restante pendiente'; p.textContent = 'Falta repartir ' + resto + ' de ' + pr.faltante; }
+          else if (resto < 0) { p.className = 'restante pendiente'; p.textContent = 'Estás recortando ' + (-resto) + ' de más'; }
+          else { p.className = 'restante completo'; p.textContent = '✓ Repartido completo'; }
         });
         $('btn-ajustes').disabled = !algo;
       }
@@ -979,8 +1297,8 @@
         var caja = $('ok-ajustes');
         function errorA(msg) {
           caja.style.display = 'block';
-          caja.style.background = '#fdecea';
-          caja.style.color = '#8a1c12';
+          caja.style.background = 'rgba(166, 64, 43, 0.10)';
+          caja.style.color = '#A6402B';
           caja.textContent = msg;
         }
         if (!webhookListo(WEBHOOK_D3, 'D3 · Ajustes', 'ok-ajustes')) return;
@@ -1096,16 +1414,16 @@
 
         if (!idEdicion) {
           caja.style.display = 'block';
-          caja.style.background = '#fdecea';
-          caja.style.color = '#8a1c12';
+          caja.style.background = 'rgba(166, 64, 43, 0.10)';
+          caja.style.color = '#A6402B';
           caja.textContent = 'Todavía no cargó la edición vigente. Esperá unos segundos y probá de nuevo.';
           return;
         }
         var clave = $('clave-falt').value.trim();
         if (!clave) {
           caja.style.display = 'block';
-          caja.style.background = '#fdecea';
-          caja.style.color = '#8a1c12';
+          caja.style.background = 'rgba(166, 64, 43, 0.10)';
+          caja.style.color = '#A6402B';
           caja.textContent = 'Falta la clave de equipa.';
           return;
         }
