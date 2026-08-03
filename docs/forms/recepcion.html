@@ -123,6 +123,7 @@
     <div class="tabs">
       <button type="button" id="tab-recepcion" class="activa">📥 Recepción</button>
       <button type="button" id="tab-fracc">🔪 Fraccionamiento</button>
+      <button type="button" id="tab-ajustes">⚖️ Ajustes</button>
       <button type="button" id="tab-retiro">🛍 Retiro</button>
     </div>
 
@@ -216,6 +217,36 @@
       </div>
     </div>
 
+    <!-- ── Vista Ajustes ── -->
+    <div id="vista-ajustes" style="display:none;">
+      <div class="card-eq">
+        <h2>Repartir los faltantes</h2>
+        <p class="muted" style="font-size:0.9rem;">
+          Acá aparecen los faltantes que detectó el sistema. Decidan entre todas
+          cuánto se le recorta a cada pedido. Lo que recorten se
+          <strong>descuenta del total a pagar</strong> de esa persona.
+        </p>
+
+        <div class="campo">
+          <label for="aprobado-por">¿Quién carga la decisión? *</label>
+          <input type="text" id="aprobado-por" placeholder="Tu nombre" autocomplete="name">
+        </div>
+
+        <div id="lista-ajustes"></div>
+
+        <div class="campo">
+          <label for="clave-ajustes">Clave de equipa *</label>
+          <input type="password" id="clave-ajustes" placeholder="La clave compartida de la equipa">
+        </div>
+
+        <button type="button" class="btn-conf" id="btn-ajustes" disabled>Aplicar ajustes</button>
+
+        <div class="ok-box" id="ok-ajustes">
+          ✅ Ajustes aplicados. Los pedidos quedaron actualizados.
+        </div>
+      </div>
+    </div>
+
     <!-- ── Vista Retiro ── -->
     <div id="vista-retiro" style="display:none;">
       <div class="card-eq">
@@ -268,6 +299,7 @@
       var WEBHOOK_FRAC   = 'https://hook.us2.make.com/pnu4revwv7cpba73qpnif4bsa0cuw86i';
       var WEBHOOK_RETIRO = 'https://hook.us2.make.com/gd5qh8wry0v9wmnsqfwp96vjmua55e36';
       var WEBHOOK_D2     = 'https://hook.us2.make.com/aodjwri3frhtfj8yk7mnegpb6czva9j9';
+      var WEBHOOK_D3     = 'https://hook.us2.make.com/8w3cb9fk11gf9rj9352ai7k4pixpmm1n';
       var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
 
       var $ = function (id) { return document.getElementById(id); };
@@ -294,9 +326,12 @@
       var planFracc = [];     // filas de Plan_Fraccionamiento de la edición
       var pedidos = [];       // pedidos de la edición (para Retiro)
       var consumidores = {};  // id -> nombre
+      var contactos = {};     // id -> {tel, email}
+      var propuestas = [];    // faltantes pendientes de la edición
+      var itemsEd = [];       // ítems de los pedidos de la edición
 
       // ── Solapas ──────────────────────────────────────────────────
-      var VISTAS = ['recepcion', 'fracc', 'retiro'];
+      var VISTAS = ['recepcion', 'fracc', 'ajustes', 'retiro'];
       function mostrarVista(cual) {
         VISTAS.forEach(function (v) {
           document.getElementById('vista-' + v).style.display = (v === cual) ? 'block' : 'none';
@@ -344,7 +379,9 @@
           gviz('sheet=Productores&range=A1:B300&headers=1'),
           gviz('sheet=Plan_Fraccionamiento&range=A1:L500&headers=1'),
           gviz('sheet=Pedidos&range=A1:U3000&headers=1'),
-          gviz('sheet=Consumidores&range=A1:B2000&headers=1')
+          gviz('sheet=Consumidores&range=A1:D2000&headers=1'),
+          gviz('sheet=Propuestas_Ajuste&range=A1:N500&headers=1'),
+          gviz('sheet=Items&range=A1:M3000&headers=1')
         ]).then(function (res) {
           var rowsK = res[0].table.rows;
           idEdicion = rowsK.length ? String(celda(rowsK[0], 0)).trim() : '';
@@ -392,10 +429,15 @@
             });
           });
 
-          // Consumidores (nombres)
+          // Consumidores (nombres + contacto)
           res[5].table.rows.forEach(function (r) {
             var id = String(celda(r, 0)).trim();
-            if (id) consumidores[id] = String(celda(r, 1)).trim();
+            if (!id) return;
+            consumidores[id] = String(celda(r, 1)).trim();
+            contactos[id] = {
+              tel: String(celda(r, 2)).trim(),
+              email: String(celda(r, 3)).trim()
+            };
           });
 
           // Pedidos de la edición
@@ -407,16 +449,49 @@
               id_consumidor: String(celda(r, 2)).trim(),
               correlativo: parseInt(celda(r, 3), 10) || 0,
               estado: String(celda(r, 5)).trim(),
+              aporte: parseFloat(celda(r, 7)) || 0,
               total: parseFloat(celda(r, 10)) || 0
             });
           });
           pedidos.sort(function (a, b) { return a.correlativo - b.correlativo; });
+
+          // Propuestas de ajuste pendientes de esta edición
+          propuestas = [];
+          res[6].table.rows.forEach(function (r) {
+            if (String(celda(r, 1)).trim() !== idEdicion) return;
+            if (String(celda(r, 10)).trim() !== 'Pendiente') return;
+            propuestas.push({
+              id_propuesta: String(celda(r, 0)).trim(),
+              id_producto: String(celda(r, 3)).trim(),
+              pedida: parseFloat(celda(r, 4)) || 0,
+              recibida: parseFloat(celda(r, 5)) || 0,
+              faltante: parseFloat(celda(r, 6)) || 0,
+              detalle: String(celda(r, 13)).trim()
+            });
+          });
+
+          // Ítems de los pedidos de esta edición
+          itemsEd = [];
+          res[7].table.rows.forEach(function (r) {
+            var idPed = String(celda(r, 1)).trim();
+            if (idPed.indexOf(idEdicion) === -1) return;
+            itemsEd.push({
+              id_item: String(celda(r, 0)).trim(),
+              id_pedido: idPed,
+              id_producto: String(celda(r, 2)).trim(),
+              cantidad: parseFloat(celda(r, 4)) || 0,
+              fraccion: String(celda(r, 5)).trim(),
+              precio: parseFloat(celda(r, 6)) || 0,
+              efectiva: parseFloat(celda(r, 10)) || 0
+            });
+          });
 
           $('estado-edicion').innerHTML = 'Edición vigente: <strong>' + idEdicion +
             '</strong> · ' + contarProductores() + ' productores · ' +
             planFracc.length + ' fracciones · ' + pedidos.length + ' pedidos';
           armarSelect();
           renderFracc();
+          renderAjustes();
           renderRetiro();
         }).catch(function () {
           $('estado-edicion').className = 'aviso rojo';
@@ -802,6 +877,215 @@
             }
           });
           renderRetiro();
+        }
+      });
+
+      // ── Vista Ajustes (D3) ───────────────────────────────────────
+      function pesos(n) { return '$' + Math.round(n).toLocaleString('es-AR'); }
+
+      function nombreProducto(id) {
+        for (var i = 0; i < lineas.length; i++) {
+          if (lineas[i].id_producto === id) return lineas[i].producto;
+        }
+        return id;
+      }
+
+      function pedidoDe(idPed) {
+        for (var i = 0; i < pedidos.length; i++) {
+          if (pedidos[i].id_pedido === idPed) return pedidos[i];
+        }
+        return null;
+      }
+
+      function afectadosDe(idProducto) {
+        var out = [];
+        itemsEd.forEach(function (it, idx) {
+          if (it.id_producto !== idProducto || it.efectiva <= 0) return;
+          var ped = pedidoDe(it.id_pedido);
+          if (!ped) return;
+          out.push({ item: it, idx: idx, ped: ped });
+        });
+        out.sort(function (a, b) { return a.ped.correlativo - b.ped.correlativo; });
+        return out;
+      }
+
+      function renderAjustes() {
+        var cont = $('lista-ajustes');
+        cont.innerHTML = '';
+        if (!propuestas.length) {
+          cont.innerHTML = '<p class="muted">No hay faltantes pendientes de repartir en esta edición. ' +
+            'Si recién corriste la revisión de faltantes, recargá la página.</p>';
+          $('btn-ajustes').disabled = true;
+          return;
+        }
+        propuestas.forEach(function (pr, pi) {
+          var af = afectadosDe(pr.id_producto);
+          var html = '<div style="border:1px solid #ddd;border-radius:8px;padding:12px;margin-bottom:14px;">';
+          html += '<h3 style="margin:0 0 4px;">⚠️ ' + (pr.detalle || pr.id_producto) + '</h3>';
+          html += '<p class="muted" style="font-size:0.85rem;margin:0 0 10px;">Se pidieron ' + pr.pedida +
+            ', llegaron ' + pr.recibida + ' → hay que recortar <strong>' + pr.faltante + '</strong>.</p>';
+          if (!af.length) {
+            html += '<p class="muted">No encontramos pedidos con este producto.</p>';
+          }
+          af.forEach(function (a) {
+            html += '<div style="display:flex;align-items:center;gap:8px;margin:6px 0;flex-wrap:wrap;">' +
+              '<span style="flex:1 1 190px;">N° ' + a.ped.correlativo + ' · ' +
+              (consumidores[a.ped.id_consumidor] || a.ped.id_consumidor) +
+              ' — pidió <strong>' + a.item.efectiva + '</strong></span>' +
+              '<label style="font-size:0.85rem;">recortar ' +
+              '<input type="number" class="in-aj" data-pi="' + pi + '" data-idx="' + a.idx +
+              '" min="0" max="' + a.item.efectiva + '" step="0.25" value="0" style="width:80px;padding:4px;">' +
+              '</label><span class="queda" style="font-size:0.85rem;color:#555;flex:1 1 100%;"></span></div>';
+          });
+          html += '<p class="restante" data-pi="' + pi + '" style="font-weight:600;margin:8px 0 0;"></p></div>';
+          cont.insertAdjacentHTML('beforeend', html);
+        });
+
+        Array.prototype.forEach.call(cont.querySelectorAll('.in-aj'), function (inp) {
+          inp.addEventListener('input', recalcAjustes);
+        });
+        recalcAjustes();
+      }
+
+      function recalcAjustes() {
+        var cont = $('lista-ajustes');
+        var algo = false;
+        propuestas.forEach(function (pr, pi) {
+          var suma = 0;
+          Array.prototype.forEach.call(cont.querySelectorAll('.in-aj[data-pi="' + pi + '"]'), function (inp) {
+            var v = parseFloat(inp.value) || 0;
+            var max = parseFloat(inp.max) || 0;
+            if (v < 0) { v = 0; inp.value = 0; }
+            if (v > max) { v = max; inp.value = max; }
+            suma += v;
+            var it = itemsEd[parseInt(inp.getAttribute('data-idx'), 10)];
+            var q = inp.parentNode.parentNode.querySelector('.queda');
+            q.textContent = v > 0
+              ? '→ se lleva ' + (Math.round((it.efectiva - v) * 10000) / 10000) +
+                ' · ' + pesos(v * it.precio) + ' menos a pagar'
+              : '';
+          });
+          if (suma > 0) algo = true;
+          var p = cont.querySelector('.restante[data-pi="' + pi + '"]');
+          var resto = Math.round((pr.faltante - suma) * 10000) / 10000;
+          if (resto > 0) { p.style.color = '#8a1c12'; p.textContent = 'Falta repartir ' + resto + ' de ' + pr.faltante; }
+          else if (resto < 0) { p.style.color = '#8a1c12'; p.textContent = 'Estás recortando ' + (-resto) + ' de más'; }
+          else { p.style.color = '#1d6b3a'; p.textContent = '✓ Repartido completo'; }
+        });
+        $('btn-ajustes').disabled = !algo;
+      }
+
+      $('btn-ajustes').addEventListener('click', function () {
+        var caja = $('ok-ajustes');
+        function errorA(msg) {
+          caja.style.display = 'block';
+          caja.style.background = '#fdecea';
+          caja.style.color = '#8a1c12';
+          caja.textContent = msg;
+        }
+        if (!webhookListo(WEBHOOK_D3, 'D3 · Ajustes', 'ok-ajustes')) return;
+        var quien = $('aprobado-por').value.trim();
+        var clave = $('clave-ajustes').value.trim();
+        if (!quien) { errorA('Falta tu nombre.'); return; }
+        if (!clave) { errorA('Falta la clave de equipa.'); return; }
+
+        var recortes = {};      // idx de itemsEd -> cantidad recortada
+        var porPropuesta = {};  // pi -> [idx]
+        Array.prototype.forEach.call($('lista-ajustes').querySelectorAll('.in-aj'), function (inp) {
+          var v = parseFloat(inp.value) || 0;
+          if (v <= 0) return;
+          var idx = parseInt(inp.getAttribute('data-idx'), 10);
+          var pi = parseInt(inp.getAttribute('data-pi'), 10);
+          recortes[idx] = v;
+          (porPropuesta[pi] = porPropuesta[pi] || []).push(idx);
+        });
+
+        var itemsOut = [], tocados = {};
+        Object.keys(recortes).forEach(function (k) {
+          var idx = parseInt(k, 10), it = itemsEd[idx], v = recortes[idx];
+          var nuevaEf = Math.round((it.efectiva - v) * 10000) / 10000;
+          var factor = factorFraccion(it.fraccion) || 1;
+          itemsOut.push({
+            id_item: it.id_item,
+            id_pedido: it.id_pedido,
+            id_producto: it.id_producto,
+            cantidad_nueva: Math.round((nuevaEf / factor) * 10000) / 10000,
+            cantidad_efectiva_nueva: nuevaEf,
+            subtotal_nuevo: Math.round(nuevaEf * it.precio),
+            estado_item: nuevaEf > 0 ? 'Descontado' : 'Faltante',
+            observacion: 'Faltante del productor: -' + v
+          });
+          tocados[it.id_pedido] = true;
+        });
+
+        var pedidosOut = Object.keys(tocados).map(function (idPed) {
+          var ped = pedidoDe(idPed);
+          var subtotal = 0, devuelto = 0, detalle = [];
+          itemsEd.forEach(function (it, idx) {
+            if (it.id_pedido !== idPed) return;
+            var v = recortes[idx] || 0;
+            var ef = it.efectiva - v;
+            subtotal += ef * it.precio;
+            if (v > 0) {
+              devuelto += v * it.precio;
+              detalle.push('• ' + nombreProducto(it.id_producto) + ': pediste ' + it.efectiva +
+                ' y te llevás ' + (Math.round(ef * 10000) / 10000) +
+                ' (' + pesos(v * it.precio) + ' menos)');
+            }
+          });
+          subtotal = Math.round(subtotal);
+          var aporte = Math.round(subtotal * (ped.aporte || 0) / 100);
+          var c = contactos[ped.id_consumidor] || {};
+          return {
+            id_pedido: idPed,
+            correlativo: ped.correlativo,
+            nombre: consumidores[ped.id_consumidor] || ped.id_consumidor,
+            email: c.email || '',
+            telefono: c.tel || '',
+            subtotal_nuevo: subtotal,
+            aporte_nuevo: aporte,
+            total_nuevo: subtotal + aporte,
+            total_anterior: ped.total,
+            monto_devuelto: Math.round(devuelto),
+            detalle_recortes: detalle.join('\n')
+          };
+        });
+
+        var propuestasOut = Object.keys(porPropuesta).map(function (k) {
+          var pi = parseInt(k, 10), pr = propuestas[pi];
+          var txt = porPropuesta[pi].map(function (idx) {
+            var it = itemsEd[idx], ped = pedidoDe(it.id_pedido);
+            return 'N° ' + (ped ? ped.correlativo : '?') + ' ' +
+              (ped ? (consumidores[ped.id_consumidor] || '') : '') + ': -' + recortes[idx];
+          }).join(' | ');
+          return { id_propuesta: pr.id_propuesta, ajustes: txt, aprobado_por: quien };
+        });
+
+        var btn = $('btn-ajustes');
+        btn.disabled = true;
+        btn.textContent = 'Aplicando…';
+
+        fetch(WEBHOOK_D3, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            tipo: 'ajustes',
+            id_edicion: idEdicion,
+            aprobado_por: quien,
+            clave: clave,
+            items: itemsOut,
+            pedidos: pedidosOut,
+            propuestas: propuestasOut
+          })
+        }).then(finA).catch(finA);
+
+        function finA() {
+          btn.textContent = 'Aplicar ajustes';
+          caja.style.display = 'block';
+          caja.style.background = '';
+          caja.style.color = '';
+          caja.innerHTML = '✅ Ajustes enviados. Recargá la página en un minuto para ver los pedidos actualizados.';
         }
       });
 
