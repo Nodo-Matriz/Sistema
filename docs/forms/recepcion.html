@@ -163,6 +163,27 @@
       </div>
     </div>
 
+    <div class="card-eq" id="card-faltantes">
+      <h2>⚠️ Revisar faltantes</h2>
+      <p class="muted" style="font-size:0.9rem;">
+        Cuando ya recibiste a <strong>todos</strong> los productores, tocá acá.
+        El sistema compara lo que se pidió contra lo que llegó y le manda a la
+        equipa por mail el detalle de qué falta y qué pedidos quedan afectados,
+        para decidir juntas los ajustes.
+      </p>
+
+      <div class="campo">
+        <label for="clave-falt">Clave de equipa *</label>
+        <input type="password" id="clave-falt" placeholder="La clave compartida de la equipa">
+      </div>
+
+      <button type="button" class="btn-conf" id="btn-faltantes">Revisar faltantes de la edición</button>
+
+      <div class="ok-box" id="ok-faltantes">
+        ✅ Listo. En un minuto llega el mail con el detalle de faltantes.
+      </div>
+    </div>
+
     </div><!-- /vista-recepcion -->
 
     <!-- ── Vista Fraccionamiento ── -->
@@ -246,9 +267,25 @@
       var WEBHOOK_D1     = 'https://hook.us2.make.com/wh4waco8hddd4qvggwfpul8wxyo2s9xo';
       var WEBHOOK_FRAC   = 'https://hook.us2.make.com/pnu4revwv7cpba73qpnif4bsa0cuw86i';
       var WEBHOOK_RETIRO = 'https://hook.us2.make.com/gd5qh8wry0v9wmnsqfwp96vjmua55e36';
+      var WEBHOOK_D2     = 'https://hook.us2.make.com/aodjwri3frhtfj8yk7mnegpb6czva9j9';
       var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
 
       var $ = function (id) { return document.getElementById(id); };
+
+      // Devuelve true si el webhook está configurado; si no, avisa en pantalla.
+      function webhookListo(url, nombre, contenedorId) {
+        if (typeof url === 'string' && url.indexOf('https://hook.') === 0) return true;
+        var caja = $(contenedorId);
+        if (caja) {
+          caja.style.display = 'block';
+          caja.style.background = '#fdecea';
+          caja.style.color = '#8a1c12';
+          caja.innerHTML = '🚫 Este botón todavía no está conectado (falta cargar la ' +
+            'dirección del escenario ' + nombre + ' en el archivo). Avisale a quien ' +
+            'administra el sistema — no se envió nada.';
+        }
+        return false;
+      }
 
       var idEdicion = '';
       var productores = {};   // id -> nombre
@@ -765,6 +802,48 @@
             }
           });
           renderRetiro();
+        }
+      });
+
+      // ── D2 · Revisar faltantes ───────────────────────────────────
+      $('btn-faltantes').addEventListener('click', function () {
+        var caja = $('ok-faltantes');
+        if (!webhookListo(WEBHOOK_D2, 'D2 · Faltantes', 'ok-faltantes')) return;
+
+        if (!idEdicion) {
+          caja.style.display = 'block';
+          caja.style.background = '#fdecea';
+          caja.style.color = '#8a1c12';
+          caja.textContent = 'Todavía no cargó la edición vigente. Esperá unos segundos y probá de nuevo.';
+          return;
+        }
+        var clave = $('clave-falt').value.trim();
+        if (!clave) {
+          caja.style.display = 'block';
+          caja.style.background = '#fdecea';
+          caja.style.color = '#8a1c12';
+          caja.textContent = 'Falta la clave de equipa.';
+          return;
+        }
+
+        var btn = $('btn-faltantes');
+        btn.disabled = true;
+        btn.textContent = 'Revisando…';
+
+        fetch(WEBHOOK_D2, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ tipo: 'faltantes', id_edicion: idEdicion, clave: clave })
+        }).then(finF).catch(finF);
+
+        function finF() {
+          btn.disabled = false;
+          btn.textContent = 'Revisar faltantes de la edición';
+          caja.style.display = 'block';
+          caja.style.background = '';
+          caja.style.color = '';
+          caja.innerHTML = '✅ Listo. En un minuto llega el mail con el detalle de faltantes.';
         }
       });
 
