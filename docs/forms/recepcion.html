@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex">
-  <title>Recepción en galpón · Nodo Matríz (equipa)</title>
+  <title>Recepción en galpón · Nodo Matríz (equipo)</title>
   <link rel="stylesheet" href="../assets/styles.css">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4 Q22 8 22 16 Q22 24 16 28 Q10 24 10 16 Q10 8 16 4 Z' fill='%234A6B3A'/%3E%3Cpath d='M16 6 V28' stroke='%23FAF6EE' stroke-width='1.5' stroke-linecap='round' opacity='0.6'/%3E%3C/svg%3E">
   <style>
@@ -12,7 +12,7 @@
        Recepción en galpón — hereda el sistema de diseño de
        ../assets/styles.css (Fraunces + Atkinson Hyperlegible,
        paleta de tierra). Acá sólo van los componentes propios
-       de la app de la equipa.
+       de la app del equipo.
        ============================================================ */
 
     .wrap {
@@ -28,7 +28,7 @@
 
     .lead { margin-bottom: var(--s-5); }
 
-    /* ── Tarjeta de la equipa ──────────────────────────────── */
+    /* ── Tarjeta del equipo ──────────────────────────────── */
     .card-eq {
       background: var(--c-leche);
       border: 1px solid rgba(74, 107, 58, 0.14);
@@ -424,7 +424,7 @@
         </svg>
         <span>
           <span class="site-mark__name">Nodo Matríz</span>
-          <span class="site-mark__sub">recepción en galpón · equipa</span>
+          <span class="site-mark__sub">recepción en galpón · equipo</span>
         </span>
       </a>
     </header>
@@ -442,7 +442,7 @@
       <button type="button" id="tab-recepcion" class="activa">📥 Recepción</button>
       <button type="button" id="tab-fracc">🔪 Fraccionamiento</button>
       <button type="button" id="tab-ajustes">⚖️ Ajustes</button>
-      <button type="button" id="tab-retiro">🛍 Retiro</button>
+      <button type="button" id="tab-entrega">🛍 Entrega</button>
     </div>
 
     <div id="vista-recepcion">
@@ -450,7 +450,11 @@
     <div class="card-eq fade-in" data-delay="2">
       <div class="campo">
         <label for="recibido-por">¿Quién recibe? *</label>
-        <input type="text" id="recibido-por" placeholder="Tu nombre" autocomplete="name">
+        <select id="recibido-por">
+          <option value="">— Elegí tu nombre —</option>
+        </select>
+        <input type="text" id="recibido-por-otro" placeholder="Nombre de quien ayuda hoy"
+               autocomplete="name" style="display:none; margin-top:8px;">
       </div>
 
       <div class="campo">
@@ -458,6 +462,8 @@
         <select id="sel-productor" disabled>
           <option value="">Cargando…</option>
         </select>
+        <button type="button" class="btn btn--ghost btn--small" id="btn-refrescar"
+                style="margin-top:10px;">↻ Actualizar registros</button>
       </div>
     </div>
 
@@ -467,12 +473,13 @@
         Tildá cada renglón a medida que lo confirmás. Lo que quede sin tildar
         se registra como <strong>no recibido</strong> (cantidad 0).
       </p>
+      <div class="aviso rojo" id="aviso-dup" style="display:none;"></div>
       <div id="lista-items"></div>
       <p class="progreso" id="progreso"></p>
 
       <div class="campo">
-        <label for="clave">Clave de equipa *</label>
-        <input type="password" id="clave" placeholder="La clave compartida de la equipa">
+        <label for="clave">Clave de equipo *</label>
+        <input type="password" id="clave" placeholder="La clave compartida del equipo">
       </div>
 
       <button type="button" class="btn-conf" id="btn-confirmar" disabled>Registrar recepción</button>
@@ -487,13 +494,13 @@
       <p class="muted">
         Cuando ya recibiste a <strong>todos</strong> los productores, tocá acá.
         El sistema compara lo que se pidió contra lo que llegó y le manda a la
-        equipa por mail el detalle de qué falta y qué pedidos quedan afectados,
+        equipo por mail el detalle de qué falta y qué pedidos quedan afectados,
         para decidir juntas los ajustes.
       </p>
 
       <div class="campo">
-        <label for="clave-falt">Clave de equipa *</label>
-        <input type="password" id="clave-falt" placeholder="La clave compartida de la equipa">
+        <label for="clave-falt">Clave de equipo *</label>
+        <input type="password" id="clave-falt" placeholder="La clave compartida del equipo">
       </div>
 
       <button type="button" class="btn-conf" id="btn-faltantes">Revisar faltantes de la edición</button>
@@ -516,15 +523,19 @@
 
         <div class="campo">
           <label for="preparado-por">¿Quién prepara? *</label>
-          <input type="text" id="preparado-por" placeholder="Tu nombre" autocomplete="name">
+          <select id="preparado-por">
+            <option value="">— Elegí tu nombre —</option>
+          </select>
+          <input type="text" id="preparado-por-otro" placeholder="Nombre de quien ayuda hoy"
+                 autocomplete="name" style="display:none; margin-top:8px;">
         </div>
 
         <div id="lista-fracc"></div>
         <p class="progreso" id="progreso-fracc"></p>
 
         <div class="campo">
-          <label for="clave-fracc">Clave de equipa *</label>
-          <input type="password" id="clave-fracc" placeholder="La clave compartida de la equipa">
+          <label for="clave-fracc">Clave de equipo *</label>
+          <input type="password" id="clave-fracc" placeholder="La clave compartida del equipo">
         </div>
 
         <button type="button" class="btn-conf" id="btn-fracc" disabled>Registrar fracciones preparadas</button>
@@ -547,14 +558,18 @@
 
         <div class="campo">
           <label for="aprobado-por">¿Quién carga la decisión? *</label>
-          <input type="text" id="aprobado-por" placeholder="Tu nombre" autocomplete="name">
+          <select id="aprobado-por">
+            <option value="">— Elegí tu nombre —</option>
+          </select>
+          <input type="text" id="aprobado-por-otro" placeholder="Nombre de quien ayuda hoy"
+                 autocomplete="name" style="display:none; margin-top:8px;">
         </div>
 
         <div id="lista-ajustes"></div>
 
         <div class="campo">
-          <label for="clave-ajustes">Clave de equipa *</label>
-          <input type="password" id="clave-ajustes" placeholder="La clave compartida de la equipa">
+          <label for="clave-ajustes">Clave de equipo *</label>
+          <input type="password" id="clave-ajustes" placeholder="La clave compartida del equipo">
         </div>
 
         <button type="button" class="btn-conf" id="btn-ajustes" disabled>Aplicar ajustes</button>
@@ -565,37 +580,41 @@
       </div>
     </div>
 
-    <!-- ── Vista Retiro ── -->
-    <div id="vista-retiro" style="display:none;">
+    <!-- ── Vista Entrega ── -->
+    <div id="vista-entrega" style="display:none;">
       <div class="card-eq">
-        <h2>Retiro de pedidos</h2>
+        <h2>Entrega de pedidos</h2>
         <p class="muted">
-          Tildá cada pedido cuando el consumidor lo <strong>retira del galpón</strong> y registrá.
+          Tildá cada pedido cuando se lo <strong>entregás al consumidor</strong> y registrá.
           Reemplaza las marcas de color de la planilla heladera.
         </p>
 
         <div class="campo">
           <label for="entregado-por">¿Quién entrega? *</label>
-          <input type="text" id="entregado-por" placeholder="Tu nombre" autocomplete="name">
+          <select id="entregado-por">
+            <option value="">— Elegí tu nombre —</option>
+          </select>
+          <input type="text" id="entregado-por-otro" placeholder="Nombre de quien ayuda hoy"
+                 autocomplete="name" style="display:none; margin-top:8px;">
         </div>
 
         <div class="campo">
-          <label for="buscar-retiro">Buscar consumidor</label>
-          <input type="text" id="buscar-retiro" placeholder="Escribí parte del nombre…">
+          <label for="buscar-entrega">Buscar consumidor</label>
+          <input type="text" id="buscar-entrega" placeholder="Escribí parte del nombre…">
         </div>
 
-        <div id="lista-retiro"></div>
-        <p class="progreso" id="progreso-retiro"></p>
+        <div id="lista-entrega"></div>
+        <p class="progreso" id="progreso-entrega"></p>
 
         <div class="campo">
-          <label for="clave-retiro">Clave de equipa *</label>
-          <input type="password" id="clave-retiro" placeholder="La clave compartida de la equipa">
+          <label for="clave-entrega">Clave de equipo *</label>
+          <input type="password" id="clave-entrega" placeholder="La clave compartida del equipo">
         </div>
 
-        <button type="button" class="btn-conf" id="btn-retiro" disabled>Registrar retiros</button>
+        <button type="button" class="btn-conf" id="btn-entrega" disabled>Registrar entregas</button>
 
-        <div class="ok-box" id="ok-retiro">
-          ✅ Retiros registrados.
+        <div class="ok-box" id="ok-entrega">
+          ✅ Entregas registradas.
         </div>
       </div>
     </div>
@@ -641,15 +660,17 @@
       var productores = {};   // id -> nombre
       var lineas = [];        // filas de Comandas_Calc A:H
       var registrados = {};   // id_productor -> true (en esta sesión)
+      var recibidosVivo = {}; // id_productor -> quién lo recibió (según la hoja Recepciones)
+      var equipoNombres = []; // nombres activos de la hoja Equipo
       var planFracc = [];     // filas de Plan_Fraccionamiento de la edición
-      var pedidos = [];       // pedidos de la edición (para Retiro)
+      var pedidos = [];       // pedidos de la edición (para Entrega)
       var consumidores = {};  // id -> nombre
       var contactos = {};     // id -> {tel, email}
       var propuestas = [];    // faltantes pendientes de la edición
       var itemsEd = [];       // ítems de los pedidos de la edición
 
       // ── Solapas ──────────────────────────────────────────────────
-      var VISTAS = ['recepcion', 'fracc', 'ajustes', 'retiro'];
+      var VISTAS = ['recepcion', 'fracc', 'ajustes', 'entrega'];
       function mostrarVista(cual) {
         VISTAS.forEach(function (v) {
           document.getElementById('vista-' + v).style.display = (v === cual) ? 'block' : 'none';
@@ -688,6 +709,69 @@
         return isNaN(n) ? 1 : n;
       }
 
+      // ── equipo: desplegables de "¿quién?" ────────────────────────
+      var QUIEN_IDS = ['recibido-por', 'preparado-por', 'aprobado-por', 'entregado-por'];
+
+      function armarSelectsEquipo() {
+        QUIEN_IDS.forEach(function (id) {
+          var sel = $(id), otro = $(id + '-otro');
+          if (!equipoNombres.length) {
+            // Sin hoja Equipo todavía: se escribe el nombre a mano, como antes.
+            sel.style.display = 'none';
+            otro.style.display = 'block';
+            otro.placeholder = 'Tu nombre';
+            return;
+          }
+          sel.innerHTML = '<option value="">— Elegí tu nombre —</option>';
+          equipoNombres.forEach(function (n) {
+            var op = document.createElement('option');
+            op.value = n;
+            op.textContent = n;
+            sel.appendChild(op);
+          });
+          var op = document.createElement('option');
+          op.value = '__otro__';
+          op.textContent = 'Otra persona…';
+          sel.appendChild(op);
+        });
+      }
+
+      function valorQuien(id) {
+        var sel = $(id);
+        if (sel.style.display === 'none' || sel.value === '__otro__') {
+          return $(id + '-otro').value.trim();
+        }
+        return sel.value.trim();
+      }
+
+      function parseEquipo(res) {
+        equipoNombres = [];
+        if (!res) return;
+        try {
+          res.table.rows.forEach(function (r) {
+            var nombre = String(celda(r, 1)).trim();
+            var activa = String(celda(r, 4)).trim().toLowerCase();
+            if (nombre && (activa === 'sí' || activa === 'si' || activa === '')) {
+              equipoNombres.push(nombre);
+            }
+          });
+        } catch (e) { equipoNombres = []; }
+      }
+
+      function parseRecepciones(res) {
+        recibidosVivo = {};
+        if (!res) return;
+        try {
+          res.table.rows.forEach(function (r) {
+            if (String(celda(r, 1)).trim() !== idEdicion) return;
+            var idP = String(celda(r, 2)).trim();
+            if (idP && !recibidosVivo[idP]) {
+              recibidosVivo[idP] = String(celda(r, 4)).trim();
+            }
+          });
+        } catch (e) { recibidosVivo = {}; }
+      }
+
       // ── carga inicial ────────────────────────────────────────────
       function cargar() {
         // Edición vigente (Comandas_Calc!K1) + tabla de comandas + nombres
@@ -699,7 +783,10 @@
           gviz('sheet=Pedidos&range=A1:U3000&headers=1'),
           gviz('sheet=Consumidores&range=A1:D2000&headers=1'),
           gviz('sheet=Propuestas_Ajuste&range=A1:N500&headers=1'),
-          gviz('sheet=Items&range=A1:M3000&headers=1')
+          gviz('sheet=Items&range=A1:M3000&headers=1'),
+          // Las dos últimas no son críticas: si la hoja no existe, seguimos igual.
+          gviz('sheet=Equipo&range=A1:E100&headers=1').catch(function () { return null; }),
+          gviz('sheet=Recepciones&range=A1:L4000&headers=1').catch(function () { return null; })
         ]).then(function (res) {
           var rowsK = res[0].table.rows;
           idEdicion = rowsK.length ? String(celda(rowsK[0], 0)).trim() : '';
@@ -727,7 +814,7 @@
 
           if (!idEdicion || !lineas.length) {
             $('estado-edicion').className = 'aviso rojo';
-            $('estado-edicion').textContent = 'No hay comandas generadas. Primero generá las comandas de la edición desde la herramienta de equipa.';
+            $('estado-edicion').textContent = 'No hay comandas generadas. Primero generá las comandas de la edición desde la herramienta del equipo.';
             return;
           }
 
@@ -804,13 +891,17 @@
             });
           });
 
+          parseEquipo(res[8]);
+          parseRecepciones(res[9]);
+
           $('estado-edicion').innerHTML = 'Edición vigente: <strong>' + idEdicion +
             '</strong> · ' + contarProductores() + ' productores · ' +
             planFracc.length + ' fracciones · ' + pedidos.length + ' pedidos';
+          armarSelectsEquipo();
           armarSelect();
           renderFracc();
           renderAjustes();
-          renderRetiro();
+          renderEntrega();
         }).catch(function () {
           $('estado-edicion').className = 'aviso rojo';
           $('estado-edicion').textContent = 'No pudimos leer la planilla. Revisá la conexión y recargá.';
@@ -823,8 +914,17 @@
         return Object.keys(s).length;
       }
 
+      function marcaRecibido(idProd) {
+        if (recibidosVivo[idProd]) {
+          return ' ✓ recibido' + (recibidosVivo[idProd] ? ' por ' + recibidosVivo[idProd] : '');
+        }
+        if (registrados[idProd]) return ' ✓ registrado';
+        return '';
+      }
+
       function armarSelect() {
         var sel = $('sel-productor');
+        var elegido = sel.value;
         sel.innerHTML = '<option value="">— Elegir productor —</option>';
         var vistos = {};
         lineas.forEach(function (l) {
@@ -832,12 +932,42 @@
           vistos[l.id_productor] = true;
           var op = document.createElement('option');
           op.value = l.id_productor;
-          op.textContent = (productores[l.id_productor] || l.id_productor) +
-            (registrados[l.id_productor] ? ' ✓ registrado' : '');
+          op.textContent = (productores[l.id_productor] || l.id_productor) + marcaRecibido(l.id_productor);
           sel.appendChild(op);
         });
         sel.disabled = false;
+        if (elegido) sel.value = elegido;
       }
+
+      function actualizarAvisoDup(idProd) {
+        var caja = $('aviso-dup');
+        var quien = recibidosVivo[idProd] || '';
+        var ya = quien || registrados[idProd];
+        if (!ya) { caja.style.display = 'none'; return; }
+        caja.style.display = 'block';
+        caja.innerHTML = '⚠️ Este productor <strong>ya fue registrado' +
+          (quien ? ' por ' + quien : ' desde esta pantalla') + '</strong>. ' +
+          'Si lo volvés a registrar, la recepción queda <strong>duplicada</strong> y ' +
+          'los faltantes se calculan mal. Registralo de nuevo sólo si están ' +
+          'corrigiendo algo y saben lo que hacen.';
+      }
+
+      // ↻ vuelve a leer la hoja Recepciones sin recargar la página
+      $('btn-refrescar').addEventListener('click', function () {
+        var b = $('btn-refrescar');
+        b.disabled = true;
+        b.textContent = 'Actualizando…';
+        gviz('sheet=Recepciones&range=A1:L4000&headers=1&_=' + Date.now())
+          .then(function (res) { parseRecepciones(res); })
+          .catch(function () {})
+          .then(function () {
+            armarSelect();
+            var elegido = $('sel-productor').value;
+            if (elegido) actualizarAvisoDup(elegido);
+            b.disabled = false;
+            b.textContent = '↻ Actualizar registros';
+          });
+      });
 
       // ── render de la lista del productor elegido ─────────────────
       $('sel-productor').addEventListener('change', function () {
@@ -890,6 +1020,7 @@
         $('titulo-productor').textContent = productores[idProd] || idProd;
         $('card-items').style.display = 'block';
         $('card-items').dataset.idProd = idProd;
+        actualizarAvisoDup(idProd);
         actualizarProgreso();
       }
 
@@ -918,11 +1049,26 @@
       }
 
       function validar() {
-        var ok = $('recibido-por').value.trim() !== '' && $('clave').value.trim() !== '';
+        var ok = valorQuien('recibido-por') !== '' && $('clave').value.trim() !== '';
         $('btn-confirmar').disabled = !ok;
       }
-      $('recibido-por').addEventListener('input', validar);
       $('clave').addEventListener('input', validar);
+
+      // Mostrar/ocultar el campo "Otra persona…" y revalidar en los 4 selects
+      QUIEN_IDS.forEach(function (id) {
+        var sel = $(id), otro = $(id + '-otro');
+        sel.addEventListener('change', function () {
+          otro.style.display = (sel.value === '__otro__') ? 'block' : 'none';
+          if (sel.value === '__otro__') otro.focus();
+          revalidarQuien();
+        });
+        otro.addEventListener('input', revalidarQuien);
+      });
+      function revalidarQuien() {
+        validar();
+        validarFracc();
+        validarEntrega();
+      }
 
       // ── envío ────────────────────────────────────────────────────
       $('btn-confirmar').addEventListener('click', function () {
@@ -960,7 +1106,7 @@
         var payload = {
           id_edicion: idEdicion,
           id_productor: idProd,
-          recibido_por: $('recibido-por').value.trim(),
+          recibido_por: valorQuien('recibido-por'),
           clave: $('clave').value.trim(),
           items: items
         };
@@ -981,6 +1127,7 @@
           btn.disabled = false;
           $('ok-box').style.display = 'block';
           registrados[idProd] = true;
+          recibidosVivo[idProd] = valorQuien('recibido-por');
           armarSelect();
           $('sel-productor').value = idProd;
           window.scrollTo(0, document.body.scrollHeight);
@@ -1037,11 +1184,10 @@
 
       function validarFracc() {
         var nuevas = $('lista-fracc').querySelectorAll('.chk-f:checked:not(:disabled)').length;
-        var ok = $('preparado-por').value.trim() !== '' &&
+        var ok = valorQuien('preparado-por') !== '' &&
                  $('clave-fracc').value.trim() !== '' && nuevas > 0;
         $('btn-fracc').disabled = !ok;
       }
-      $('preparado-por').addEventListener('input', validarFracc);
       $('clave-fracc').addEventListener('input', validarFracc);
 
       $('btn-fracc').addEventListener('click', function () {
@@ -1056,7 +1202,7 @@
         var payload = {
           tipo: 'fraccionamiento',
           id_edicion: idEdicion,
-          preparado_por: $('preparado-por').value.trim(),
+          preparado_por: valorQuien('preparado-por'),
           clave: $('clave-fracc').value.trim(),
           items: items
         };
@@ -1080,29 +1226,29 @@
             var chk = divs[i].querySelector('.chk-f');
             if (chk.checked && !chk.disabled) {
               p.estado = 'Preparado';
-              p.preparado_por = $('preparado-por').value.trim();
+              p.preparado_por = valorQuien('preparado-por');
             }
           });
           renderFracc();
         }
       });
 
-      // ── Retiro ───────────────────────────────────────────────────
+      // ── Entrega ──────────────────────────────────────────────────
       function nombreConsumidor(p) {
         return consumidores[p.id_consumidor] || p.id_consumidor || '(sin nombre)';
       }
 
-      function renderRetiro() {
-        var cont = $('lista-retiro');
+      function renderEntrega() {
+        var cont = $('lista-entrega');
         cont.innerHTML = '';
 
         if (!pedidos.length) {
           cont.innerHTML = '<p class="muted">No hay pedidos para esta edición.</p>';
-          $('progreso-retiro').textContent = '';
+          $('progreso-entrega').textContent = '';
           return;
         }
 
-        var filtro = $('buscar-retiro').value.trim().toLowerCase();
+        var filtro = $('buscar-entrega').value.trim().toLowerCase();
 
         pedidos.forEach(function (p, i) {
           var nombre = nombreConsumidor(p);
@@ -1113,7 +1259,7 @@
           div.className = 'item' + (yaEntregado ? ' preparado' : ' no-llego');
           div.dataset.idx = String(i);
           div.innerHTML =
-            '<input type="checkbox" class="chk-r" aria-label="Retirado"' +
+            '<input type="checkbox" class="chk-r" aria-label="Entregado"' +
               (yaEntregado ? ' checked disabled' : '') + '>' +
             '<div class="cuerpo">' +
               '<div class="linea-nombre"></div>' +
@@ -1125,38 +1271,37 @@
           div.querySelector('.quien').textContent = yaEntregado ? '✓ Entregado' : '';
           cont.appendChild(div);
         });
-        actualizarProgresoRetiro();
+        actualizarProgresoEntrega();
       }
 
-      $('buscar-retiro').addEventListener('input', renderRetiro);
+      $('buscar-entrega').addEventListener('input', renderEntrega);
 
-      $('lista-retiro').addEventListener('change', function (e) {
+      $('lista-entrega').addEventListener('change', function (e) {
         if (!e.target.classList.contains('chk-r') || e.target.disabled) return;
         var item = e.target.closest('.item');
         if (e.target.checked) { item.classList.add('tildado'); item.classList.remove('no-llego'); }
         else { item.classList.remove('tildado'); item.classList.add('no-llego'); }
-        actualizarProgresoRetiro();
+        actualizarProgresoEntrega();
       });
 
-      function actualizarProgresoRetiro() {
+      function actualizarProgresoEntrega() {
         var hechos = pedidos.filter(function (p) { return p.estado === 'Entregado'; }).length;
-        var nuevos = $('lista-retiro').querySelectorAll('.chk-r:checked:not(:disabled)').length;
-        $('progreso-retiro').textContent = hechos + ' de ' + pedidos.length +
+        var nuevos = $('lista-entrega').querySelectorAll('.chk-r:checked:not(:disabled)').length;
+        $('progreso-entrega').textContent = hechos + ' de ' + pedidos.length +
           ' ya entregados · ' + nuevos + ' por registrar ahora';
-        validarRetiro();
+        validarEntrega();
       }
 
-      function validarRetiro() {
-        var nuevos = $('lista-retiro').querySelectorAll('.chk-r:checked:not(:disabled)').length;
-        var ok = $('entregado-por').value.trim() !== '' &&
-                 $('clave-retiro').value.trim() !== '' && nuevos > 0;
-        $('btn-retiro').disabled = !ok;
+      function validarEntrega() {
+        var nuevos = $('lista-entrega').querySelectorAll('.chk-r:checked:not(:disabled)').length;
+        var ok = valorQuien('entregado-por') !== '' &&
+                 $('clave-entrega').value.trim() !== '' && nuevos > 0;
+        $('btn-entrega').disabled = !ok;
       }
-      $('entregado-por').addEventListener('input', validarRetiro);
-      $('clave-retiro').addEventListener('input', validarRetiro);
+      $('clave-entrega').addEventListener('input', validarEntrega);
 
-      $('btn-retiro').addEventListener('click', function () {
-        var divs = $('lista-retiro').querySelectorAll('.item');
+      $('btn-entrega').addEventListener('click', function () {
+        var divs = $('lista-entrega').querySelectorAll('.item');
         var items = [];
         Array.prototype.forEach.call(divs, function (div) {
           var chk = div.querySelector('.chk-r');
@@ -1167,14 +1312,14 @@
         if (!items.length) return;
 
         var payload = {
-          tipo: 'retiro',
+          tipo: 'retiro',   // el escenario de Make espera este valor: no cambiar
           id_edicion: idEdicion,
-          entregado_por: $('entregado-por').value.trim(),
-          clave: $('clave-retiro').value.trim(),
+          entregado_por: valorQuien('entregado-por'),
+          clave: $('clave-entrega').value.trim(),
           items: items
         };
 
-        var btn = $('btn-retiro');
+        var btn = $('btn-entrega');
         btn.disabled = true;
         btn.textContent = 'Registrando…';
 
@@ -1186,15 +1331,15 @@
         }).then(finR).catch(finR);
 
         function finR() {
-          btn.textContent = 'Registrar retiros';
-          $('ok-retiro').style.display = 'block';
+          btn.textContent = 'Registrar entregas';
+          $('ok-entrega').style.display = 'block';
           Array.prototype.forEach.call(divs, function (div) {
             var chk = div.querySelector('.chk-r');
             if (chk.checked && !chk.disabled) {
               pedidos[parseInt(div.dataset.idx, 10)].estado = 'Entregado';
             }
           });
-          renderRetiro();
+          renderEntrega();
         }
       });
 
@@ -1302,10 +1447,10 @@
           caja.textContent = msg;
         }
         if (!webhookListo(WEBHOOK_D3, 'D3 · Ajustes', 'ok-ajustes')) return;
-        var quien = $('aprobado-por').value.trim();
+        var quien = valorQuien('aprobado-por');
         var clave = $('clave-ajustes').value.trim();
         if (!quien) { errorA('Falta tu nombre.'); return; }
-        if (!clave) { errorA('Falta la clave de equipa.'); return; }
+        if (!clave) { errorA('Falta la clave de equipo.'); return; }
 
         var recortes = {};      // idx de itemsEd -> cantidad recortada
         var porPropuesta = {};  // pi -> [idx]
@@ -1318,41 +1463,41 @@
           (porPropuesta[pi] = porPropuesta[pi] || []).push(idx);
         });
 
+        // Se manda SOLO el recorte (delta) de cada ítem. Los valores nuevos
+        // los calcula Make leyendo la fila viva de la planilla, así dos
+        // personas pueden ajustar a la vez sin pisarse.
         var itemsOut = [], tocados = {};
         Object.keys(recortes).forEach(function (k) {
           var idx = parseInt(k, 10), it = itemsEd[idx], v = recortes[idx];
-          var nuevaEf = Math.round((it.efectiva - v) * 10000) / 10000;
           var factor = factorFraccion(it.fraccion) || 1;
           itemsOut.push({
             id_item: it.id_item,
             id_pedido: it.id_pedido,
             id_producto: it.id_producto,
-            cantidad_nueva: Math.round((nuevaEf / factor) * 10000) / 10000,
-            cantidad_efectiva_nueva: nuevaEf,
-            subtotal_nuevo: Math.round(nuevaEf * it.precio),
-            estado_item: nuevaEf > 0 ? 'Descontado' : 'Faltante',
+            producto: nombreProducto(it.id_producto),
+            recorte_efectiva: v,
+            recorte_cantidad: Math.round((v / factor) * 10000) / 10000,
+            precio: it.precio,
             observacion: 'Faltante del productor: -' + v
           });
           tocados[it.id_pedido] = true;
         });
 
+        // Datos informativos por pedido (para el mail de aviso). Los montos
+        // nuevos NO van acá: los recalcula Make sumando Items!H de la fila viva.
         var pedidosOut = Object.keys(tocados).map(function (idPed) {
           var ped = pedidoDe(idPed);
-          var subtotal = 0, devuelto = 0, detalle = [];
+          var devuelto = 0, detalle = [];
           itemsEd.forEach(function (it, idx) {
             if (it.id_pedido !== idPed) return;
             var v = recortes[idx] || 0;
-            var ef = it.efectiva - v;
-            subtotal += ef * it.precio;
             if (v > 0) {
               devuelto += v * it.precio;
               detalle.push('• ' + nombreProducto(it.id_producto) + ': pediste ' + it.efectiva +
-                ' y te llevás ' + (Math.round(ef * 10000) / 10000) +
+                ' y te llevás ' + (Math.round((it.efectiva - v) * 10000) / 10000) +
                 ' (' + pesos(v * it.precio) + ' menos)');
             }
           });
-          subtotal = Math.round(subtotal);
-          var aporte = Math.round(subtotal * (ped.aporte || 0) / 100);
           var c = contactos[ped.id_consumidor] || {};
           return {
             id_pedido: idPed,
@@ -1360,9 +1505,6 @@
             nombre: consumidores[ped.id_consumidor] || ped.id_consumidor,
             email: c.email || '',
             telefono: c.tel || '',
-            subtotal_nuevo: subtotal,
-            aporte_nuevo: aporte,
-            total_nuevo: subtotal + aporte,
             total_anterior: ped.total,
             monto_devuelto: Math.round(devuelto),
             detalle_recortes: detalle.join('\n')
@@ -1424,7 +1566,7 @@
           caja.style.display = 'block';
           caja.style.background = 'rgba(166, 64, 43, 0.10)';
           caja.style.color = '#A6402B';
-          caja.textContent = 'Falta la clave de equipa.';
+          caja.textContent = 'Falta la clave de equipo.';
           return;
         }
 
