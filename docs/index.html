@@ -6,30 +6,14 @@
   <meta name="robots" content="noindex">
   <title>Nodo Matriz — Sistema de gestión</title>
   <link rel="stylesheet" href="assets/styles.css">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4 Q22 8 22 16 Q22 24 16 28 Q10 24 10 16 Q10 8 16 4 Z' fill='%234A6B3A'/%3E%3Cpath d='M16 6 V28' stroke='%23FAF6EE' stroke-width='1.5' stroke-linecap='round' opacity='0.6'/%3E%3C/svg%3E">
+  <link rel="icon" type="image/png" href="assets/favicon-nodo.png">
 </head>
 <body>
-  <main class="wrap fade-in">
+  <main class="wrap">
 
-    <header class="site-header">
+    <header class="site-header fade-in">
       <a class="site-mark" href="./">
-        <!-- Logo: hoja estilizada -->
-        <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <defs>
-            <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#6E8E55"/>
-              <stop offset="100%" stop-color="#4A6B3A"/>
-            </linearGradient>
-          </defs>
-          <path d="M24 4 Q34 10 34 24 Q34 38 24 44 Q14 38 14 24 Q14 10 24 4 Z" fill="url(#leafGrad)"/>
-          <path d="M24 8 V42" stroke="#FAF6EE" stroke-width="1.8" stroke-linecap="round" opacity="0.7"/>
-          <path d="M24 16 Q19 18 17 22" stroke="#FAF6EE" stroke-width="1.4" stroke-linecap="round" opacity="0.5" fill="none"/>
-          <path d="M24 22 Q19 24 17 28" stroke="#FAF6EE" stroke-width="1.4" stroke-linecap="round" opacity="0.5" fill="none"/>
-          <path d="M24 28 Q19 30 17 34" stroke="#FAF6EE" stroke-width="1.4" stroke-linecap="round" opacity="0.5" fill="none"/>
-          <path d="M24 16 Q29 18 31 22" stroke="#FAF6EE" stroke-width="1.4" stroke-linecap="round" opacity="0.5" fill="none"/>
-          <path d="M24 22 Q29 24 31 28" stroke="#FAF6EE" stroke-width="1.4" stroke-linecap="round" opacity="0.5" fill="none"/>
-          <path d="M24 28 Q29 30 31 34" stroke="#FAF6EE" stroke-width="1.4" stroke-linecap="round" opacity="0.5" fill="none"/>
-        </svg>
+        <img src="assets/logo-nodo-verde.png" alt="Nodo Matríz" style="width:52px; height:52px;">
         <span>
           <span class="site-mark__name">Nodo Matriz</span>
           <span class="site-mark__sub">sistema de gestión</span>
@@ -41,12 +25,12 @@
       <h1>Sistema interno del Nodo Matriz</h1>
       <p class="lead">
         Espacio web donde habitan los formularios de gestión de cada edición:
-        actualización de stock por proveedurías, pedidos de consumidores,
-        recepción en galpón, retiro y referidos.
+        stock de proveedurías, pedidos de consumidores y las herramientas
+        del equipo para el galpón.
       </p>
       <p>
         Este sitio no está pensado para navegación general. Cada formulario se
-        accede a través de un link específico que se distribuye en cada momento
+        accede a través del link específico que se comparte en cada momento
         del ciclo de la edición.
       </p>
     </section>
@@ -88,18 +72,44 @@
 
     <section class="fade-in" data-delay="4">
       <h2>Para el equipo del galpón</h2>
+
       <div class="card mt-3">
-        <h3>Próximamente</h3>
+        <h3>Recepción, fraccionamiento, ajustes y entrega</h3>
         <p class="muted">
-          Los formularios de recepción de productos en el galpón
-          (<code class="kbd">recepcion.html</code>) y marcado de retiro
-          (<code class="kbd">retiro.html</code>) van a vivir aquí cuando se
-          active la Fase 4 del proyecto.
+          La app de trabajo del día de galpón, en cuatro solapas: registrar la
+          <strong>recepción</strong> de cada productor, tildar el
+          <strong>fraccionamiento</strong>, repartir los <strong>ajustes</strong>
+          por faltantes y marcar la <strong>entrega</strong> de cada pedido.
+          Todas las acciones piden la clave compartida del equipo.
+        </p>
+        <p>
+          <a href="forms/recepcion.html" class="btn btn--ghost btn--small">
+            Abrir la app del galpón
+          </a>
+        </p>
+      </div>
+
+      <div class="card mt-3">
+        <h3>Generar edición y comandas</h3>
+        <p class="muted">
+          Herramienta para abrir una edición nueva: genera el formulario público
+          de pedidos con los productos y el orden de categorías elegido, y
+          después del cierre genera las comandas por productor. También pide
+          la clave del equipo.
+        </p>
+        <p>
+          <a href="forms/generar-edicion.html" class="btn btn--ghost btn--small">
+            Abrir generar edición
+          </a>
         </p>
       </div>
     </section>
 
     <footer class="site-footer">
+      <p>
+        <img src="assets/logo-nodo-completo-verde.png" alt="Nodo Matriz Agroecológico · Sierras Chicas"
+             style="width:120px; height:auto; display:block; margin: 0 auto var(--s-4); opacity:0.85;">
+      </p>
       <p>Nodo Matriz Agroecológico · Unquillo, Sierras Chicas · Córdoba</p>
       <p>
         <a href="https://github.com/Nodo-Matriz/Sistema">repositorio del sistema</a>
