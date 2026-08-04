@@ -4,20 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex">
-  <title>Generar edición · Nodo Matríz (equipa)</title>
+  <title>Generar edición · Nodo Matríz (equipo)</title>
   <link rel="stylesheet" href="../assets/styles.css">
-  <link rel="icon" type="image/png" href="../assets/logo-nodo-verde.png">
+  <link rel="icon" type="image/png" href="../assets/favicon-nodo.png">
   <style>
-    /* Respaldo por si styles.css no carga */
-    body { font-family: Georgia, serif; background: #f4efe6; color: #2e3a26; margin: 0; }
-    .wrap { max-width: 620px; margin: 0 auto; padding: 24px 16px 64px; }
+    .wrap { max-width: 620px; }
 
     .card-eq {
-      background: var(--c-leche, #fff);
-      border: 1px solid rgba(74, 107, 58, 0.15);
-      border-radius: 14px;
-      padding: var(--s-5, 20px);
-      margin-top: var(--s-4, 16px);
+      background: var(--c-leche);
+      border: 1px solid rgba(74, 107, 58, 0.14);
+      border-radius: var(--r-card);
+      padding: var(--s-5);
+      margin-top: var(--s-5);
+      box-shadow: var(--sh-suave);
+    }
+
+    .card-eq h2 {
+      font-size: 1.5rem;
+      font-variation-settings: 'opsz' 48, 'SOFT' 60;
+      margin-bottom: var(--s-2);
     }
 
     .campo { margin-bottom: var(--s-4, 16px); }
@@ -31,17 +36,19 @@
     .campo input {
       width: 100%;
       box-sizing: border-box;
-      padding: 10px;
-      border: 1.5px solid var(--c-salvia, #c9c2b2);
-      border-radius: 8px;
+      padding: var(--s-3) var(--s-4);
+      border: 1.5px solid var(--c-salvia);
+      border-radius: var(--r-input);
       font-size: 1rem;
-      font-family: var(--f-body, inherit);
-      background: transparent;
+      font-family: var(--f-body);
+      background: var(--c-leche);
+      color: var(--c-suelo);
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
     .campo input:focus {
       outline: none;
-      border-color: var(--c-oliva, #4a6b3a);
-      background: var(--c-leche, #fff);
+      border-color: var(--c-oliva);
+      box-shadow: var(--sh-foco);
     }
     .campo small { color: var(--c-tierra, #7a6f58); }
 
@@ -126,7 +133,7 @@
         <img src="../assets/logo-nodo-verde.png" alt="Nodo Matríz" style="width:48px; height:48px;">
         <span>
           <span class="site-mark__name">Nodo Matríz</span>
-          <span class="site-mark__sub">herramienta de la equipa</span>
+          <span class="site-mark__sub">herramienta del equipo</span>
         </span>
       </a>
     </header>
@@ -187,8 +194,8 @@
     <!-- ── Confirmación ── -->
     <div class="card-eq fade-in" data-delay="4">
       <div class="campo">
-        <label for="clave">Clave de equipa *</label>
-        <input type="password" id="clave" placeholder="La clave compartida de la equipa">
+        <label for="clave">Clave de equipo *</label>
+        <input type="password" id="clave" placeholder="La clave compartida del equipo">
       </div>
 
       <div class="preview" id="preview">Completá los campos para ver el resumen…</div>
@@ -210,7 +217,7 @@
       <p class="muted" style="font-size:0.9rem;">
         Para usar <strong>después del cierre del formulario</strong>. Usa el número
         de edición, el año y la clave cargados arriba. Genera las comandas, las
-        registra en la planilla y manda a la equipa un correo con el mensaje de
+        registra en la planilla y manda al equipo un correo con el mensaje de
         WhatsApp listo para enviar a cada productor.
       </p>
 
@@ -227,7 +234,7 @@
       </button>
 
       <div class="ok" id="resultado-com">
-        ✅ Disparado. En un minuto llega el correo a la equipa con las comandas
+        ✅ Disparado. En un minuto llega el correo al equipo con las comandas
         y sus links de WhatsApp, y quedan registradas en la pestaña Comandas.
       </div>
     </div>
