@@ -596,6 +596,37 @@
       border-color: var(--c-salvia);
       cursor: not-allowed;
     }
+
+    .btn-accion.confirmar {
+      background: var(--c-arcilla-oscuro);
+      border-color: var(--c-arcilla-oscuro);
+    }
+
+    .btn-deshacer {
+      display: block;
+      margin: var(--s-3) auto 0;
+      background: none;
+      border: 1.5px solid var(--c-salvia);
+      border-radius: var(--r-pill);
+      padding: 7px 16px;
+      font-family: var(--f-body);
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--c-tierra);
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .btn-deshacer:hover { border-color: var(--c-arcilla-oscuro); color: var(--c-arcilla-oscuro); }
+
+    .ped-head .caret {
+      flex-shrink: 0;
+      color: var(--c-tierra);
+      font-size: 0.8rem;
+      transition: transform 0.15s;
+    }
+
+    .ped-card.abierto .caret { transform: rotate(90deg); }
   </style>
 </head>
 <body>
@@ -767,10 +798,11 @@
       <div class="card-eq">
         <h2>Armado y entrega</h2>
         <p class="muted">
-          Tocá un pedido para ver sus productos e ir tachando mientras armás
-          el cajón. Con todo tachado aparece <strong>“✓ Cajón armado”</strong>;
-          cuando el consumidor lo retira, tocá <strong>“Entregar pedido”</strong>.
-          Cada toque se guarda al instante y los demás teléfonos lo ven solos.
+          Tocá un pedido para <strong>abrir o cerrar</strong> su detalle e ir
+          tachando mientras armás el cajón. Con todo tachado aparece
+          <strong>“✓ Cajón armado”</strong>; cuando el consumidor lo retira,
+          tocá <strong>“Entregar pedido”</strong> (pide confirmación).
+          Cada registro se guarda al instante y los demás teléfonos lo ven solos.
         </p>
 
         <div class="campo">
@@ -1470,7 +1502,9 @@
       function estadoDe(p) {
         var base = (p.estado === 'Entregado' || p.estado === 'Armado') ? p.estado : 'Pendiente';
         var o = overrides[p.id_pedido];
-        if (o && rango(o.estado) > rango(base)) return o.estado;
+        // Un registro recién hecho (incluso un "deshacer") manda sobre la
+        // planilla hasta que ella lo confirme (~30 seg); después expira.
+        if (o && (Date.now() - o.ts) < 180000) return o.estado;
         return base;
       }
 
@@ -1513,6 +1547,7 @@
           card.dataset.idx = String(i);
           card.innerHTML =
             '<div class="ped-head">' +
+              '<span class="caret">▶</span>' +
               '<span class="ped-nombre"></span>' +
               '<span class="chip-ped ' + est.toLowerCase() + '">' +
                 (est === 'Pendiente' ? 'pendiente'
@@ -1558,6 +1593,12 @@
             b2.className = 'btn-accion';
             b2.textContent = 'Entregar pedido';
             cuerpo.appendChild(b2);
+          } else if (est === 'Entregado') {
+            var b3 = document.createElement('button');
+            b3.type = 'button';
+            b3.className = 'btn-deshacer';
+            b3.textContent = '↩ Deshacer entrega (si fue un error)';
+            cuerpo.appendChild(b3);
           }
 
           cont.appendChild(card);
@@ -1593,11 +1634,37 @@
 
       // Tocar la tarjeta la despliega; tocar el botón registra la acción
       $('lista-entrega').addEventListener('click', function (e) {
+        var deshacer = e.target.closest('.btn-deshacer');
+        if (deshacer) {
+          var cardD = deshacer.closest('.ped-card');
+          var pD = pedidos[parseInt(cardD.dataset.idx, 10)];
+          // volver a "Armado" reusa la ruta armado del escenario de Make
+          registrarAccion(pD, 'armado', deshacer);
+          return;
+        }
         var btn = e.target.closest('.btn-accion');
         if (btn) {
           var card = btn.closest('.ped-card');
           var p = pedidos[parseInt(card.dataset.idx, 10)];
-          registrarAccion(p, btn.classList.contains('armar') ? 'armado' : 'entrega', btn);
+          if (btn.classList.contains('armar')) {
+            registrarAccion(p, 'armado', btn);
+            return;
+          }
+          // Entregar pide confirmación: dos toques seguidos
+          if (!btn.dataset.conf) {
+            btn.dataset.conf = '1';
+            btn.classList.add('confirmar');
+            btn.textContent = '¿Confirmás la entrega? Tocá de nuevo';
+            setTimeout(function () {
+              if (!btn.isConnected || !btn.dataset.conf) return;
+              delete btn.dataset.conf;
+              btn.classList.remove('confirmar');
+              btn.textContent = 'Entregar pedido';
+            }, 4000);
+            return;
+          }
+          delete btn.dataset.conf;
+          registrarAccion(p, 'entrega', btn);
           return;
         }
         var head = e.target.closest('.ped-head');
@@ -1654,7 +1721,10 @@
         }).then(fin).catch(fin);
 
         function fin() {
-          overrides[p.id_pedido] = { estado: accion === 'armado' ? 'Armado' : 'Entregado' };
+          overrides[p.id_pedido] = {
+            estado: accion === 'armado' ? 'Armado' : 'Entregado',
+            ts: Date.now()
+          };
           if (accion === 'armado') guardarTicks(p.id_pedido, []);
           if (accion === 'entrega') pedAbierto = '';
           renderEntrega();
