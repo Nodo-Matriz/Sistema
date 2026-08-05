@@ -199,11 +199,11 @@
           <div class="field">
             <label class="field__label">Porcentaje de aporte</label>
             <label class="option">
-              <input type="radio" name="aporte_porcent" value="14">
-              <span class="option__label">14% <span class="muted">(mínimo sugerido)</span></span>
+              <input type="radio" name="aporte_porcent" value="15" checked>
+              <span class="option__label">15% <span class="muted">(mínimo sugerido)</span></span>
             </label>
             <label class="option">
-              <input type="radio" name="aporte_porcent" value="20" checked>
+              <input type="radio" name="aporte_porcent" value="20">
               <span class="option__label">20%</span>
             </label>
             <label class="option">
@@ -220,7 +220,7 @@
             </label>
             <div id="aporte-otro-campo" style="display:none; margin-top: var(--s-3); padding-left: var(--s-6);">
               <input class="input" type="number" id="aporte-input-custom"
-                     min="0" max="100" step="1" placeholder="Ej: 10"
+                     min="0" max="100" step="1" placeholder="Ej: 15"
                      style="width: 130px;">
               <span class="muted" style="margin-left: var(--s-2);">%</span>
             </div>
@@ -258,8 +258,8 @@
         <div class="card mt-4">
           <h2>Forma de pago</h2>
           <p class="muted">
-            Una vez confirmado tu pedido recibirás los datos para abonar al alias
-            <strong>{{alias_pago_nodo}}</strong>. También aceptamos efectivo al retirar.
+            Una vez confirmado tu pedido, te llegan por correo los datos para
+            abonar. También aceptamos efectivo al retirar.
           </p>
           <div class="field">
             <label class="field__label">¿Cómo vas a abonar?</label>
@@ -712,8 +712,19 @@ __CATEGORIAS_JSON__
           comentarios: document.getElementById('comentarios').value.trim() || null,
         };
       }, {
-        successMessage:
-          '¡Recibimos tu pedido! En breve te llegará el detalle por email y por WhatsApp, con los datos para abonar. Gracias por sostener esta red.',
+        onSuccess: function () {
+          // Mostrar la confirmación ARRIBA de la página, no al pie
+          finalSection.classList.add('hidden');
+          var ok = document.createElement('div');
+          ok.className = 'note note--success';
+          ok.innerHTML = '<strong>¡Listo! Recibimos tu pedido.</strong> ' +
+            'En breve te llegará el detalle por email y por WhatsApp, con los ' +
+            'datos para abonar. Gracias por sostener esta red.';
+          var main = document.querySelector('main.wrap') || document.body;
+          var header = main.querySelector('header');
+          main.insertBefore(ok, header ? header.nextSibling : main.firstChild);
+          window.scrollTo({ top: 0, behavior: 'auto' });
+        },
       });
 
     })();
