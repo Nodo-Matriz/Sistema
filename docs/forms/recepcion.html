@@ -401,6 +401,63 @@
 
     .restante.completo { color: var(--c-verde-ok); }
     .restante.pendiente { color: var(--c-arcilla-oscuro); }
+
+    /* ── Control de productos por pedido (solapa Entrega) ──── */
+    .btn-control {
+      margin-top: var(--s-2);
+      background: none;
+      border: 1.5px solid var(--c-salvia);
+      border-radius: var(--r-pill);
+      padding: 5px 12px;
+      font-family: var(--f-body);
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--c-tierra);
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .btn-control:hover { border-color: var(--c-oliva); color: var(--c-musgo); }
+
+    .items-ped {
+      display: none;
+      margin-top: var(--s-3);
+      border-top: 1px dotted rgba(107, 93, 79, 0.28);
+      padding-top: var(--s-3);
+    }
+
+    .item-ped {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0;
+      cursor: pointer;
+      font-size: 0.92rem;
+      color: var(--c-suelo);
+    }
+
+    .item-ped input {
+      width: 22px;
+      height: 22px;
+      accent-color: var(--c-musgo);
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+
+    .item-ped.ok .txt { text-decoration: line-through; opacity: 0.55; }
+
+    .item-ped.no-va .txt {
+      text-decoration: line-through;
+      opacity: 0.45;
+      font-style: italic;
+    }
+
+    .prog-control {
+      font-size: 0.8rem;
+      color: var(--c-tierra);
+      font-style: italic;
+      padding-top: 4px;
+    }
   </style>
 </head>
 <body>
@@ -572,7 +629,10 @@
       <div class="card-eq">
         <h2>Entrega de pedidos</h2>
         <p class="muted">
-          Tildá cada pedido cuando se lo <strong>entregás al consumidor</strong> y registrá.
+          Tocá <strong>📋 Controlar productos</strong> para ver todo lo que
+          pidió cada consumidor e ir tachando producto por producto mientras
+          revisás el cajón. Cuando está todo controlado, el pedido se tilda
+          solo. Después tocá <strong>Registrar entregas</strong>.
           Reemplaza las marcas de color de la planilla heladera.
         </p>
 
@@ -1225,6 +1285,31 @@
         return consumidores[p.id_consumidor] || p.id_consumidor || '(sin nombre)';
       }
 
+      function infoProducto(id) {
+        for (var i = 0; i < lineas.length; i++) {
+          if (lineas[i].id_producto === id) {
+            return { nombre: lineas[i].producto || id, unidad: lineas[i].unidad || '' };
+          }
+        }
+        return { nombre: id, unidad: '' };
+      }
+
+      function itemsDePedido(idPed) {
+        return itemsEd.filter(function (it) { return it.id_pedido === idPed; });
+      }
+
+      function textoItem(it) {
+        var info = infoProducto(it.id_producto);
+        if (it.efectiva <= 0) return info.nombre + ' — faltante, no va';
+        var cant;
+        if (it.fraccion) {
+          cant = it.cantidad + ' × ' + it.fraccion + (info.unidad ? ' ' + info.unidad : '');
+        } else {
+          cant = it.efectiva + (info.unidad ? ' ' + info.unidad : '');
+        }
+        return cant + ' · ' + info.nombre;
+      }
+
       function renderEntrega() {
         var cont = $('lista-entrega');
         cont.innerHTML = '';
@@ -1242,6 +1327,8 @@
           if (filtro && nombre.toLowerCase().indexOf(filtro) === -1) return;
 
           var yaEntregado = (p.estado === 'Entregado');
+          var its = itemsDePedido(p.id_pedido);
+
           var div = document.createElement('div');
           div.className = 'item' + (yaEntregado ? ' preparado' : ' no-llego');
           div.dataset.idx = String(i);
@@ -1251,11 +1338,35 @@
             '<div class="cuerpo">' +
               '<div class="linea-nombre"></div>' +
               '<div class="quien"></div>' +
+              (its.length
+                ? '<button type="button" class="btn-control">📋 Controlar productos (' +
+                    its.length + ') ▸</button><div class="items-ped"></div>'
+                : '') +
             '</div>';
           div.querySelector('.linea-nombre').textContent =
             'N° ' + p.correlativo + ' · ' + nombre +
             ' — $' + Math.round(p.total).toLocaleString('es-AR');
           div.querySelector('.quien').textContent = yaEntregado ? '✓ Entregado' : '';
+
+          if (its.length) {
+            var sub = div.querySelector('.items-ped');
+            its.forEach(function (it) {
+              var fila = document.createElement('label');
+              var noVa = it.efectiva <= 0;
+              fila.className = 'item-ped' + (noVa ? ' no-va' : '');
+              fila.innerHTML = '<input type="checkbox" class="chk-item"' +
+                ((noVa || yaEntregado) ? ' disabled' : '') +
+                (noVa ? ' checked' : '') +
+                '><span class="txt"></span>';
+              fila.querySelector('.txt').textContent = textoItem(it);
+              sub.appendChild(fila);
+            });
+            var prog = document.createElement('div');
+            prog.className = 'prog-control';
+            sub.appendChild(prog);
+            actualizarControl(sub, false);
+          }
+
           cont.appendChild(div);
         });
         actualizarProgresoEntrega();
@@ -1263,7 +1374,43 @@
 
       $('buscar-entrega').addEventListener('input', renderEntrega);
 
+      // Desplegar / plegar el control de productos de un pedido
+      $('lista-entrega').addEventListener('click', function (e) {
+        var btn = e.target.closest('.btn-control');
+        if (!btn) return;
+        var sub = btn.parentNode.querySelector('.items-ped');
+        var abierto = sub.style.display === 'block';
+        sub.style.display = abierto ? 'none' : 'block';
+        btn.textContent = btn.textContent.replace(abierto ? '▾' : '▸', abierto ? '▸' : '▾');
+      });
+
+      // Cuando el control de un pedido está completo, se tilda solo
+      function actualizarControl(sub, tildarSiCompleto) {
+        var tot = sub.querySelectorAll('.chk-item:not(:disabled)').length;
+        var ok = sub.querySelectorAll('.chk-item:checked:not(:disabled)').length;
+        var prog = sub.querySelector('.prog-control');
+        if (prog) {
+          prog.textContent = tot ? ok + ' de ' + tot + ' controlados' : '';
+        }
+        if (tildarSiCompleto && tot > 0 && ok === tot) {
+          var item = sub.closest('.item');
+          var chk = item.querySelector('.chk-r');
+          if (!chk.checked && !chk.disabled) {
+            chk.checked = true;
+            item.classList.add('tildado');
+            item.classList.remove('no-llego');
+            actualizarProgresoEntrega();
+          }
+        }
+      }
+
       $('lista-entrega').addEventListener('change', function (e) {
+        if (e.target.classList.contains('chk-item')) {
+          var fila = e.target.closest('.item-ped');
+          fila.classList.toggle('ok', e.target.checked);
+          actualizarControl(e.target.closest('.items-ped'), true);
+          return;
+        }
         if (!e.target.classList.contains('chk-r') || e.target.disabled) return;
         var item = e.target.closest('.item');
         if (e.target.checked) { item.classList.add('tildado'); item.classList.remove('no-llego'); }
