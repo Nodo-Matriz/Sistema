@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Mapa de la edición · Nodo Matríz</title>
+  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="icon" type="image/png" href="assets/favicon-nodo.png">
+  <style>
+    .wrap { max-width: 620px; }
+
+    .fase {
+      background: var(--c-leche);
+      border: 1.5px solid rgba(74, 107, 58, 0.18);
+      border-radius: var(--r-card);
+      padding: var(--s-4) var(--s-5);
+      box-shadow: var(--sh-suave);
+    }
+
+    .fase h3 {
+      margin: 0 0 var(--s-1);
+      font-size: 1.15rem;
+    }
+
+    .fase .quien {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--c-tierra);
+      margin-bottom: var(--s-2);
+    }
+
+    .escenarios {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: var(--s-2);
+    }
+
+    .esc {
+      font-size: 0.78rem;
+      font-weight: 700;
+      border-radius: var(--r-pill);
+      padding: 4px 12px;
+      background: var(--c-musgo);
+      color: var(--c-crema);
+      white-space: nowrap;
+    }
+
+    .esc small {
+      font-weight: 400;
+      opacity: 0.9;
+      color: inherit;
+    }
+
+    .esc.futuro {
+      background: transparent;
+      border: 1.5px dashed var(--c-salvia);
+      color: var(--c-tierra);
+    }
+
+    .flecha {
+      text-align: center;
+      color: var(--c-oliva);
+      font-size: 1.3rem;
+      line-height: 1;
+      margin: 6px 0;
+    }
+
+    .leyenda {
+      display: flex;
+      gap: var(--s-4);
+      flex-wrap: wrap;
+      margin: var(--s-5) 0;
+      font-size: 0.85rem;
+      color: var(--c-tierra);
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+
+    <header class="site-header fade-in">
+      <a class="site-mark" href="./">
+        <img src="assets/logo-nodo-verde.png" alt="Nodo Matríz" style="width:48px; height:48px;">
+        <span>
+          <span class="site-mark__name">Nodo Matríz</span>
+          <span class="site-mark__sub">mapa de la edición · equipo</span>
+        </span>
+      </a>
+    </header>
+
+    <section class="fade-in" data-delay="1">
+      <h1>El ciclo de una edición</h1>
+      <p class="lead">
+        Los procesos de punta a punta, con el escenario de Make que
+        automatiza cada uno.
+      </p>
+      <div class="leyenda">
+        <span><span class="esc">A0</span> funcionando</span>
+        <span><span class="esc futuro">A0</span> próxima fase</span>
+      </div>
+    </section>
+
+    <div class="fade-in" data-delay="2">
+
+      <div class="fase">
+        <div class="quien">Equipo · arranque</div>
+        <h3>1 · Abrir edición</h3>
+        <p class="muted" style="margin:0;">Avisar a productores que empieza la carga, con su link personal.</p>
+        <div class="escenarios">
+          <span class="esc futuro">A1 <small>solicitud de stocks</small></span>
+        </div>
+      </div>
+      <div class="flecha">↓</div>
+
+      <div class="fase">
+        <div class="quien">Productores + equipo</div>
+        <h3>2 · Carga de productos</h3>
+        <p class="muted" style="margin:0;">Cada productor actualiza su oferta; el equipo sigue quién falta y carga por quien no puede.</p>
+        <div class="escenarios">
+          <span class="esc">A2 <small>captura de actualizaciones</small></span>
+        </div>
+      </div>
+      <div class="flecha">↓</div>
+
+      <div class="fase">
+        <div class="quien">Equipo</div>
+        <h3>3 · Revisar y generar la edición</h3>
+        <p class="muted" style="margin:0;">Vista previa del form con los datos vivos, y generación del formulario público.</p>
+        <div class="escenarios">
+          <span class="esc">A3 <small>generación del formulario</small></span>
+        </div>
+      </div>
+      <div class="flecha">↓</div>
+
+      <div class="fase">
+        <div class="quien">Consumidores · hasta el cierre</div>
+        <h3>4 · Toma de pedidos</h3>
+        <p class="muted" style="margin:0;">Cada pedido crea sus filas y dispara el remito por correo con el detalle en tabla.</p>
+        <div class="escenarios">
+          <span class="esc">B1 <small>captura del pedido</small></span>
+          <span class="esc">B2 <small>remito al consumidor</small></span>
+          <span class="esc futuro">B4 <small>recordatorio de cierre</small></span>
+          <span class="esc futuro">C1 <small>cierre automático</small></span>
+        </div>
+      </div>
+      <div class="flecha">↓</div>
+
+      <div class="fase">
+        <div class="quien">Equipo · tras el cierre</div>
+        <h3>5 · Comandas a productores</h3>
+        <p class="muted" style="margin:0;">Qué le pedimos a cada productor, con su mensaje de WhatsApp listo, y el plan de fraccionamiento.</p>
+        <div class="escenarios">
+          <span class="esc">C2 <small>comanda por productor</small></span>
+          <span class="esc">C3 <small>plan de fraccionamiento</small></span>
+        </div>
+      </div>
+      <div class="flecha">↓</div>
+
+      <div class="fase">
+        <div class="quien">Equipo · día de galpón</div>
+        <h3>6 · Galpón: recibir, ajustar, armar, entregar</h3>
+        <p class="muted" style="margin:0;">Recepción por productor, faltantes y ajustes, fraccionamiento, y armado y entrega de cajones.</p>
+        <div class="escenarios">
+          <span class="esc">D1 <small>recepción</small></span>
+          <span class="esc">D2 <small>faltantes</small></span>
+          <span class="esc">D3 <small>ajustes</small></span>
+          <span class="esc">D4 <small>armado y entrega</small></span>
+        </div>
+      </div>
+      <div class="flecha">↓</div>
+
+      <div class="fase">
+        <div class="quien">Equipo · fin del ciclo</div>
+        <h3>7 · Cerrar edición</h3>
+        <p class="muted" style="margin:0;">No retirados, cobros y pagos, liquidación a productores, gratitud y métricas.</p>
+        <div class="escenarios">
+          <span class="esc futuro">D5 <small>no retirados</small></span>
+          <span class="esc futuro">E1 <small>pago al retirar</small></span>
+          <span class="esc futuro">E3 <small>liquidación</small></span>
+          <span class="esc futuro">F2 <small>gratitud</small></span>
+          <span class="esc futuro">F3 <small>métricas</small></span>
+        </div>
+      </div>
+
+    </div>
+
+    <footer class="site-footer">
+      <p>Nodo Matríz Agroecológico · Unquillo, Sierras Chicas</p>
+    </footer>
+
+  </main>
+</body>
+</html>

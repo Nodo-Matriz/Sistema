@@ -142,6 +142,16 @@
       border: 2px solid rgba(74, 107, 58, 0.22);
     }
 
+    /* pasos ya cumplidos en la edición en curso */
+    .paso.hecho .num {
+      background: var(--c-salvia);
+      color: var(--c-leche);
+      box-shadow: none;
+    }
+
+    .paso.hecho h3 { color: var(--c-tierra); }
+    .paso.hecho p { opacity: 0.7; }
+
     /* mini-form del paso Abrir edición */
     .campo-a1 {
       display: flex;
@@ -215,6 +225,9 @@
       <p class="lead">
         Guía interna del equipo del Nodo: cada paso del ciclo, en orden,
         con su herramienta.
+      </p>
+      <p>
+        <a href="flujo-edicion.html" class="btn btn--ghost btn--small">🗺 Ver el mapa de escenarios</a>
       </p>
     </section>
 
@@ -509,11 +522,21 @@
             'Abrir el form de pedidos de ' + id + '</a>';
         }
 
-        // marcar "estamos acá"
+        // pintar el recorrido: hechos ✓, actual "estamos acá", futuros vacíos
         var paso = cerrada ? 1 : pasoDeEstado(estado);
         if (paso) {
-          var el = $('paso-' + paso);
-          if (el) el.className = (el.className + ' actual').trim();
+          for (var n = 1; n <= 7; n++) {
+            var el = $('paso-' + n);
+            if (!el) continue;
+            if (n < paso) {
+              el.className = 'paso hecho';
+              el.querySelector('.num').textContent = '✓';
+            } else if (n === paso) {
+              el.className = 'paso actual';
+            } else {
+              el.className = 'paso futuro';
+            }
+          }
         }
       }).catch(function () {
         $('ed-titulo').textContent = 'No pudimos leer la planilla.';
