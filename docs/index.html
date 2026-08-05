@@ -141,6 +141,60 @@
       box-shadow: none;
       border: 2px solid rgba(74, 107, 58, 0.22);
     }
+
+    /* mini-form del paso Abrir edición */
+    .campo-a1 {
+      display: flex;
+      gap: var(--s-2);
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: var(--s-3);
+    }
+
+    .campo-a1 input {
+      flex: 1 1 180px;
+      font-family: var(--f-body);
+      font-size: 0.95rem;
+      padding: 10px 14px;
+      border: 1.5px solid var(--c-salvia);
+      border-radius: var(--r-input);
+      background: var(--c-leche);
+      color: var(--c-suelo);
+    }
+
+    .campo-a1 input:focus {
+      outline: none;
+      border-color: var(--c-oliva);
+      box-shadow: var(--sh-foco);
+    }
+
+    .btn-start {
+      display: inline-block;
+      font-family: var(--f-body);
+      font-size: 0.95rem;
+      font-weight: 700;
+      padding: 11px 22px;
+      border-radius: var(--r-pill);
+      border: 2px solid var(--c-musgo);
+      background: var(--c-musgo);
+      color: var(--c-crema);
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .btn-start:hover { background: var(--c-oliva); border-color: var(--c-oliva); }
+
+    .ok-mini {
+      display: none;
+      background: rgba(91, 122, 58, 0.12);
+      border-left: 4px solid var(--c-verde-ok);
+      color: var(--c-corteza);
+      padding: var(--s-3) var(--s-4);
+      border-radius: 12px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      margin-top: var(--s-3);
+    }
   </style>
 </head>
 <body>
@@ -175,6 +229,30 @@
       <div class="paso" id="paso-1">
         <div class="num">1</div>
         <div class="aca">⬤ estamos acá</div>
+        <div class="quien">Equipo · arranque del ciclo</div>
+        <h3>Abrir edición</h3>
+        <p>
+          Se le avisa a todos los productores que empieza la carga: cada uno
+          recibe por WhatsApp y por correo su link personal para actualizar
+          sus productos. El botón dispara el envío automático de todos los
+          mensajes de una vez.
+        </p>
+        <div class="campo-a1">
+          <input type="password" id="clave-a1" placeholder="Clave de equipo">
+          <button type="button" class="btn-start" id="btn-abrir-edicion">
+            Iniciar edición → avisar a productores
+          </button>
+        </div>
+        <p class="nota">
+          Escenario A1 — pendiente de configurar en Make. Hasta entonces el
+          botón avisa que no está conectado y no envía nada.
+        </p>
+        <div class="ok-mini" id="ok-a1"></div>
+      </div>
+
+      <div class="paso" id="paso-2">
+        <div class="num">2</div>
+        <div class="aca">⬤ estamos acá</div>
         <div class="quien">Lunes previo · productores + equipo</div>
         <h3>Carga de productos</h3>
         <p>
@@ -190,8 +268,8 @@
         </p>
       </div>
 
-      <div class="paso" id="paso-2">
-        <div class="num">2</div>
+      <div class="paso" id="paso-3">
+        <div class="num">3</div>
         <div class="aca">⬤ estamos acá</div>
         <div class="quien">Equipo</div>
         <h3>Generar la edición</h3>
@@ -207,8 +285,8 @@
         </p>
       </div>
 
-      <div class="paso" id="paso-3">
-        <div class="num">3</div>
+      <div class="paso" id="paso-4">
+        <div class="num">4</div>
         <div class="aca">⬤ estamos acá</div>
         <div class="quien">Consumidores · hasta el cierre</div>
         <h3>Difusión y toma de pedidos</h3>
@@ -222,8 +300,8 @@
         </p>
       </div>
 
-      <div class="paso" id="paso-4">
-        <div class="num">4</div>
+      <div class="paso" id="paso-5">
+        <div class="num">5</div>
         <div class="aca">⬤ estamos acá</div>
         <div class="quien">Equipo · después del cierre</div>
         <h3>Comandas a productores</h3>
@@ -240,8 +318,8 @@
         </p>
       </div>
 
-      <div class="paso" id="paso-5">
-        <div class="num">5</div>
+      <div class="paso" id="paso-6">
+        <div class="num">6</div>
         <div class="aca">⬤ estamos acá</div>
         <div class="quien">Equipo · día de galpón</div>
         <h3>Recepción, ajustes y entrega</h3>
@@ -260,15 +338,16 @@
         </p>
       </div>
 
-      <div class="paso futuro" id="paso-6">
-        <div class="num">6</div>
+      <div class="paso futuro" id="paso-7">
+        <div class="num">7</div>
         <div class="aca">⬤ estamos acá</div>
-        <div class="quien">Equipo · cierre de la edición</div>
-        <h3>Pagos, sobrantes y métricas</h3>
+        <div class="quien">Equipo · fin del ciclo</div>
+        <h3>Cerrar edición</h3>
         <p class="nota">
-          Cobros de consumidores, pagos a productores, sobrantes y métricas
-          de la edición. Por ahora se llevan en la planilla; las herramientas
-          de esta etapa vienen en las próximas fases.
+          Cobros de consumidores, pagos a productores, sobrantes y métricas,
+          y el cierre de la edición en la planilla (estado «Cerrada»). Por
+          ahora se lleva en la planilla; las herramientas de esta etapa
+          vienen en las próximas fases.
         </p>
       </div>
 
@@ -293,6 +372,9 @@
 
       var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
       var BASE_FORMS = 'forms/';
+      // Escenario A1 (avisar a productores que abre la carga).
+      // Pegar acá la dirección del webhook cuando esté armado en Make.
+      var WEBHOOK_A1 = '';
 
       var $ = function (id) { return document.getElementById(id); };
 
@@ -334,14 +416,54 @@
       // estado de la edición -> número de paso de la guía
       function pasoDeEstado(estado) {
         var e = estado.toLowerCase();
-        if (e.indexOf('stock') !== -1 || e.indexOf('carga') !== -1) return 1;
-        if (e.indexOf('planific') !== -1) return 2;
-        if (e.indexOf('abierto') !== -1 || e.indexOf('pedidos') !== -1) return 3;
-        if (e.indexOf('comanda') !== -1 || e.indexOf('cierre') !== -1) return 4;
+        if (e.indexOf('planific') !== -1 || e.indexOf('apertura') !== -1) return 1;
+        if (e.indexOf('stock') !== -1 || e.indexOf('carga') !== -1) return 2;
+        if (e.indexOf('abierto') !== -1 || e.indexOf('pedidos') !== -1) return 4;
+        if (e.indexOf('comanda') !== -1 || e.indexOf('cierre') !== -1) return 5;
         if (e.indexOf('recep') !== -1 || e.indexOf('galp') !== -1 ||
-            e.indexOf('entrega') !== -1) return 5;
+            e.indexOf('entrega') !== -1) return 6;
         return 0;
       }
+
+      // ── Botón "Iniciar edición" (escenario A1) ─────────────────
+      $('btn-abrir-edicion').addEventListener('click', function () {
+        var caja = $('ok-a1');
+        function aviso(msg, esError) {
+          caja.style.display = 'block';
+          caja.style.background = esError ? 'rgba(166, 64, 43, 0.10)' : '';
+          caja.style.borderLeftColor = esError ? '#A6402B' : '';
+          caja.style.color = esError ? '#A6402B' : '';
+          caja.textContent = msg;
+        }
+
+        var clave = $('clave-a1').value.trim();
+        if (!clave) { aviso('Falta la clave de equipo.', true); return; }
+
+        if (WEBHOOK_A1.indexOf('https://hook.') !== 0) {
+          aviso('🚫 Este botón todavía no está conectado: falta armar el ' +
+            'escenario A1 en Make y cargar su dirección en este archivo. ' +
+            'No se envió nada.', true);
+          return;
+        }
+
+        var btn = $('btn-abrir-edicion');
+        btn.disabled = true;
+        btn.textContent = 'Enviando avisos…';
+
+        fetch(WEBHOOK_A1, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ tipo: 'abrir_edicion', clave: clave })
+        }).then(fin).catch(fin);
+
+        function fin() {
+          btn.disabled = false;
+          btn.textContent = 'Iniciar edición → avisar a productores';
+          aviso('✅ Disparado. En unos minutos cada productor recibe su link ' +
+            'de carga por WhatsApp y por correo.', false);
+        }
+      });
 
       gviz('sheet=Ediciones&range=A1:L100&headers=1').then(function (res) {
         // última fila cuyo id tenga formato de edición (ED2026-11);
