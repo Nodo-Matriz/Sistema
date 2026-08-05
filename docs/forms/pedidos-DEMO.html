@@ -121,7 +121,7 @@
           </div>
           <div class="summary__total-row">
             <span>
-              Aporte solidario (<span id="aporte-porc">10</span>%)
+              Aporte solidario (<span id="aporte-porc">15</span>%)
               <br>
               <small style="color: var(--c-tierra)">
                 Sostiene el funcionamiento del Nodo. Podés modificarlo.
@@ -196,14 +196,14 @@
           <h2>Aporte solidario</h2>
           <p class="muted">
             El aporte solidario sostiene el espacio físico, la logística, las
-            comunicaciones y el tiempo del equipo. La sugerencia es del 10%
+            comunicaciones y el tiempo del equipo. El mínimo sugerido es del 15%
             del subtotal, pero podés ajustarlo según tus posibilidades reales.
           </p>
           <div class="field">
             <label class="field__label" for="aporte-input">Porcentaje de aporte (%)</label>
             <input class="input" type="number" id="aporte-input"
                    min="0" max="50" step="1"
-                   value="10"
+                   value="15"
                    style="width: 130px;">
           </div>
         </div>
@@ -239,8 +239,8 @@
         <div class="card mt-4">
           <h2>Forma de pago</h2>
           <p class="muted">
-            Una vez confirmado tu pedido recibirás los datos para abonar al alias
-            <strong>nodomatriz.mp</strong>. También aceptamos efectivo al retirar.
+            Una vez confirmado tu pedido, te llegan por correo los datos para
+            abonar. También aceptamos efectivo al retirar.
           </p>
           <div class="field">
             <label class="field__label">¿Cómo vas a abonar?</label>
@@ -656,8 +656,19 @@ __DEMO__
           comentarios: document.getElementById('comentarios').value.trim() || null,
         };
       }, {
-        successMessage:
-          '¡Recibimos tu pedido! En breve te llegará el detalle por email y por WhatsApp, con los datos para abonar. Gracias por sostener esta red.',
+        onSuccess: function () {
+          // Mostrar la confirmación ARRIBA de la página, no al pie
+          finalSection.classList.add('hidden');
+          var ok = document.createElement('div');
+          ok.className = 'note note--success';
+          ok.innerHTML = '<strong>¡Listo! Recibimos tu pedido.</strong> ' +
+            'En breve te llegará el detalle por email y por WhatsApp, con los ' +
+            'datos para abonar. Gracias por sostener esta red.';
+          var main = document.querySelector('main.wrap') || document.body;
+          var header = main.querySelector('header');
+          main.insertBefore(ok, header ? header.nextSibling : main.firstChild);
+          window.scrollTo({ top: 0, behavior: 'auto' });
+        },
       });
 
     })();
