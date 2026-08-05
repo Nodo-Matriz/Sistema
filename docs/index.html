@@ -264,29 +264,14 @@
           <a href="forms/carga-productos.html" class="btn btn--ghost btn--small">
             Abrir carga de productos
           </a>
+          <a href="forms/vista-previa.html" class="btn btn--ghost btn--small">
+            Ver / editar la carga en vivo
+          </a>
         </p>
       </div>
 
       <div class="paso" id="paso-3">
         <div class="num">3</div>
-        <div class="aca">⬤ estamos acá</div>
-        <div class="quien">Equipo · antes de generar</div>
-        <h3>Revisar la edición</h3>
-        <p>
-          La vista previa muestra el formulario de pedidos <strong>tal como
-          va a salir</strong>, con los productos, precios y categorías
-          actuales de la planilla. Si algo está mal, se corrige desde ahí
-          mismo con el ✏️ de cada producto y se actualiza la previa.
-        </p>
-        <p>
-          <a href="forms/vista-previa.html" class="btn btn--ghost btn--small">
-            Abrir vista previa del form
-          </a>
-        </p>
-      </div>
-
-      <div class="paso" id="paso-4">
-        <div class="num">4</div>
         <div class="aca">⬤ estamos acá</div>
         <div class="quien">Equipo</div>
         <h3>Generar la edición</h3>
@@ -302,8 +287,8 @@
         </p>
       </div>
 
-      <div class="paso" id="paso-5">
-        <div class="num">5</div>
+      <div class="paso" id="paso-4">
+        <div class="num">4</div>
         <div class="aca">⬤ estamos acá</div>
         <div class="quien">Consumidores · hasta el cierre</div>
         <h3>Difusión y toma de pedidos</h3>
@@ -317,8 +302,8 @@
         </p>
       </div>
 
-      <div class="paso" id="paso-6">
-        <div class="num">6</div>
+      <div class="paso" id="paso-5">
+        <div class="num">5</div>
         <div class="aca">⬤ estamos acá</div>
         <div class="quien">Equipo · después del cierre</div>
         <h3>Comandas a productores</h3>
@@ -335,8 +320,8 @@
         </p>
       </div>
 
-      <div class="paso" id="paso-7">
-        <div class="num">7</div>
+      <div class="paso" id="paso-6">
+        <div class="num">6</div>
         <div class="aca">⬤ estamos acá</div>
         <div class="quien">Equipo · día de galpón</div>
         <h3>Recepción, ajustes y entrega</h3>
@@ -355,8 +340,8 @@
         </p>
       </div>
 
-      <div class="paso futuro" id="paso-8">
-        <div class="num">8</div>
+      <div class="paso futuro" id="paso-7">
+        <div class="num">7</div>
         <div class="aca">⬤ estamos acá</div>
         <div class="quien">Equipo · fin del ciclo</div>
         <h3>Cerrar edición</h3>
@@ -434,12 +419,12 @@
       function pasoDeEstado(estado) {
         var e = estado.toLowerCase();
         if (e.indexOf('planific') !== -1 || e.indexOf('apertura') !== -1) return 1;
-        if (e.indexOf('stock') !== -1 || e.indexOf('carga') !== -1) return 2;
-        if (e.indexOf('revis') !== -1) return 3;
-        if (e.indexOf('abierto') !== -1 || e.indexOf('pedidos') !== -1) return 5;
-        if (e.indexOf('comanda') !== -1 || e.indexOf('cierre') !== -1) return 6;
+        if (e.indexOf('stock') !== -1 || e.indexOf('carga') !== -1 ||
+            e.indexOf('revis') !== -1) return 2;
+        if (e.indexOf('abierto') !== -1 || e.indexOf('pedidos') !== -1) return 4;
+        if (e.indexOf('comanda') !== -1 || e.indexOf('cierre') !== -1) return 5;
         if (e.indexOf('recep') !== -1 || e.indexOf('galp') !== -1 ||
-            e.indexOf('entrega') !== -1) return 7;
+            e.indexOf('entrega') !== -1) return 6;
         return 0;
       }
 
