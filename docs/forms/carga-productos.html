@@ -124,6 +124,64 @@
     .btn-refrescar {
       margin-bottom: var(--s-4);
     }
+
+    /* ── Tablero de progreso ───────────────────────────────── */
+    .tablero {
+      background: var(--c-crema-osc);
+      border: 1px solid rgba(74, 107, 58, 0.10);
+      border-radius: var(--r-card);
+      padding: var(--s-4) var(--s-5);
+      margin-bottom: var(--s-5);
+    }
+
+    .barra-linea {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 5px;
+    }
+
+    .barra-linea + .barra { margin-bottom: var(--s-4); }
+
+    .barra-tit {
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--c-corteza);
+    }
+
+    .barra-num {
+      font-family: var(--f-display);
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--c-suelo);
+    }
+
+    .barra {
+      height: 12px;
+      background: var(--c-leche);
+      border: 1px solid rgba(74, 107, 58, 0.14);
+      border-radius: var(--r-pill);
+      overflow: hidden;
+    }
+
+    .barra-fill {
+      height: 100%;
+      width: 0;
+      background: var(--c-oliva-claro);
+      border-radius: var(--r-pill);
+      transition: width 0.4s ease;
+    }
+
+    .barra-fill.fill-items { background: var(--c-musgo); }
+
+    .nota-vivo {
+      font-size: 0.8rem;
+      color: var(--c-tierra);
+      font-style: italic;
+      margin: var(--s-3) 0 0;
+    }
   </style>
 </head>
 <body>
@@ -159,14 +217,24 @@
         pedirle que actualice.
       </p>
 
-      <button type="button" class="btn btn--ghost btn--small btn-refrescar" id="btn-refrescar">
-        ↻ Actualizar estados
-      </button>
       <a href="vista-previa.html" class="btn btn--ghost btn--small btn-refrescar">
         👁 Ver / editar la carga en vivo
       </a>
 
-      <p class="resumen" id="resumen"></p>
+      <div class="tablero">
+        <div class="barra-linea">
+          <span class="barra-tit">Productores al día</span>
+          <span class="barra-num" id="num-prods">—</span>
+        </div>
+        <div class="barra"><div class="barra-fill" id="barra-prods"></div></div>
+        <div class="barra-linea">
+          <span class="barra-tit">Productos actualizados</span>
+          <span class="barra-num" id="num-items">—</span>
+        </div>
+        <div class="barra"><div class="barra-fill fill-items" id="barra-items"></div></div>
+        <p class="nota-vivo">Se actualiza solo: al volver a esta pestaña y cada 30 segundos.</p>
+      </div>
+
       <div id="lista"></div>
     </div>
 
@@ -186,8 +254,10 @@
 
       var $ = function (id) { return document.getElementById(id); };
 
-      var productores = [];   // {id, nombre, telefono}
-      var ultimaCarga = {};   // id_productor -> Date de la última carga
+      var productores = [];    // {id, nombre, telefono}
+      var ultimaCarga = {};    // id_productor -> Date de la última carga
+      var totProductos = 0;    // productos en el catálogo
+      var actProductos = 0;    // productos con actualización reciente
 
       function gviz(params) {
         var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
@@ -236,8 +306,9 @@
 
       function cargar() {
         Promise.all([
-          gviz('sheet=Productores&range=A1:N300&headers=1'),
-          gviz('sheet=Log_Cambios_Stock&range=A1:N10000&headers=1')
+          gviz('sheet=Productores&range=A1:N300&headers=1&_=' + Date.now()),
+          gviz('sheet=Log_Cambios_Stock&range=A1:N10000&headers=1&_=' + Date.now()),
+          gviz('sheet=Productos&range=A1:N1000&headers=1&_=' + Date.now())
         ]).then(function (res) {
           productores = [];
           res[0].table.rows.forEach(function (r) {
@@ -251,7 +322,9 @@
             });
           });
           procesarLog(res[1]);
+          procesarProductos(res[2]);
           render();
+          $('estado').className = 'aviso';
           $('estado').textContent = 'Datos leídos de la planilla. ' +
             'Se considera al día una carga de los últimos ' + DIAS_AL_DIA + ' días.';
         }).catch(function () {
@@ -269,6 +342,22 @@
           var f = parseFecha(celda(r, 1));
           if (!f) return;
           if (!ultimaCarga[idP] || f > ultimaCarga[idP]) ultimaCarga[idP] = f;
+        });
+      }
+
+      // Productos del catálogo: total y cuántos tienen actualización reciente
+      // (columna N ultima_actualizacion, índice 13)
+      function procesarProductos(res) {
+        totProductos = 0;
+        actProductos = 0;
+        if (!res) return;
+        var ahora = new Date();
+        var corte = DIAS_AL_DIA * 24 * 60 * 60 * 1000;
+        res.table.rows.forEach(function (r) {
+          if (!String(celda(r, 0)).trim()) return;
+          totProductos++;
+          var f = parseFecha(celda(r, 13));
+          if (f && (ahora - f) < corte) actProductos++;
         });
       }
 
@@ -321,11 +410,10 @@
 
           var acciones = div.querySelector('.acciones');
 
+          // misma pestaña: al volver con "atrás", la página se refresca sola
           var abrir = document.createElement('a');
           abrir.className = 'btn-mini' + (esAlDia ? '' : ' lleno');
           abrir.href = 'stock.html?id_productor=' + encodeURIComponent(p.id);
-          abrir.target = '_blank';
-          abrir.rel = 'noopener';
           abrir.textContent = 'Cargar productos';
           acciones.appendChild(abrir);
 
@@ -345,25 +433,39 @@
           cont.appendChild(div);
         });
 
-        $('resumen').textContent = alDia + ' de ' + productores.length +
-          ' productores al día · ' + (productores.length - alDia) + ' pendientes';
+        // tablero
+        var tot = productores.length;
+        $('num-prods').textContent = alDia + ' de ' + tot;
+        $('barra-prods').style.width = tot ? (alDia / tot * 100) + '%' : '0%';
+        $('num-items').textContent = actProductos + ' de ' + totProductos;
+        $('barra-items').style.width = totProductos
+          ? (actProductos / totProductos * 100) + '%' : '0%';
       }
 
-      $('btn-refrescar').addEventListener('click', function () {
-        var b = $('btn-refrescar');
-        b.disabled = true;
-        b.textContent = 'Actualizando…';
-        gviz('sheet=Log_Cambios_Stock&range=A1:N10000&headers=1&_=' + Date.now())
-          .then(function (res) { procesarLog(res); })
-          .catch(function () {})
-          .then(function () {
-            render();
-            b.disabled = false;
-            b.textContent = '↻ Actualizar estados';
-          });
+      // ── Actualización en vivo, sin botones ───────────────────────
+      var ultimoRefresco = 0;
+
+      function refrescar() {
+        var ahora = Date.now();
+        if (ahora - ultimoRefresco < 5000) return;  // no más de 1 vez cada 5 seg
+        ultimoRefresco = ahora;
+        cargar();
+      }
+
+      // al volver a esta pestaña (de cargar un productor, o de otra app)
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) refrescar();
       });
+      window.addEventListener('focus', refrescar);
+      // al volver con el botón "atrás" (la página puede venir de la caché)
+      window.addEventListener('pageshow', function (e) {
+        if (e.persisted) refrescar();
+      });
+      // pulso de fondo cada 30 segundos (leer la planilla es gratis)
+      setInterval(refrescar, 30000);
 
       cargar();
+      ultimoRefresco = Date.now();
     })();
   </script>
 </body>
