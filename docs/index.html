@@ -344,10 +344,12 @@
       }
 
       gviz('sheet=Ediciones&range=A1:L100&headers=1').then(function (res) {
-        // última fila con id_edicion
+        // última fila cuyo id tenga formato de edición (ED2026-11);
+        // así se saltean las filas de anotaciones de la hoja
         var vigente = null;
         res.table.rows.forEach(function (r) {
-          if (String(celda(r, 0)).trim()) vigente = r;
+          var id = String(celda(r, 0)).trim();
+          if (/^ED\d{4}-\d{2}$/.test(id)) vigente = r;
         });
 
         if (!vigente) {
