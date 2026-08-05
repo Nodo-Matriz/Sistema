@@ -4,9 +4,144 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex">
-  <title>Nodo Matriz — Sistema de gestión</title>
+  <title>Nodo Matriz — Guía de la edición</title>
   <link rel="stylesheet" href="assets/styles.css">
   <link rel="icon" type="image/png" href="assets/favicon-nodo.png">
+  <style>
+    .wrap { max-width: 680px; }
+
+    /* ── Tarjeta de edición vigente ─────────────────────────── */
+    .edicion-viva {
+      background: var(--c-leche);
+      border: 1px solid rgba(74, 107, 58, 0.14);
+      border-radius: var(--r-card);
+      padding: var(--s-5);
+      margin-top: var(--s-5);
+      box-shadow: var(--sh-suave);
+    }
+
+    .edicion-viva .titulo {
+      font-family: var(--f-display);
+      font-size: 1.35rem;
+      font-variation-settings: 'opsz' 48, 'SOFT' 60;
+      color: var(--c-suelo);
+      margin: 0 0 var(--s-2);
+    }
+
+    .chip-estado {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      background: var(--c-oliva-claro);
+      color: var(--c-leche);
+      border-radius: var(--r-pill);
+      padding: 3px 12px;
+      vertical-align: middle;
+      margin-left: 8px;
+    }
+
+    .edicion-viva .dato {
+      font-size: 0.92rem;
+      color: var(--c-corteza);
+      margin: 3px 0;
+    }
+
+    .edicion-viva .dato strong { color: var(--c-suelo); }
+
+    /* ── Línea de tiempo ────────────────────────────────────── */
+    .tl {
+      position: relative;
+      margin-top: var(--s-7);
+    }
+
+    .tl::before {
+      content: '';
+      position: absolute;
+      left: 21px;
+      top: 10px;
+      bottom: 10px;
+      width: 2px;
+      background: rgba(74, 107, 58, 0.22);
+    }
+
+    .paso {
+      position: relative;
+      padding-left: 64px;
+      margin-bottom: var(--s-7);
+    }
+
+    .paso .num {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--c-musgo);
+      color: var(--c-crema);
+      font-family: var(--f-display);
+      font-size: 1.25rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--sh-suave);
+    }
+
+    .paso .quien {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--c-tierra);
+      margin-bottom: 2px;
+    }
+
+    .paso h3 {
+      margin: 0 0 var(--s-2);
+      font-size: 1.3rem;
+    }
+
+    .paso p {
+      font-size: 0.95rem;
+      line-height: 1.55;
+      color: var(--c-corteza);
+      margin: 0 0 var(--s-3);
+    }
+
+    .paso .nota {
+      font-size: 0.85rem;
+      color: var(--c-tierra);
+      font-style: italic;
+    }
+
+    /* paso donde está parada la edición hoy */
+    .paso.actual .num {
+      background: var(--c-arcilla-oscuro);
+      box-shadow: 0 0 0 5px rgba(176, 125, 98, 0.25), var(--sh-suave);
+    }
+
+    .paso .aca {
+      display: none;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--c-arcilla-oscuro);
+      margin-bottom: 4px;
+    }
+
+    .paso.actual .aca { display: block; }
+
+    .paso.futuro .num {
+      background: var(--c-crema-osc);
+      color: var(--c-tierra);
+      box-shadow: none;
+      border: 2px solid rgba(74, 107, 58, 0.22);
+    }
+  </style>
 </head>
 <body>
   <main class="wrap">
@@ -16,86 +151,37 @@
         <img src="assets/logo-nodo-verde.png" alt="Nodo Matríz" style="width:52px; height:52px;">
         <span>
           <span class="site-mark__name">Nodo Matriz</span>
-          <span class="site-mark__sub">sistema de gestión</span>
+          <span class="site-mark__sub">guía de la edición · equipo</span>
         </span>
       </a>
     </header>
 
     <section class="fade-in" data-delay="1">
-      <h1>Sistema interno del Nodo Matriz</h1>
+      <h1>El recorrido de una edición</h1>
       <p class="lead">
-        Espacio web donde habitan los formularios de gestión de cada edición:
-        stock de proveedurías, pedidos de consumidores y las herramientas
-        del equipo para el galpón.
-      </p>
-      <p>
-        Este sitio no está pensado para navegación general. Cada formulario se
-        accede a través del link específico que se comparte en cada momento
-        del ciclo de la edición.
+        Guía interna del equipo del Nodo: cada paso del ciclo, en orden,
+        con su herramienta. La marca <strong>“estamos acá”</strong> se
+        actualiza sola leyendo la planilla.
       </p>
     </section>
 
-    <hr class="divider">
+    <div class="edicion-viva fade-in" data-delay="2" id="card-edicion">
+      <p class="titulo" id="ed-titulo">Leyendo la planilla…</p>
+      <div id="ed-datos"></div>
+    </div>
 
-    <section class="fade-in" data-delay="2">
-      <h2>Para productores</h2>
-      <div class="card mt-3">
+    <div class="tl fade-in" data-delay="3">
+
+      <div class="paso" id="paso-1">
+        <div class="num">1</div>
+        <div class="aca">⬤ estamos acá</div>
+        <div class="quien">Lunes previo · productores + equipo</div>
         <h3>Carga de productos</h3>
-        <p class="muted">
-          Cada lunes recibís por WhatsApp un link personalizado a tu form de
-          carga de productos. El link tiene tu identificador
-          (<code class="kbd">id_productor</code>) ya incluido, así no tenés
-          que escribirlo.
-        </p>
         <p>
-          <a href="forms/stock.html?id_productor=PROD001&amp;preview=1" class="btn btn--ghost btn--small">
-            Ver vista previa del form
-          </a>
-        </p>
-      </div>
-    </section>
-
-    <section class="fade-in" data-delay="3">
-      <h2>Para consumidores</h2>
-      <div class="card mt-3">
-        <h3>Pedido quincenal</h3>
-        <p class="muted">
-          Cada quincena se publica el formulario de pedidos con los productos
-          disponibles en esa edición. Lo recibís por WhatsApp y se cierra en la
-          fecha indicada.
-        </p>
-        <p>
-          El form de pedidos se genera nuevo cada edición, con URL del tipo:
-          <code class="kbd">forms/pedidos-ED2026-09.html</code>
-        </p>
-      </div>
-    </section>
-
-    <section class="fade-in" data-delay="4">
-      <h2>Para el equipo del galpón</h2>
-
-      <div class="card mt-3">
-        <h3>Recepción, fraccionamiento, ajustes y entrega</h3>
-        <p class="muted">
-          La app de trabajo del día de galpón, en cuatro solapas: registrar la
-          <strong>recepción</strong> de cada productor, tildar el
-          <strong>fraccionamiento</strong>, repartir los <strong>ajustes</strong>
-          por faltantes y marcar la <strong>entrega</strong> de cada pedido.
-          Todas las acciones piden la clave compartida del equipo.
-        </p>
-        <p>
-          <a href="forms/recepcion.html" class="btn btn--ghost btn--small">
-            Abrir la app del galpón
-          </a>
-        </p>
-      </div>
-
-      <div class="card mt-3">
-        <h3>Carga de productos por productor</h3>
-        <p class="muted">
-          Muestra quién ya actualizó sus productos para la edición y quién
-          falta. Desde ahí se puede abrir el form de cualquier productor para
-          cargarlo en su nombre, o mandarle el recordatorio por WhatsApp.
+          Cada productor recibe por WhatsApp su link personal para actualizar
+          qué ofrece, a qué precio y cuánto. Desde la herramienta del equipo
+          se ve quién ya cargó y quién falta, se le puede recordar por
+          WhatsApp, o cargar en su nombre si no puede hacerlo solo.
         </p>
         <p>
           <a href="forms/carga-productos.html" class="btn btn--ghost btn--small">
@@ -104,13 +190,15 @@
         </p>
       </div>
 
-      <div class="card mt-3">
-        <h3>Generar edición y comandas</h3>
-        <p class="muted">
-          Herramienta para abrir una edición nueva: genera el formulario público
-          de pedidos con los productos y el orden de categorías elegido, y
-          después del cierre genera las comandas por productor. También pide
-          la clave del equipo.
+      <div class="paso" id="paso-2">
+        <div class="num">2</div>
+        <div class="aca">⬤ estamos acá</div>
+        <div class="quien">Equipo</div>
+        <h3>Generar la edición</h3>
+        <p>
+          Con las cargas al día, se genera el formulario público de pedidos:
+          número de edición, fecha de cierre, aporte solidario y orden de las
+          categorías. En un par de minutos el form queda publicado.
         </p>
         <p>
           <a href="forms/generar-edicion.html" class="btn btn--ghost btn--small">
@@ -118,7 +206,73 @@
           </a>
         </p>
       </div>
-    </section>
+
+      <div class="paso" id="paso-3">
+        <div class="num">3</div>
+        <div class="aca">⬤ estamos acá</div>
+        <div class="quien">Consumidores · hasta el cierre</div>
+        <h3>Difusión y toma de pedidos</h3>
+        <p>
+          El link del form de la edición se comparte por los grupos de
+          WhatsApp. Cada consumidor arma su pedido; el form se cierra solo
+          en la fecha de cierre.
+        </p>
+        <p id="p3-boton">
+          <span class="nota">El link del form vigente aparece acá cuando hay una edición abierta.</span>
+        </p>
+      </div>
+
+      <div class="paso" id="paso-4">
+        <div class="num">4</div>
+        <div class="aca">⬤ estamos acá</div>
+        <div class="quien">Equipo · después del cierre</div>
+        <h3>Comandas a productores</h3>
+        <p>
+          Cerrado el form, se generan las comandas: qué le pedimos a cada
+          productor según los pedidos. Llega un correo al equipo con el
+          mensaje de WhatsApp listo para reenviar a cada productor, con la
+          fecha y hora de entrega en el galpón.
+        </p>
+        <p>
+          <a href="forms/generar-edicion.html" class="btn btn--ghost btn--small">
+            Generar comandas (misma herramienta)
+          </a>
+        </p>
+      </div>
+
+      <div class="paso" id="paso-5">
+        <div class="num">5</div>
+        <div class="aca">⬤ estamos acá</div>
+        <div class="quien">Equipo · día de galpón</div>
+        <h3>Recepción, ajustes y entrega</h3>
+        <p>
+          El día de galpón, todo pasa por la app: registrar la
+          <strong>recepción</strong> de cada productor, <strong>revisar
+          faltantes</strong>, repartir los <strong>ajustes</strong> entre los
+          pedidos, tildar el <strong>fraccionamiento</strong> y marcar la
+          <strong>entrega</strong> de cada pedido. Cada acción pide la clave
+          del equipo y registra quién la hizo.
+        </p>
+        <p>
+          <a href="forms/recepcion.html" class="btn btn--ghost btn--small">
+            Abrir la app del galpón
+          </a>
+        </p>
+      </div>
+
+      <div class="paso futuro" id="paso-6">
+        <div class="num">6</div>
+        <div class="aca">⬤ estamos acá</div>
+        <div class="quien">Equipo · cierre de la edición</div>
+        <h3>Pagos, sobrantes y métricas</h3>
+        <p class="nota">
+          Cobros de consumidores, pagos a productores, sobrantes y métricas
+          de la edición. Por ahora se llevan en la planilla; las herramientas
+          de esta etapa vienen en las próximas fases.
+        </p>
+      </div>
+
+    </div>
 
     <footer class="site-footer">
       <p>
@@ -132,5 +286,114 @@
     </footer>
 
   </main>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
+      var BASE_FORMS = 'forms/';
+
+      var $ = function (id) { return document.getElementById(id); };
+
+      function gviz(params) {
+        var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
+          '/gviz/tq?tqx=out:json&' + params;
+        return fetch(url)
+          .then(function (r) { return r.text(); })
+          .then(function (t) {
+            var m = t.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+            if (!m) throw new Error('gviz');
+            return JSON.parse(m[1]);
+          });
+      }
+
+      function celda(row, i) {
+        var c = row.c[i];
+        if (!c || c.v === null || c.v === undefined) return '';
+        return c.v;
+      }
+
+      function parseFecha(v) {
+        if (!v) return null;
+        if (v instanceof Date) return v;
+        var s = String(v);
+        var m = s.match(/^Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+)(?:,(\d+))?)?\)$/);
+        if (m) return new Date(+m[1], +m[2], +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0));
+        var d = new Date(s.replace(' ', 'T'));
+        return isNaN(d.getTime()) ? null : d;
+      }
+
+      function fechaHuman(d) {
+        return new Intl.DateTimeFormat('es-AR', {
+          weekday: 'long', day: 'numeric', month: 'long',
+          hour: '2-digit', minute: '2-digit'
+        }).format(d) + ' hs';
+      }
+
+      // estado de la edición -> número de paso de la guía
+      function pasoDeEstado(estado) {
+        var e = estado.toLowerCase();
+        if (e.indexOf('stock') !== -1 || e.indexOf('carga') !== -1) return 1;
+        if (e.indexOf('planific') !== -1) return 2;
+        if (e.indexOf('abierto') !== -1 || e.indexOf('pedidos') !== -1) return 3;
+        if (e.indexOf('comanda') !== -1 || e.indexOf('cierre') !== -1) return 4;
+        if (e.indexOf('recep') !== -1 || e.indexOf('galp') !== -1 ||
+            e.indexOf('entrega') !== -1) return 5;
+        return 0;
+      }
+
+      gviz('sheet=Ediciones&range=A1:L100&headers=1').then(function (res) {
+        // última fila con id_edicion
+        var vigente = null;
+        res.table.rows.forEach(function (r) {
+          if (String(celda(r, 0)).trim()) vigente = r;
+        });
+
+        if (!vigente) {
+          $('ed-titulo').textContent = 'Todavía no hay ediciones en la planilla.';
+          return;
+        }
+
+        var id = String(celda(vigente, 0)).trim();
+        var estado = String(celda(vigente, 3)).trim();
+        var cierreForm = parseFecha(celda(vigente, 7));
+        var entrega = parseFecha(celda(vigente, 9));
+        var cerrada = estado.toLowerCase() === 'cerrada';
+
+        $('ed-titulo').innerHTML = (cerrada ? 'Última edición: ' : 'Edición en curso: ') +
+          '<strong>' + id + '</strong>' +
+          '<span class="chip-estado">' + (estado || 'sin estado') + '</span>';
+
+        var datos = '';
+        if (cierreForm) datos += '<p class="dato">Cierre del form de pedidos: <strong>' +
+          fechaHuman(cierreForm) + '</strong></p>';
+        if (entrega) datos += '<p class="dato">Entrega en el galpón: <strong>' +
+          fechaHuman(entrega) + '</strong></p>';
+        if (cerrada) datos += '<p class="dato">No hay edición abierta: el próximo paso ' +
+          'es la carga de productos de la que viene.</p>';
+        $('ed-datos').innerHTML = datos;
+
+        // botón al form de pedidos vigente (paso 3)
+        if (!cerrada) {
+          var urlForm = BASE_FORMS + 'pedidos-' + id + '.html';
+          $('p3-boton').innerHTML =
+            '<a href="' + urlForm + '" class="btn btn--ghost btn--small">' +
+            'Abrir el form de pedidos de ' + id + '</a>';
+        }
+
+        // marcar "estamos acá"
+        var paso = cerrada ? 1 : pasoDeEstado(estado);
+        if (paso) {
+          var el = $('paso-' + paso);
+          if (el) el.className = (el.className + ' actual').trim();
+        }
+      }).catch(function () {
+        $('ed-titulo').textContent = 'No pudimos leer la planilla.';
+        $('ed-datos').innerHTML = '<p class="dato">La guía sigue sirviendo igual; ' +
+          'recargá para reintentar.</p>';
+      });
+    })();
+  </script>
 </body>
 </html>
