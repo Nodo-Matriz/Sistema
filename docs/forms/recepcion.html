@@ -648,6 +648,8 @@
         <div class="campo">
           <label for="buscar-entrega">Buscar consumidor</label>
           <input type="text" id="buscar-entrega" placeholder="Escribí parte del nombre…">
+          <button type="button" class="btn btn--ghost btn--small" id="btn-refrescar-entrega"
+                  style="margin-top:10px;">↻ Actualizar entregas</button>
         </div>
 
         <div id="lista-entrega"></div>
@@ -805,6 +807,23 @@
         } catch (e) { equipoNombres = []; }
       }
 
+      function parsePedidos(res) {
+        pedidos = [];
+        if (!res) return;
+        res.table.rows.forEach(function (r) {
+          if (String(celda(r, 1)).trim() !== idEdicion) return;
+          pedidos.push({
+            id_pedido: String(celda(r, 0)).trim(),
+            id_consumidor: String(celda(r, 2)).trim(),
+            correlativo: parseInt(celda(r, 3), 10) || 0,
+            estado: String(celda(r, 5)).trim(),
+            aporte: parseFloat(celda(r, 7)) || 0,
+            total: parseFloat(celda(r, 10)) || 0
+          });
+        });
+        pedidos.sort(function (a, b) { return a.correlativo - b.correlativo; });
+      }
+
       function parseRecepciones(res) {
         recibidosVivo = {};
         if (!res) return;
@@ -893,19 +912,7 @@
           });
 
           // Pedidos de la edición
-          pedidos = [];
-          res[4].table.rows.forEach(function (r) {
-            if (String(celda(r, 1)).trim() !== idEdicion) return;
-            pedidos.push({
-              id_pedido: String(celda(r, 0)).trim(),
-              id_consumidor: String(celda(r, 2)).trim(),
-              correlativo: parseInt(celda(r, 3), 10) || 0,
-              estado: String(celda(r, 5)).trim(),
-              aporte: parseFloat(celda(r, 7)) || 0,
-              total: parseFloat(celda(r, 10)) || 0
-            });
-          });
-          pedidos.sort(function (a, b) { return a.correlativo - b.correlativo; });
+          parsePedidos(res[4]);
 
           // Propuestas de ajuste pendientes de esta edición
           propuestas = [];
@@ -1373,6 +1380,59 @@
       }
 
       $('buscar-entrega').addEventListener('input', renderEntrega);
+
+      // ↻ relee el estado vivo de Pedidos sin perder lo que estás controlando
+      $('btn-refrescar-entrega').addEventListener('click', function () {
+        var b = $('btn-refrescar-entrega');
+        b.disabled = true;
+        b.textContent = 'Actualizando…';
+
+        // guardar tildes en curso (pedidos marcados y productos controlados)
+        var marcados = {};   // id_pedido -> true
+        var controlados = {}; // id_pedido -> [índices de chk-item tildados]
+        Array.prototype.forEach.call($('lista-entrega').querySelectorAll('.item'), function (div) {
+          var p = pedidos[parseInt(div.dataset.idx, 10)];
+          if (!p) return;
+          var chk = div.querySelector('.chk-r');
+          if (chk && chk.checked && !chk.disabled) marcados[p.id_pedido] = true;
+          var idxs = [];
+          Array.prototype.forEach.call(div.querySelectorAll('.chk-item'), function (ci, k) {
+            if (ci.checked && !ci.disabled) idxs.push(k);
+          });
+          if (idxs.length) controlados[p.id_pedido] = idxs;
+        });
+
+        gviz('sheet=Pedidos&range=A1:U3000&headers=1&_=' + Date.now())
+          .then(function (res) { parsePedidos(res); })
+          .catch(function () {})
+          .then(function () {
+            renderEntrega();
+            // restaurar tildes sobre los pedidos que siguen pendientes
+            Array.prototype.forEach.call($('lista-entrega').querySelectorAll('.item'), function (div) {
+              var p = pedidos[parseInt(div.dataset.idx, 10)];
+              if (!p) return;
+              var chk = div.querySelector('.chk-r');
+              if (marcados[p.id_pedido] && chk && !chk.disabled && !chk.checked) {
+                chk.checked = true;
+                div.classList.add('tildado');
+                div.classList.remove('no-llego');
+              }
+              var idxs = controlados[p.id_pedido] || [];
+              var items = div.querySelectorAll('.chk-item');
+              idxs.forEach(function (k) {
+                if (items[k] && !items[k].disabled) {
+                  items[k].checked = true;
+                  items[k].closest('.item-ped').classList.add('ok');
+                }
+              });
+              var sub = div.querySelector('.items-ped');
+              if (sub) actualizarControl(sub, false);
+            });
+            actualizarProgresoEntrega();
+            b.disabled = false;
+            b.textContent = '↻ Actualizar entregas';
+          });
+      });
 
       // Desplegar / plegar el control de productos de un pedido
       $('lista-entrega').addEventListener('click', function (e) {
