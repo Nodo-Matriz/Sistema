@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Vista previa del form de pedidos · Nodo Matríz (equipo)</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+  <link rel="icon" type="image/png" href="../assets/favicon-nodo.png">
+  <style>
+    .wrap { max-width: 680px; }
+
+    .aviso {
+      background: rgba(110, 142, 85, 0.10);
+      border-left: 4px solid var(--c-oliva);
+      border-radius: 14px;
+      padding: var(--s-4) var(--s-5);
+      margin: var(--s-5) 0;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: var(--c-corteza);
+    }
+
+    .aviso.rojo {
+      background: rgba(166, 64, 43, 0.10);
+      border-left-color: var(--c-rojo);
+    }
+
+    .resumen {
+      font-size: 0.9rem;
+      color: var(--c-tierra);
+      font-style: italic;
+      margin: var(--s-3) 0 var(--s-4);
+    }
+
+    /* el lapicito de corrección, propio de la previa */
+    .btn-corregir {
+      display: inline-block;
+      font-family: var(--f-body);
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: var(--r-pill);
+      border: 1.5px solid var(--c-salvia);
+      color: var(--c-tierra);
+      background: transparent;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+
+    .btn-corregir:hover {
+      border-color: var(--c-oliva);
+      color: var(--c-musgo);
+      background: rgba(110, 142, 85, 0.10);
+    }
+
+    .product { position: relative; }
+
+    .fila-corregir {
+      margin-top: var(--s-2);
+      text-align: right;
+    }
+
+    .cat-card { margin-top: var(--s-5); }
+
+    .nota-final {
+      font-size: 0.9rem;
+      color: var(--c-tierra);
+      font-style: italic;
+      line-height: 1.5;
+      margin-top: var(--s-6);
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+
+    <header class="site-header fade-in">
+      <a class="site-mark" href="../">
+        <img src="../assets/logo-nodo-verde.png" alt="Nodo Matríz" style="width:48px; height:48px;">
+        <span>
+          <span class="site-mark__name">Nodo Matríz</span>
+          <span class="site-mark__sub">vista previa · equipo</span>
+        </span>
+      </a>
+    </header>
+
+    <section class="fade-in" data-delay="1">
+      <h1>Vista previa del form de pedidos</h1>
+      <p class="lead">
+        Así se van a ver los productos en el formulario de la próxima edición,
+        con los datos reales de la planilla y el orden de categorías elegido.
+      </p>
+    </section>
+
+    <div class="aviso" id="estado">Leyendo la planilla…</div>
+
+    <div class="aviso" style="background: rgba(196, 149, 67, 0.12); border-left-color: var(--c-mostaza);">
+      🔍 Esto es una <strong>previa</strong>: nada de lo que toques acá envía
+      pedidos ni cambia la planilla. Si un producto está mal, tocá
+      <strong>✏️ Corregir</strong>: se abre el form de carga del productor,
+      lo arreglás ahí, y volvés a esta pestaña y tocás
+      <strong>↻ Actualizar</strong>.
+    </div>
+
+    <p style="margin: var(--s-4) 0;">
+      <button type="button" class="btn btn--ghost btn--small" id="btn-refrescar">↻ Actualizar previa</button>
+    </p>
+
+    <p class="resumen" id="resumen"></p>
+
+    <div id="catalogo"></div>
+
+    <p class="nota-final">
+      Después de los productos, el form real sigue con los datos personales,
+      la entrega y el pago — esa parte no cambia entre ediciones. El aporte
+      solidario y la fecha de cierre se definen al generar la edición.
+    </p>
+
+    <footer class="site-footer">
+      <p>Nodo Matríz Agroecológico · Unquillo, Sierras Chicas</p>
+    </footer>
+
+  </main>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
+      var LS_KEY = 'nm_orden_categorias';  // misma clave que usa Generar edición
+
+      var $ = function (id) { return document.getElementById(id); };
+
+      function gviz(params) {
+        var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
+          '/gviz/tq?tqx=out:json&' + params;
+        return fetch(url)
+          .then(function (r) { return r.text(); })
+          .then(function (t) {
+            var m = t.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+            if (!m) throw new Error('gviz');
+            return JSON.parse(m[1]);
+          });
+      }
+
+      function celda(row, i) {
+        var c = row.c[i];
+        if (!c || c.v === null || c.v === undefined) return '';
+        return c.v;
+      }
+
+      function escapeHtml(s) {
+        if (s === null || s === undefined) return '';
+        return String(s)
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+      }
+
+      function formatMoney(n) {
+        return '$' + Math.round(n || 0).toLocaleString('es-AR');
+      }
+
+      function siNo(v) {
+        return String(v || '').trim().toLowerCase().indexOf('s') === 0;
+      }
+
+      // ── Cargar y armar el catálogo igual que lo arma A3 ──────────
+      function cargar() {
+        $('estado').className = 'aviso';
+        $('estado').textContent = 'Leyendo la planilla…';
+
+        gviz('sheet=Productos&range=A1:S1000&headers=1&_=' + Date.now())
+          .then(function (res) {
+            var productos = [];
+            res.table.rows.forEach(function (r) {
+              var id = String(celda(r, 0)).trim();
+              if (!id) return;
+              if (!siNo(celda(r, 9))) return;  // J: disponible_edicion_actual
+              productos.push({
+                id_producto: id,
+                id_productor: String(celda(r, 1)).trim(),
+                nombre: String(celda(r, 2)).trim(),
+                unidad: String(celda(r, 3)).trim(),
+                fraccionable: siNo(celda(r, 4)),
+                fracciones: String(celda(r, 5) || '').split(/[|,;]/)
+                  .map(function (f) { return f.trim(); })
+                  .filter(function (f) { return f; }),
+                precio: parseFloat(celda(r, 6)) || 0,
+                origen: String(celda(r, 7)).trim(),
+                categoria: String(celda(r, 8)).trim() || 'Sin categoría',
+                es_oferta: siNo(celda(r, 11)),
+                notas: String(celda(r, 14) || '').trim(),
+                productor: String(celda(r, 16)).trim()
+              });
+            });
+
+            render(productos);
+          })
+          .catch(function () {
+            $('estado').className = 'aviso rojo';
+            $('estado').textContent = 'No pudimos leer la planilla. Revisá la conexión y recargá.';
+          });
+      }
+
+      function ordenCategorias(cats) {
+        var guardado = [];
+        try { guardado = JSON.parse(localStorage.getItem(LS_KEY)) || []; } catch (e) {}
+        var enCats = {};
+        cats.forEach(function (c) { enCats[c] = true; });
+        var resultado = guardado.filter(function (c) { return enCats[c]; });
+        var nuevas = cats.filter(function (c) { return resultado.indexOf(c) === -1; });
+        nuevas.sort(function (a, b) { return a.localeCompare(b, 'es'); });
+        return resultado.concat(nuevas);
+      }
+
+      function renderProductCard(p) {
+        var tags = '';
+        if (p.es_oferta) tags += '<span class="product__tag product__tag--oferta">Oferta</span>';
+
+        var meta = '';
+        if (p.origen) meta += escapeHtml(p.origen) + ' · ';
+        meta += 'por ' + escapeHtml(p.unidad);
+
+        var control = '';
+        if (p.fraccionable && p.fracciones.length) {
+          control += '<select class="select" style="width: auto;">';
+          control += '<option value="0">— sin elegir —</option>';
+          p.fracciones.forEach(function (f) {
+            control += '<option>' + escapeHtml(f) + ' ' + escapeHtml(p.unidad) + '</option>';
+          });
+          control += '</select>';
+          control += '<input class="input" type="number" min="0" step="1" value="0" placeholder="cant." style="width: 80px;">';
+        } else {
+          control += '<input class="input" type="number" min="0" step="1" value="0" placeholder="0" style="width: 100px;">';
+        }
+
+        return '' +
+          '<div class="product">' +
+          '  <div class="product__head">' +
+          '    <span class="product__name">' + escapeHtml(p.nombre) + ' ' + tags + '</span>' +
+          '    <span class="product__meta">' +
+          '      <span>' + meta + '</span>' +
+          '      <span class="product__price">' + formatMoney(p.precio) + '</span>' +
+          '    </span>' +
+          '  </div>' +
+          '  <div class="product__control">' + control + '</div>' +
+          '  <div class="fila-corregir">' +
+          '    <a class="btn-corregir" target="_blank" rel="noopener" ' +
+          '       href="stock.html?id_productor=' + encodeURIComponent(p.id_productor) + '">' +
+          '      ✏️ Corregir' + (p.productor ? ' (' + escapeHtml(p.productor) + ')' : '') +
+          '    </a>' +
+          '  </div>' +
+          '</div>';
+      }
+
+      function render(productos) {
+        var cont = $('catalogo');
+        cont.innerHTML = '';
+
+        if (!productos.length) {
+          $('estado').className = 'aviso rojo';
+          $('estado').textContent = 'No hay productos marcados como disponibles para la edición. ' +
+            'Primero hay que hacer la carga de productos.';
+          $('resumen').textContent = '';
+          return;
+        }
+
+        // agrupar por categoría
+        var porCat = {};
+        productos.forEach(function (p) {
+          (porCat[p.categoria] = porCat[p.categoria] || []).push(p);
+        });
+
+        var orden = ordenCategorias(Object.keys(porCat));
+
+        orden.forEach(function (cat) {
+          var card = document.createElement('div');
+          card.className = 'card cat-card';
+          var html = '<h2>' + escapeHtml(cat) + '</h2>';
+          html += '<div class="product-list mt-3">';
+          porCat[cat].forEach(function (p) { html += renderProductCard(p); });
+          html += '</div>';
+          card.innerHTML = html;
+          cont.appendChild(card);
+        });
+
+        $('estado').className = 'aviso';
+        $('estado').innerHTML = 'Previa armada con los datos <strong>actuales</strong> de la ' +
+          'planilla. El orden de las categorías es el elegido en Generar edición' +
+          (localStorage.getItem(LS_KEY) ? '' : ' (todavía no se eligió: se muestra alfabético)') + '.';
+
+        $('resumen').textContent = orden.length + ' categorías · ' +
+          productos.length + ' productos disponibles';
+      }
+
+      $('btn-refrescar').addEventListener('click', cargar);
+
+      cargar();
+    })();
+  </script>
+</body>
+</html>
