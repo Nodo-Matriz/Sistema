@@ -18,19 +18,19 @@
          ED2026-12              ej: ED2026-09
          12          ej: 9
          2026            ej: 2026
-         lunes, 27 de julio, 13:00 hs      ej: martes 14 de mayo, 12:00 hs
-         2026-07-27T13:00:00-03:00        ej: 2026-05-14T12:00:00-03:00
+         lunes, 10 de agosto, 18:00 hs      ej: martes 14 de mayo, 12:00 hs
+         2026-08-10T18:00:00-03:00        ej: 2026-05-14T12:00:00-03:00
          REEMPLAZAR_WEBHOOK_B1_DESPUES             ej: https://hook.eu2.make.com/abc123
          15  ej: 10
          nodomatriz.mp         ej: nodomatriz.mp
-         categorias_json            JSON con todas las categorías y
+         __CATEGORIAS_JSON__         JSON con todas las categorías y
                                      productos de la edición (ver
                                      formato esperado al pie del archivo).
        ============================================================ -->
 
   <title>Pedido edición 12 · Nodo Matriz</title>
   <link rel="stylesheet" href="../assets/styles.css">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4 Q22 8 22 16 Q22 24 16 28 Q10 24 10 16 Q10 8 16 4 Z' fill='%234A6B3A'/%3E%3C/svg%3E">
+  <link rel="icon" type="image/png" href="../assets/favicon-nodo.png">
 </head>
 <body>
   <main class="wrap">
@@ -49,14 +49,14 @@
     <section class="fade-in" data-delay="1">
       <h1>Pedido quincenal</h1>
       <p class="lead">
-        Una nueva edición es una invitación a recorrer juntxs todo lo que la trama trae
-        esta quincena. Vas a poder recorrer todas las categoría antes de cerrar tu pedido:
+        Una edición es una invitación a recorrer juntas todo lo que la red trae
+        esta quincena. Pasá por cada categoría antes de cerrar tu pedido:
         a veces aparecen cosas nuevas, productos de estación, ofertas, productores
-        que vuelven después de un tiempo.
+        que vuelven después de mucho tiempo.
       </p>
 
       <div class="note note--info">
-        <strong>Cierre del formulario:</strong> lunes, 27 de julio, 13:00 hs.
+        <strong>Cierre del formulario:</strong> lunes, 10 de agosto, 18:00 hs.
         Pasada esa hora, los pedidos no pueden modificarse ni agregarse.
       </div>
     </section>
@@ -77,22 +77,22 @@
         <div class="wizard__crumbs"></div>
       </div>
 
-      <!-- Las categorías se renderizan acá vía JS desde categorias_json -->
+      <!-- Las categorías se renderizan acá vía JS desde __CATEGORIAS_JSON__ -->
       <div id="wizard-steps"></div>
 
-      <div class="wizard__nav" style="display:flex; flex-direction:column; align-items:stretch; gap:10px;">
+      <div class="wizard__nav">
+        <button type="button" class="btn btn--ghost" data-action="wizard-prev">
+          ← Categoría anterior
+        </button>
+        <span class="wizard__nav-info">
+          Recorré todas las categorías para poder cerrar el pedido.
+        </span>
         <button type="button" class="btn btn--primary" data-action="wizard-next">
           Siguiente categoría →
         </button>
         <button type="button" class="btn btn--primary hidden" data-action="wizard-finish">
           Revisar pedido →
         </button>
-        <button type="button" class="btn btn--ghost" data-action="wizard-prev">
-          ← Categoría anterior
-        </button>
-        <span class="wizard__nav-info" style="text-align:center;">
-          Recorré todas las categorías para poder cerrar el pedido.
-        </span>
       </div>
     </div>
 
@@ -194,16 +194,16 @@
           <h2>Aporte solidario</h2>
           <p class="muted">
             El aporte solidario sostiene el espacio físico, la logística, las
-            comunicaciones y el tiempo de la equipa. Elegí según tus posibilidades reales.
+            comunicaciones y el tiempo del equipo. Elegí según tus posibilidades reales.
           </p>
           <div class="field">
             <label class="field__label">Porcentaje de aporte</label>
             <label class="option">
-              <input type="radio" name="aporte_porcent" value="14">
-              <span class="option__label">14% <span class="muted">(mínimo sugerido)</span></span>
+              <input type="radio" name="aporte_porcent" value="15" checked>
+              <span class="option__label">15% <span class="muted">(mínimo sugerido)</span></span>
             </label>
             <label class="option">
-              <input type="radio" name="aporte_porcent" value="20" checked>
+              <input type="radio" name="aporte_porcent" value="20">
               <span class="option__label">20%</span>
             </label>
             <label class="option">
@@ -220,7 +220,7 @@
             </label>
             <div id="aporte-otro-campo" style="display:none; margin-top: var(--s-3); padding-left: var(--s-6);">
               <input class="input" type="number" id="aporte-input-custom"
-                     min="0" max="100" step="1" placeholder="Ej: 10"
+                     min="0" max="100" step="1" placeholder="Ej: 15"
                      style="width: 130px;">
               <span class="muted" style="margin-left: var(--s-2);">%</span>
             </div>
@@ -258,8 +258,8 @@
         <div class="card mt-4">
           <h2>Forma de pago</h2>
           <p class="muted">
-            Una vez confirmado tu pedido recibirás los datos para abonar al alias
-            <strong>nodomatriz.mp</strong>. También aceptamos efectivo al retirar.
+            Una vez confirmado tu pedido, te llegan por correo los datos para
+            abonar. También aceptamos efectivo al retirar.
           </p>
           <div class="field">
             <label class="field__label">¿Cómo vas a abonar?</label>
@@ -308,7 +308,7 @@
 
   <script src="../assets/form-logic.js"></script>
   <script id="categorias-json" type="application/json">
-[{"nombre":"CEBOLLA COBRIZA","origen":"Mendoza","precio":1280,"unidad":"kg","categoria":"Hortalizas","es_oferta":"No","productor":"Macollando / Las Rositas","fracciones":null,"descripcion":null,"id_producto":"P0002","distancia_km":"630","fraccionable":"No","id_productor":"PROD002"},{"nombre":"BATATA MORADA","origen":"Córdoba","precio":2500,"unidad":"kg","categoria":"Hortalizas","es_oferta":"No","productor":"Macollando / Las Rositas","fracciones":null,"descripcion":null,"id_producto":"P0004","distancia_km":"26","fraccionable":"No","id_productor":"PROD002"},{"nombre":"BATATA BONIATO","origen":"Córdoba","precio":1600,"unidad":"kg","categoria":"Hortalizas","es_oferta":"No","productor":"Macollando / Las Rositas","fracciones":null,"descripcion":null,"id_producto":"P0005","distancia_km":"26","fraccionable":"No","id_productor":"PROD002"},{"nombre":"ZAPALLO BRASILERO","origen":"Mendoza","precio":1500,"unidad":"kg","categoria":"Hortalizas","es_oferta":"Sí","productor":"Macollando / Las Rositas","fracciones":null,"descripcion":null,"id_producto":"P0006","distancia_km":"630","fraccionable":"No","id_productor":"PROD002"},{"nombre":"ZAPALLO ANCO","origen":"Córdoba","precio":1300,"unidad":"kg","categoria":"Hortalizas","es_oferta":"No","productor":"Macollando / Las Rositas","fracciones":null,"descripcion":null,"id_producto":"P0007","distancia_km":"26","fraccionable":"No","id_productor":"PROD002"},{"nombre":"REPOLLO BLANCO","origen":"Mendoza","precio":3000,"unidad":"unidad","categoria":"Hortalizas","es_oferta":"No","productor":"Macollando / Las Rositas","fracciones":null,"descripcion":null,"id_producto":"P0008","distancia_km":"630","fraccionable":"No","id_productor":"PROD002"},{"nombre":"DULCE DE LECHE","origen":null,"precio":8050,"unidad":"kg","categoria":"Dulces","es_oferta":"No","productor":"La Higuera","fracciones":null,"descripcion":null,"id_producto":"P0075","distancia_km":null,"fraccionable":"No","id_productor":"PROD013"},{"nombre":"SEMILLAS DE GIRASOL CON CÁSCARA 20 GR","origen":null,"precio":3000,"unidad":"unidad","categoria":"Frutos Secos","es_oferta":"Sí","productor":"Verdelandia ","fracciones":null,"descripcion":null,"id_producto":"P0147","distancia_km":null,"fraccionable":"Sí","id_productor":"PROD003"},{"nombre":"QUESO TYBO","origen":"Entre Ríos","precio":14600,"unidad":"kg","categoria":"Lácteos","es_oferta":"No","productor":"La Higuera","fracciones":null,"descripcion":null,"id_producto":"P0211","distancia_km":"570","fraccionable":"No","id_productor":"PROD013"},{"nombre":"QUESO CREMOSO","origen":"Entre Ríos","precio":15000,"unidad":"kg","categoria":"Lácteos","es_oferta":"No","productor":"La Higuera","fracciones":null,"descripcion":null,"id_producto":"P0212","distancia_km":"570","fraccionable":"No","id_productor":"PROD013"},{"nombre":"SARDO FRESCO","origen":"Entre Ríos","precio":19766,"unidad":"kg","categoria":"Lácteos","es_oferta":"No","productor":"La Higuera","fracciones":"1, 1/2","descripcion":null,"id_producto":"P0214","distancia_km":"570","fraccionable":"Sí","id_productor":"PROD013"},{"nombre":"PROVOLETA AJI","origen":"Entre Ríos","precio":3700,"unidad":"unidad","categoria":"Lácteos","es_oferta":"Sí","productor":"La Higuera","fracciones":null,"descripcion":null,"id_producto":"P0216","distancia_km":"570","fraccionable":"No","id_productor":"PROD013"},{"nombre":"GRANOLA","origen":"Río Ceballos","precio":35000,"unidad":"kg","categoria":"Frutos Secos","es_oferta":"No","productor":"Verdelandia ","fracciones":"1, 1/2, 1/4","descripcion":null,"id_producto":"P0255","distancia_km":"12","fraccionable":"Sí","id_productor":"PROD003"},{"nombre":"PAN INTEGRAL MULTISEMILLAS","origen":"Río Ceballos","precio":7000,"unidad":"unidad","categoria":"Panificados","es_oferta":"No","productor":"Verdelandia ","fracciones":null,"descripcion":null,"id_producto":"P0292","distancia_km":"12","fraccionable":"No","id_productor":"PROD003"},{"nombre":"PAN INTEGRAL MULTICEREAL","origen":"Río Ceballos","precio":7000,"unidad":"unidad","categoria":"Panificados","es_oferta":"No","productor":"Verdelandia ","fracciones":null,"descripcion":null,"id_producto":"P0293","distancia_km":"12","fraccionable":"No","id_productor":"PROD003"},{"nombre":"PAN DE CENTENO, ESPELTA Y MIEL.","origen":"Río Ceballos","precio":7000,"unidad":"unidad","categoria":"Panificados","es_oferta":"No","productor":"Verdelandia ","fracciones":null,"descripcion":null,"id_producto":"P0294","distancia_km":"12","fraccionable":"No","id_productor":"PROD003"},{"nombre":"HOGAZA DE NUEZ CARAMELIZADA Y MAÍZ MORADO.","origen":"Río Ceballos","precio":7000,"unidad":"unidad","categoria":"Panificados","es_oferta":"No","productor":"Verdelandia ","fracciones":null,"descripcion":null,"id_producto":"P0295","distancia_km":"12","fraccionable":"No","id_productor":"PROD003"}]
+__CATEGORIAS_JSON__
   </script>
   <script>
     (function () {
@@ -346,84 +346,15 @@
       var catalogoRaw = document.getElementById('categorias-json').textContent.trim();
       var categorias;
       try {
-        var parsed = JSON.parse(catalogoRaw);
-        categorias = normalizarCatalogo(parsed);
+        categorias = JSON.parse(catalogoRaw);
       } catch (err) {
         // Datos de prueba para desarrollo cuando el template no fue procesado
-        if (/^\[?\s*\{\{/.test(catalogoRaw) || /^__CATEGORIAS/.test(catalogoRaw)) {
+        if (/^__CATEGORIAS/.test(catalogoRaw) || /^\{\{/.test(catalogoRaw)) {
           categorias = makeDemoData();
         } else {
           console.error('JSON inválido', err);
           categorias = [];
         }
-      }
-
-      // Acepta dos formatos:
-      //  a) Array de categorías anidadas: [{id, nombre, productos:[...]}, ...]
-      //  b) Array plano de productos con campo "categoria": [{nombre, precio, categoria}, ...]
-      //     → en este caso los agrupa por categoría acá, en el navegador.
-      function normalizarCatalogo(arr) {
-        if (!Array.isArray(arr) || arr.length === 0) return [];
-      // Convertir "Sí"/"No" (texto de la planilla) a booleanos reales
-        function esSi(v) {
-          if (v === true) return true;
-          if (v === null || v === undefined) return false;
-          var s = String(v).trim().toLowerCase();
-          return s === 'sí' || s === 'si' || s === 'true';
-        }
-        arr.forEach(function (p) {
-          p.fraccionable = esSi(p.fraccionable);
-          p.es_oferta = esSi(p.es_oferta);
-          // Fracciones propias del producto: texto "1/4,1/2,1" → lista de opciones
-          if (typeof p.fracciones === 'string') {
-            var lista = p.fracciones.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
-            p.fracciones = lista.length ? lista : null;
-          }
-        });
-        // Si el primer elemento ya tiene .productos, es el formato anidado
-        if (arr[0] && Array.isArray(arr[0].productos)) return arr;
-
-        // Formato plano: agrupar por campo "categoria"
-        var grupos = {};
-        var orden = [];
-        arr.forEach(function (p) {
-          var cat = (p.categoria && String(p.categoria).trim()) || 'Otros';
-          if (!grupos[cat]) {
-            grupos[cat] = [];
-            orden.push(cat);
-          }
-          // Derivar fracciones si el producto es fraccionable y no las trae
-          if (p.fraccionable && !p.fracciones) {
-            p.fracciones = ['1/4', '1/2', '1'];
-          }
-          grupos[cat].push(p);
-        });
-
-        // Orden alfabético de categorías, con "Ofertas" primero si existiera
-        // ══════════════════════════════════════════════════════════
-        // Orden de categorías: llega desde la herramienta de la equipa
-        // (generar-edicion.html). Si no llegó, orden alfabético.
-        var ORDEN_RAW = 'Panificados|Lácteos|Bebidas|Almacén|Aromáticas|Dulces|Cosmética|Elaborados|Especias|Fiambres|Frutas|Frutos Secos|Granja|Granos|Hongos|Hortalizas|Infusiones|Medicina Natural|Moliendas|A3 · F3';
-        var ORDEN_CATEGORIAS = [];
-        if (ORDEN_RAW && ORDEN_RAW.indexOf('{{') === -1) {
-          ORDEN_CATEGORIAS = ORDEN_RAW.split('|').map(function (s) { return s.trim(); }).filter(Boolean);
-        }
-        orden.sort(function (a, b) {
-          var ia = ORDEN_CATEGORIAS.indexOf(a);
-          var ib = ORDEN_CATEGORIAS.indexOf(b);
-          if (ia === -1 && ib === -1) return a.localeCompare(b, 'es');
-          if (ia === -1) return 1;
-          if (ib === -1) return -1;
-          return ia - ib;
-        });
-
-        return orden.map(function (cat) {
-          return {
-            id: cat.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-            nombre: cat,
-            productos: grupos[cat],
-          };
-        });
       }
 
       function makeDemoData() {
@@ -490,36 +421,20 @@
         }
 
         var meta = '';
-        if (p.descripcion) meta += escapeHtml(p.descripcion) + ' · ';
-        if (p.origen) {
-          meta += escapeHtml(p.origen);
-          if (p.distancia_km) meta += ' (a ' + escapeHtml(p.distancia_km) + ' km)';
-          meta += ' · ';
-        }
-        if (p.productor) meta += escapeHtml(p.productor) + ' · ';
+        if (p.origen) meta += escapeHtml(p.origen) + ' · ';
         meta += 'por ' + escapeHtml(p.unidad);
 
         var control = '';
-
-        // Cantidad: combo de 0 a 5 (0 = no pedir), sin escritura libre
-        control += '<label class="product__ctl-label">Cantidad ';
-        control += '<select class="select" data-product="' + p.id_producto + '" data-field="cantidad" style="width:auto;">';
-        for (var i = 0; i <= 5; i++) {
-          control += '<option value="' + i + '">' + i + '</option>';
-        }
-        control += '</select></label>';
-
-        // Fracción: SOLO si el producto es fraccionable.
-        // Por defecto queda seleccionada la fracción más grande (la última de la lista).
         if (p.fraccionable && p.fracciones && p.fracciones.length) {
-          var ultima = p.fracciones.length - 1;
-          control += '<label class="product__ctl-label">Fracción ';
-          control += '<select class="select" data-product="' + p.id_producto + '" data-field="fraccion" style="width:auto;">';
-          p.fracciones.forEach(function (f, idx) {
-            var sel = (idx === ultima) ? ' selected' : '';
-            control += '<option value="' + f + '"' + sel + '>' + f + ' ' + escapeHtml(p.unidad) + '</option>';
+          control += '<select class="select" data-product="' + p.id_producto + '" data-field="fraccion" style="width: auto;">';
+          control += '<option value="0">— sin elegir —</option>';
+          p.fracciones.forEach(function (f) {
+            control += '<option value="' + f + '">' + f + ' ' + escapeHtml(p.unidad) + '</option>';
           });
-          control += '</select></label>';
+          control += '</select>';
+          control += '<input class="input" type="number" min="0" step="1" value="0" data-product="' + p.id_producto + '" data-field="cantidad" placeholder="cant." style="width: 80px;">';
+        } else {
+          control += '<input class="input" type="number" min="0" step="1" value="0" data-product="' + p.id_producto + '" data-field="cantidad" placeholder="0" style="width: 100px;">';
         }
 
         return '' +
@@ -536,6 +451,7 @@
           '  </div>' +
           '</div>';
       }
+
       function escapeHtml(s) {
         if (s === null || s === undefined) return '';
         return String(s)
@@ -551,14 +467,13 @@
 
       var wizard = NM.initWizard(wizardEl, {
         onStepChange: function (idx, stepEl) {
+          // Marcar productos en este paso como "activos" visualmente
           stepEl.querySelectorAll('.product').forEach(function (p) {
             p.classList.add('is-active');
           });
-          var y = stepEl.getBoundingClientRect().top + window.pageYOffset - 90;
-          window.scrollTo({ top: y, behavior: 'smooth' });
         }
       });
-      window.scrollTo(0, 0);
+
       // El botón "Revisar pedido" muestra la sección final
       var btnFinish = wizardEl.querySelector('[data-action="wizard-finish"]');
       btnFinish.addEventListener('click', function () {
@@ -578,7 +493,7 @@
       // ----------------------------------------------------------------
       // 4. Captura de cantidades y fracciones
       // ----------------------------------------------------------------
-      function onControlChange(e) {
+      stepsContainer.addEventListener('input', function (e) {
         var t = e.target;
         if (!t.dataset || !t.dataset.product) return;
         var id = t.dataset.product;
@@ -592,9 +507,7 @@
         } else if (field === 'fraccion') {
           stateProductos[id].fraccion = t.value === '0' ? null : t.value;
         }
-      }
-      stepsContainer.addEventListener('input', onControlChange);
-      stepsContainer.addEventListener('change', onControlChange);
+      });
 
       // ----------------------------------------------------------------
       // 5. Cálculo del resumen
@@ -607,11 +520,7 @@
           cat.productos.forEach(function (p) {
             var s = stateProductos[p.id_producto];
             if (!s || s.cantidad <= 0) return;
-            // Leer la fracción directamente del combo (el default no dispara "change")
-            if (p.fraccionable && !s.fraccion) {
-              var sel = document.querySelector('select[data-product="' + p.id_producto + '"][data-field="fraccion"]');
-              if (sel && sel.value && sel.value !== '0') s.fraccion = sel.value;
-            }
+
             // Si es fraccionable y eligió fracción, multiplicar por la fracción
             var multiplicador = 1;
             if (p.fraccionable && s.fraccion) {
@@ -683,7 +592,7 @@
 
       function actualizarTotales(subtotal) {
         var aportePorc = getAportePorc();
-        var aporte = Math.round(subtotal * (aportePorc / 100));
+        var aporte = subtotal * (aportePorc / 100);
         var total = subtotal + aporte;
 
         document.getElementById('subtotal').textContent = formatMoney(subtotal);
@@ -699,43 +608,6 @@
       if (emailParam) {
         var emailField = document.getElementById('email');
         if (emailField) emailField.value = decodeURIComponent(emailParam);
-        cargarDatosConsumidor(decodeURIComponent(emailParam));
-      }
-
-      // Si el email viene en el link y el consumidor ya existe en el padrón,
-      // pre-llenamos nombre y teléfono, y marcamos "ya pedí antes".
-      function cargarDatosConsumidor(email) {
-        var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
-        var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
-          '/gviz/tq?tqx=out:json&sheet=Consumidores_API&headers=1';
-
-        fetch(url)
-          .then(function (r) { return r.text(); })
-          .then(function (text) {
-            var m = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
-            if (!m) return;
-            var data = JSON.parse(m[1]);
-            var fila = data.table.rows.find(function (row) {
-              var mail = row.c[3] ? String(row.c[3].v).trim().toLowerCase() : '';
-              return mail === email.trim().toLowerCase();
-            });
-            if (!fila) return; // consumidor nuevo, no pasa nada
-
-            var nombre = fila.c[1] ? fila.c[1].v : '';
-            var tel    = fila.c[2] ? fila.c[2].v : '';
-
-            var nombreField = document.getElementById('nombre');
-            var telField    = document.getElementById('telefono');
-            if (nombreField && nombre && !nombreField.value) nombreField.value = nombre;
-            if (telField && tel && !telField.value) telField.value = tel;
-
-            // Marcar "No, ya pedí antes"
-            var radioNo = document.querySelector('input[name="primera_vez"][value="no"]');
-            if (radioNo) radioNo.checked = true;
-          })
-          .catch(function (err) {
-            console.warn('No se pudieron precargar los datos del consumidor:', err);
-          });
       }
 
       // Mostrar/ocultar campo de dirección según la entrega
@@ -840,8 +712,19 @@
           comentarios: document.getElementById('comentarios').value.trim() || null,
         };
       }, {
-        successMessage:
-          '¡Recibimos tu pedido! En breve te llegará el detalle por email y por WhatsApp, con los datos para abonar. Gracias por sostener esta red.',
+        onSuccess: function () {
+          // Mostrar la confirmación ARRIBA de la página, no al pie
+          finalSection.classList.add('hidden');
+          var ok = document.createElement('div');
+          ok.className = 'note note--success';
+          ok.innerHTML = '<strong>¡Listo! Recibimos tu pedido.</strong> ' +
+            'En breve te llegará el detalle por email y por WhatsApp, con los ' +
+            'datos para abonar. Gracias por sostener esta red.';
+          var main = document.querySelector('main.wrap') || document.body;
+          var header = main.querySelector('header');
+          main.insertBefore(ok, header ? header.nextSibling : main.firstChild);
+          window.scrollTo({ top: 0, behavior: 'auto' });
+        },
       });
 
     })();
