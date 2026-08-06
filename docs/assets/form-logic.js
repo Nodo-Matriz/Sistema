@@ -97,15 +97,14 @@
       return Promise.resolve({ ok: true, dev: true, payload: payload });
     }
 
+    // no-cors + text/plain: mismo patrón que el resto de los forms del
+    // sistema. Evita el preflight OPTIONS que llegaba vacío al webhook.
     return fetch(webhookUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(payload),
-      mode: 'cors',
-    }).then(function (res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.json().catch(function () { return { ok: true }; });
-    });
+    }).then(function () { return { ok: true }; });
   }
 
   /**
