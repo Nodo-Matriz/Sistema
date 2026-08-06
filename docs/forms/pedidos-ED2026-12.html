@@ -23,7 +23,7 @@
          REEMPLAZAR_WEBHOOK_B1_DESPUES             ej: https://hook.eu2.make.com/abc123
          15  ej: 10
          nodomatriz.mp         ej: nodomatriz.mp
-         __CATEGORIAS_JSON__         JSON con todas las categorías y
+         categorias_json            JSON con todas las categorías y
                                      productos de la edición (ver
                                      formato esperado al pie del archivo).
        ============================================================ -->
@@ -49,10 +49,10 @@
     <section class="fade-in" data-delay="1">
       <h1>Pedido quincenal</h1>
       <p class="lead">
-        Una edición es una invitación a recorrer juntas todo lo que la red trae
-        esta quincena. Pasá por cada categoría antes de cerrar tu pedido:
+        Una nueva edición es una invitación a recorrer juntxs todo lo que la trama trae
+        esta quincena. Vas a poder recorrer todas las categoría antes de cerrar tu pedido:
         a veces aparecen cosas nuevas, productos de estación, ofertas, productores
-        que vuelven después de mucho tiempo.
+        que vuelven después de un tiempo.
       </p>
 
       <div class="note note--info">
@@ -77,22 +77,22 @@
         <div class="wizard__crumbs"></div>
       </div>
 
-      <!-- Las categorías se renderizan acá vía JS desde __CATEGORIAS_JSON__ -->
+      <!-- Las categorías se renderizan acá vía JS desde categorias_json -->
       <div id="wizard-steps"></div>
 
-      <div class="wizard__nav">
-        <button type="button" class="btn btn--ghost" data-action="wizard-prev">
-          ← Categoría anterior
-        </button>
-        <span class="wizard__nav-info">
-          Recorré todas las categorías para poder cerrar el pedido.
-        </span>
+      <div class="wizard__nav" style="display:flex; flex-direction:column; align-items:stretch; gap:10px;">
         <button type="button" class="btn btn--primary" data-action="wizard-next">
           Siguiente categoría →
         </button>
         <button type="button" class="btn btn--primary hidden" data-action="wizard-finish">
           Revisar pedido →
         </button>
+        <button type="button" class="btn btn--ghost" data-action="wizard-prev">
+          ← Categoría anterior
+        </button>
+        <span class="wizard__nav-info" style="text-align:center;">
+          Recorré todas las categorías para poder cerrar el pedido.
+        </span>
       </div>
     </div>
 
@@ -308,7 +308,7 @@
 
   <script src="../assets/form-logic.js"></script>
   <script id="categorias-json" type="application/json">
-__CATEGORIAS_JSON__
+[{"nombre":"PAPA BLANCA CORDOBA","origen":"Córdoba","precio":2000,"unidad":"kg","categoria":"Hortalizas","es_oferta":"No","productor":"Cooperativa San Carlos","fracciones":null,"descripcion":null,"id_producto":"P0001","distancia_km":"26","fraccionable":"No","id_productor":"PROD015"},{"nombre":"CEBOLLA COBRIZA","origen":"Mendoza","precio":1280,"unidad":"kg","categoria":"Hortalizas","es_oferta":"No","productor":"Macollando / Las Rositas","fracciones":null,"descripcion":null,"id_producto":"P0002","distancia_km":"630","fraccionable":"No","id_productor":"PROD002"},{"nombre":"PAPA BLANCA","origen":"Córdoba","precio":1833,"unidad":"kg","categoria":"Hortalizas","es_oferta":"No","productor":"Cooperativa San Carlos","fracciones":null,"descripcion":null,"id_producto":"P0003","distancia_km":"26","fraccionable":"No","id_productor":"PROD015"},{"nombre":"BATATA MORADA","origen":"Córdoba","precio":2500,"unidad":"kg","categoria":"Hortalizas","es_oferta":"No","productor":"Macollando / Las Rositas","fracciones":null,"descripcion":null,"id_producto":"P0004","distancia_km":"26","fraccionable":"No","id_productor":"PROD002"},{"nombre":"BATATA BONIATO","origen":"Córdoba","precio":1600,"unidad":"kg","categoria":"Hortalizas","es_oferta":"No","productor":"Macollando / Las Rositas","fracciones":null,"descripcion":null,"id_producto":"P0005","distancia_km":"26","fraccionable":"No","id_productor":"PROD002"},{"nombre":"ZAPALLO BRASILERO","origen":"Mendoza","precio":1500,"unidad":"kg","categoria":"Hortalizas","es_oferta":"Sí","productor":"Macollando / Las Rositas","fracciones":null,"descripcion":null,"id_producto":"P0006","distancia_km":"630","fraccionable":"No","id_productor":"PROD002"},{"nombre":"ZAPALLO ANCO","origen":"Córdoba","precio":1300,"unidad":"kg","categoria":"Hortalizas","es_oferta":"No","productor":"Macollando / Las Rositas","fracciones":null,"descripcion":null,"id_producto":"P0007","distancia_km":"26","fraccionable":"No","id_productor":"PROD002"},{"nombre":"REPOLLO BLANCO","origen":"Mendoza","precio":3000,"unidad":"unidad","categoria":"Hortalizas","es_oferta":"No","productor":"Macollando / Las Rositas","fracciones":null,"descripcion":null,"id_producto":"P0008","distancia_km":"630","fraccionable":"No","id_productor":"PROD002"},{"nombre":"ZANAHORIA","origen":"Mendoza / Córdoba","precio":1700,"unidad":"kg","categoria":"Hortalizas","es_oferta":"No","productor":"Cooperativa San Carlos","fracciones":null,"descripcion":null,"id_producto":"P0010","distancia_km":"630 / 26","fraccionable":"No","id_productor":"PROD015"},{"nombre":"PALTA ETTINGER","origen":"Tucumán","precio":5900,"unidad":"kg","categoria":"Frutas","es_oferta":"No","productor":"Yuyupa","fracciones":null,"descripcion":null,"id_producto":"P0018","distancia_km":"910","fraccionable":"No","id_productor":"PROD014"},{"nombre":"BANANA","origen":"Jujuy","precio":3000,"unidad":"kg","categoria":"Frutas","es_oferta":"No","productor":"Yuyupa","fracciones":null,"descripcion":null,"id_producto":"P0019","distancia_km":"530","fraccionable":"No","id_productor":"PROD014"},{"nombre":"LIMÓN","origen":"Entre Ríos","precio":1500,"unidad":"kg","categoria":"Frutas","es_oferta":"No","productor":"Yuyupa","fracciones":null,"descripcion":null,"id_producto":"P0020","distancia_km":"570","fraccionable":"No","id_productor":"PROD014"},{"nombre":"NARANJA","origen":"Entre Ríos","precio":1750,"unidad":"kg","categoria":"Frutas","es_oferta":"No","productor":"Yuyupa","fracciones":null,"descripcion":null,"id_producto":"P0021","distancia_km":"570","fraccionable":"No","id_productor":"PROD014"},{"nombre":"POMELO ROSADO","origen":"Córdoba","precio":1750,"unidad":"kg","categoria":"Frutas","es_oferta":"No","productor":"Yuyupa","fracciones":null,"descripcion":null,"id_producto":"P0022","distancia_km":"26","fraccionable":"No","id_productor":"PROD014"},{"nombre":"MANDARINA","origen":"Entre Ríos","precio":1500,"unidad":"kg","categoria":"Frutas","es_oferta":"No","productor":"Yuyupa","fracciones":null,"descripcion":null,"id_producto":"P0023","distancia_km":"570","fraccionable":"No","id_productor":"PROD014"},{"nombre":"MANZANAS CRISP PINK","origen":"Río Negro","precio":3200,"unidad":"kg","categoria":"Frutas","es_oferta":"No","productor":"Yuyupa","fracciones":null,"descripcion":null,"id_producto":"P0024","distancia_km":"1250","fraccionable":"No","id_productor":"PROD014"},{"nombre":"PERA","origen":"Río Negro","precio":2300,"unidad":"kg","categoria":"Frutas","es_oferta":"No","productor":"Yuyupa","fracciones":null,"descripcion":null,"id_producto":"P0025","distancia_km":"1250","fraccionable":"No","id_productor":"PROD014"},{"nombre":"ACELGA X ATADO","origen":"Córdoba","precio":1500,"unidad":"atado","categoria":"Hortalizas","es_oferta":"No","productor":"Cooperativa San Carlos","fracciones":null,"descripcion":null,"id_producto":"P0026","distancia_km":"26","fraccionable":"No","id_productor":"PROD015"},{"nombre":"BOLSON","origen":"Córdoba","precio":1388,"unidad":"unidad","categoria":"Hortalizas","es_oferta":"No","productor":"Cooperativa San Carlos","fracciones":null,"descripcion":null,"id_producto":"P0046","distancia_km":"26","fraccionable":"No","id_productor":"PROD015"},{"nombre":"NABO X ATADO","origen":"Córdoba","precio":1600,"unidad":"atado","categoria":"Hortalizas","es_oferta":"No","productor":"Cooperativa San Carlos","fracciones":null,"descripcion":null,"id_producto":"P0047","distancia_km":"26","fraccionable":"No","id_productor":"PROD015"},{"nombre":"PAPINES","origen":"Jujuy","precio":6000,"unidad":"kg","categoria":"Hortalizas","es_oferta":"No","productor":"Yuyupa","fracciones":"1, 1/2","descripcion":null,"id_producto":"P0049","distancia_km":"530","fraccionable":"Sí","id_productor":"PROD014"},{"nombre":"PALTA HASS","origen":"Tucumán","precio":6806,"unidad":"kg","categoria":"Hortalizas","es_oferta":"No","productor":"Yuyupa","fracciones":null,"descripcion":null,"id_producto":"P0050","distancia_km":"910","fraccionable":"No","id_productor":"PROD014"},{"nombre":"MANDARINA CRIOLLA","origen":"Cabana","precio":1500,"unidad":"kg","categoria":"Frutas","es_oferta":"No","productor":"Yuyupa","fracciones":null,"descripcion":null,"id_producto":"P0051","distancia_km":"2","fraccionable":"No","id_productor":"PROD014"},{"nombre":"MIEL DULCE ÁMBAR","origen":"Córdoba","precio":10000,"unidad":"kg","categoria":"Almacén","es_oferta":"Sí","productor":"Mieles Dulce Ambar","fracciones":null,"descripcion":null,"id_producto":"P0063","distancia_km":"26","fraccionable":"No","id_productor":"PROD040"},{"nombre":"MIEL AMBUL","origen":"Córdoba","precio":9500,"unidad":"kg","categoria":"Almacén","es_oferta":"No","productor":"7 Colores","fracciones":null,"descripcion":null,"id_producto":"P0064","distancia_km":"26","fraccionable":"No","id_productor":"PROD044"},{"nombre":"DULCE DE LECHE","origen":"Entre Ríos","precio":5200,"unidad":"kg","categoria":"Dulces","es_oferta":"No","productor":"La Higuera","fracciones":"1, 1/2","descripcion":null,"id_producto":"P0074","distancia_km":"570","fraccionable":"No","id_productor":"PROD013"},{"nombre":"DULCE DE LECHE","origen":null,"precio":8050,"unidad":"kg","categoria":"Dulces","es_oferta":"No","productor":"La Higuera","fracciones":null,"descripcion":null,"id_producto":"P0075","distancia_km":null,"fraccionable":"No","id_productor":"PROD013"},{"nombre":"POLVO DE CACAO","origen":"Perú","precio":60000,"unidad":"kg","categoria":"Elaborados","es_oferta":"No","productor":"Florece Corazón","fracciones":"1, 1/2, 1/4, 100grs","descripcion":null,"id_producto":"P0115","distancia_km":"2580","fraccionable":"Sí","id_productor":"PROD048"},{"nombre":"PASTA DE CACAO","origen":"Ecuador","precio":130000,"unidad":"kg","categoria":"Elaborados","es_oferta":"No","productor":"Florece Corazón","fracciones":"1, 1/2, 1/4, 100grs","descripcion":null,"id_producto":"P0116","distancia_km":"4000","fraccionable":"Sí","id_productor":"PROD048"},{"nombre":"EXTRACTO DE VAINILLA EL CASTILLO X 100 CC","origen":"Agua de Oro","precio":6500,"unidad":"unidad","categoria":"Elaborados","es_oferta":"No","productor":"Extractos vainilla ","fracciones":null,"descripcion":null,"id_producto":"P0117","distancia_km":"30","fraccionable":"No","id_productor":"PROD038"},{"nombre":"JACTANCIA A GRANEL","origen":"Misiones","precio":9400,"unidad":"kg","categoria":"Infusiones","es_oferta":"No","productor":"Yerbatera Jactancia","fracciones":"1, 1/2","descripcion":null,"id_producto":"P0155","distancia_km":"1070","fraccionable":"Sí","id_productor":"PROD049"},{"nombre":"CABALLO NEGRO","origen":"Misiones","precio":8625,"unidad":"kg","categoria":"Infusiones","es_oferta":"No","productor":"7 Colores","fracciones":null,"descripcion":null,"id_producto":"P0156","distancia_km":"1070","fraccionable":"No","id_productor":"PROD044"},{"nombre":"POLENTA \"DEL CAMPO\"","origen":"Buenos Aires","precio":1500,"unidad":"unidad","categoria":"Moliendas","es_oferta":"No","productor":"Yuyupa","fracciones":null,"descripcion":"Presentación x 500 gr","id_producto":"P0167","distancia_km":"710","fraccionable":"No","id_productor":"PROD014"},{"nombre":"HARINA DE ARROZ YAMANÍ","origen":null,"precio":6720,"unidad":"kg","categoria":"Moliendas","es_oferta":"No","productor":"Mache vinagres","fracciones":"1, 1/2","descripcion":null,"id_producto":"P0174","distancia_km":null,"fraccionable":"Sí","id_productor":"PROD045"},{"nombre":"HARINA DE AVENA","origen":null,"precio":8000,"unidad":"kg","categoria":"Moliendas","es_oferta":"No","productor":"Mache vinagres","fracciones":"1, 1/2","descripcion":null,"id_producto":"P0175","distancia_km":null,"fraccionable":"Sí","id_productor":"PROD045"},{"nombre":"HARINA DE ARROZ LARGO FINO","origen":null,"precio":6400,"unidad":"kg","categoria":"Moliendas","es_oferta":"No","productor":"Malevo Vinos","fracciones":"1, 1/2","descripcion":null,"id_producto":"P0176","distancia_km":null,"fraccionable":"Sí","id_productor":"PROD046"},{"nombre":"HARINA DE MIJO","origen":null,"precio":8700,"unidad":"kg","categoria":"Moliendas","es_oferta":"No","productor":"Circuito agroecológico","fracciones":"1, 1/2","descripcion":null,"id_producto":"P0178","distancia_km":null,"fraccionable":"Sí","id_productor":"PROD047"},{"nombre":"MIJO NATURALEZA VIVA","origen":null,"precio":4400,"unidad":"kg","categoria":"Moliendas","es_oferta":"No","productor":"Masabo Orgánicos","fracciones":null,"descripcion":null,"id_producto":"P0183","distancia_km":null,"fraccionable":"Sí","id_productor":"PROD010"},{"nombre":"YOGURTH NATURAL 910 CC","origen":"Los Cocos","precio":6000,"unidad":"unidad","categoria":"Lácteos","es_oferta":"No","productor":"Craft ","fracciones":null,"descripcion":null,"id_producto":"P0185","distancia_km":"40","fraccionable":"No","id_productor":"PROD011"},{"nombre":"YOGURTH VAINILLA 910 CC","origen":"Los Cocos","precio":7200,"unidad":"unidad","categoria":"Lácteos","es_oferta":"No","productor":"Craft ","fracciones":null,"descripcion":null,"id_producto":"P0186","distancia_km":"40","fraccionable":"No","id_productor":"PROD011"},{"nombre":"QUESO TYBO","origen":"Entre Ríos","precio":14600,"unidad":"kg","categoria":"Lácteos","es_oferta":"No","productor":"La Higuera","fracciones":null,"descripcion":null,"id_producto":"P0211","distancia_km":"570","fraccionable":"No","id_productor":"PROD013"},{"nombre":"QUESO CREMOSO","origen":"Entre Ríos","precio":15000,"unidad":"kg","categoria":"Lácteos","es_oferta":"No","productor":"La Higuera","fracciones":null,"descripcion":null,"id_producto":"P0212","distancia_km":"570","fraccionable":"No","id_productor":"PROD013"},{"nombre":"QUESO MOZZA","origen":"Entre Ríos","precio":11600,"unidad":"kg","categoria":"Lácteos","es_oferta":"No","productor":"La Higuera","fracciones":null,"descripcion":null,"id_producto":"P0213","distancia_km":"570","fraccionable":"No","id_productor":"PROD013"},{"nombre":"SARDO FRESCO","origen":"Entre Ríos","precio":19766,"unidad":"kg","categoria":"Lácteos","es_oferta":"No","productor":"La Higuera","fracciones":"1, 1/2","descripcion":null,"id_producto":"P0214","distancia_km":"570","fraccionable":"Sí","id_productor":"PROD013"},{"nombre":"PROVOLETA AJO X 300grs APROX","origen":"Entre Ríos","precio":3700,"unidad":"unidad","categoria":"Lácteos","es_oferta":"No","productor":"La Higuera","fracciones":null,"descripcion":null,"id_producto":"P0215","distancia_km":"570","fraccionable":"No","id_productor":"PROD013"},{"nombre":"PROVOLETA AJI","origen":"Entre Ríos","precio":3700,"unidad":"unidad","categoria":"Lácteos","es_oferta":"Sí","productor":"La Higuera","fracciones":null,"descripcion":null,"id_producto":"P0216","distancia_km":"570","fraccionable":"No","id_productor":"PROD013"},{"nombre":"PROVOLETA OREGANO","origen":"Entre Ríos","precio":3700,"unidad":"unidad","categoria":"Lácteos","es_oferta":"No","productor":"La Higuera","fracciones":null,"descripcion":null,"id_producto":"P0217","distancia_km":"570","fraccionable":"No","id_productor":"PROD013"},{"nombre":"PROVOLETA PIMIENTA","origen":"Entre Ríos","precio":3700,"unidad":"unidad","categoria":"Lácteos","es_oferta":"No","productor":"La Higuera","fracciones":null,"descripcion":null,"id_producto":"P0218","distancia_km":"570","fraccionable":"No","id_productor":"PROD013"},{"nombre":"PROVOLETA ALBAHACA","origen":"Entre Ríos","precio":3700,"unidad":"unidad","categoria":"Lácteos","es_oferta":"No","productor":"La Higuera","fracciones":null,"descripcion":null,"id_producto":"P0219","distancia_km":"570","fraccionable":"No","id_productor":"PROD013"},{"nombre":"PROVOLETA NATURAL","origen":"Entre Ríos","precio":3700,"unidad":"unidad","categoria":"Lácteos","es_oferta":"No","productor":"La Higuera","fracciones":null,"descripcion":null,"id_producto":"P0220","distancia_km":"570","fraccionable":"No","id_productor":"PROD013"},{"nombre":"GRANOLA","origen":"Río Ceballos","precio":35000,"unidad":"kg","categoria":"Frutos Secos","es_oferta":"No","productor":"Verdelandia ","fracciones":"1, 1/2, 1/4","descripcion":null,"id_producto":"P0255","distancia_km":"12","fraccionable":"Sí","id_productor":"PROD003"},{"nombre":"PASTA DE SESÁMO 225 GR","origen":null,"precio":5900,"unidad":"unidad","categoria":"Elaborados","es_oferta":"No","productor":"Manitas ","fracciones":null,"descripcion":null,"id_producto":"P0261","distancia_km":null,"fraccionable":"No","id_productor":"PROD031"},{"nombre":"PAN INTEGRAL AROMITA","origen":"Cabana","precio":3700,"unidad":"unidad","categoria":"Panificados","es_oferta":"No","productor":"Aromita","fracciones":null,"descripcion":null,"id_producto":"P0286","distancia_km":"2","fraccionable":"No","id_productor":"PROD023"},{"nombre":"GALLETAS DE CACAO CON MANÍ","origen":"Cabana","precio":2800,"unidad":"kg","categoria":"Panificados","es_oferta":"No","productor":"Aromita","fracciones":"1, 1/2, 1/4","descripcion":null,"id_producto":"P0287","distancia_km":"2","fraccionable":"Sí","id_productor":"PROD023"},{"nombre":"GALLETAS DE LIMÓN Y CHIA","origen":"Cabana","precio":2800,"unidad":"kg","categoria":"Panificados","es_oferta":"No","productor":"Aromita","fracciones":"1, 1/2, 1/4","descripcion":null,"id_producto":"P0288","distancia_km":"2","fraccionable":"Sí","id_productor":"PROD023"},{"nombre":"GALLETAS DE ALGARROBA CON MANÍ","origen":"Cabana","precio":2800,"unidad":"kg","categoria":"Panificados","es_oferta":"No","productor":"Aromita","fracciones":"1, 1/2, 1/4","descripcion":null,"id_producto":"P0289","distancia_km":"2","fraccionable":"Sí","id_productor":"PROD023"},{"nombre":"GALLETAS DE NARANJA Y GIRASOL","origen":"Cabana","precio":2800,"unidad":"kg","categoria":"Panificados","es_oferta":"No","productor":"Aromita","fracciones":"1, 1/2, 1/4","descripcion":null,"id_producto":"P0290","distancia_km":"2","fraccionable":"Sí","id_productor":"PROD023"},{"nombre":"GALLETAS DE COCO","origen":"Cabana","precio":2800,"unidad":"kg","categoria":"Panificados","es_oferta":"No","productor":"Aromita","fracciones":"1, 1/2, 1/4","descripcion":null,"id_producto":"P0291","distancia_km":"2","fraccionable":"Sí","id_productor":"PROD023"},{"nombre":"PAN INTEGRAL MULTISEMILLAS","origen":"Río Ceballos","precio":7000,"unidad":"unidad","categoria":"Panificados","es_oferta":"No","productor":"Verdelandia ","fracciones":null,"descripcion":null,"id_producto":"P0292","distancia_km":"12","fraccionable":"No","id_productor":"PROD003"},{"nombre":"PAN INTEGRAL MULTICEREAL","origen":"Río Ceballos","precio":7000,"unidad":"unidad","categoria":"Panificados","es_oferta":"No","productor":"Verdelandia ","fracciones":null,"descripcion":null,"id_producto":"P0293","distancia_km":"12","fraccionable":"No","id_productor":"PROD003"},{"nombre":"PAN DE CENTENO, ESPELTA Y MIEL.","origen":"Río Ceballos","precio":7000,"unidad":"unidad","categoria":"Panificados","es_oferta":"No","productor":"Verdelandia ","fracciones":null,"descripcion":null,"id_producto":"P0294","distancia_km":"12","fraccionable":"No","id_productor":"PROD003"},{"nombre":"HOGAZA DE NUEZ CARAMELIZADA Y MAÍZ MORADO.","origen":"Río Ceballos","precio":7000,"unidad":"unidad","categoria":"Panificados","es_oferta":"No","productor":"Verdelandia ","fracciones":null,"descripcion":null,"id_producto":"P0295","distancia_km":"12","fraccionable":"No","id_productor":"PROD003"},{"nombre":"EMPANADAS TUCUMANAS DE MATAMBRE","origen":"Unquillo","precio":25000,"unidad":"pack","categoria":"Elaborados","es_oferta":"No","productor":"Criolla cocina ancestral ","fracciones":null,"descripcion":null,"id_producto":"P0304","distancia_km":"0","fraccionable":"No","id_productor":"PROD033"},{"nombre":"TAMALES DE CARNE","origen":"Unquillo","precio":5667,"unidad":"pack","categoria":"Elaborados","es_oferta":"No","productor":"Criolla cocina ancestral ","fracciones":null,"descripcion":null,"id_producto":"P0305","distancia_km":"0","fraccionable":"No","id_productor":"PROD033"},{"nombre":"LOCRO TRADICIONAL X PORCIÓN","origen":"Unquillo","precio":13000,"unidad":"unidad","categoria":"Elaborados","es_oferta":"No","productor":"Criolla cocina ancestral ","fracciones":null,"descripcion":null,"id_producto":"P0314","distancia_km":"0","fraccionable":"No","id_productor":"PROD033"},{"nombre":"LOCRO VEGERARIANO X PORCIÓN","origen":"Unquillo","precio":12000,"unidad":"unidad","categoria":"Elaborados","es_oferta":"No","productor":"Criolla cocina ancestral ","fracciones":null,"descripcion":null,"id_producto":"P0315","distancia_km":"0","fraccionable":"No","id_productor":"PROD033"},{"nombre":"GASEOSA APACHETA - HIBISCUS","origen":"Cabana","precio":3778,"unidad":"litro","categoria":"Bebidas","es_oferta":"No","productor":"Apacheta","fracciones":null,"descripcion":null,"id_producto":"P0316","distancia_km":"2","fraccionable":"No","id_productor":"PROD018"},{"nombre":"KOMBUCHA APACHETA HIBISCUS","origen":"Cabana","precio":3778,"unidad":"litro","categoria":"Bebidas","es_oferta":"No","productor":"Apacheta","fracciones":null,"descripcion":null,"id_producto":"P0317","distancia_km":"2","fraccionable":"No","id_productor":"PROD018"},{"nombre":"KOMBUCHA APACHETA ESTEVIA","origen":"Cabana","precio":3778,"unidad":"litro","categoria":"Bebidas","es_oferta":"No","productor":"Apacheta","fracciones":null,"descripcion":null,"id_producto":"P0318","distancia_km":"2","fraccionable":"No","id_productor":"PROD018"},{"nombre":"AGUA TÓNICA APACHETA","origen":"Cabana","precio":3778,"unidad":"litro","categoria":"Bebidas","es_oferta":"No","productor":"Apacheta","fracciones":null,"descripcion":null,"id_producto":"P0319","distancia_km":"2","fraccionable":"No","id_productor":"PROD018"},{"nombre":"CERVEZA APACHETA - NEGRA","origen":"Cabana","precio":4667,"unidad":"litro","categoria":"Bebidas","es_oferta":"No","productor":"Apacheta","fracciones":null,"descripcion":"Envase retornable","id_producto":"P0320","distancia_km":"2","fraccionable":"No","id_productor":"PROD018"},{"nombre":"CERVEZA APACHETA - ROJA","origen":"Cabana","precio":4667,"unidad":"litro","categoria":"Bebidas","es_oferta":"No","productor":"Apacheta","fracciones":null,"descripcion":"Envase retornable","id_producto":"P0321","distancia_km":"2","fraccionable":"No","id_productor":"PROD018"},{"nombre":"CERVEZA APACHETA - DORADA","origen":"Cabana","precio":4667,"unidad":"litro","categoria":"Bebidas","es_oferta":"No","productor":"Apacheta","fracciones":null,"descripcion":"Envase retornable","id_producto":"P0322","distancia_km":"2","fraccionable":"No","id_productor":"PROD018"},{"nombre":"CERVEZA APACHETA - IPA","origen":"Cabana","precio":5667,"unidad":"litro","categoria":"Bebidas","es_oferta":"No","productor":"Apacheta","fracciones":null,"descripcion":"Envase retornable","id_producto":"P0323","distancia_km":"2","fraccionable":"No","id_productor":"PROD018"},{"nombre":"CERVEZA CAWANA - DORADA","origen":"Cabana","precio":4500,"unidad":"litro","categoria":"Bebidas","es_oferta":"No","productor":"Cawana","fracciones":null,"descripcion":null,"id_producto":"P0324","distancia_km":"2","fraccionable":"No","id_productor":"PROD017"},{"nombre":"CERVEZA CAWANA - IRISH","origen":"Cabana","precio":4700,"unidad":"litro","categoria":"Bebidas","es_oferta":"No","productor":"Cawana","fracciones":null,"descripcion":null,"id_producto":"P0325","distancia_km":"2","fraccionable":"No","id_productor":"PROD017"},{"nombre":"CERVEZA CAWANA - IPA","origen":"Cabana","precio":5500,"unidad":"litro","categoria":"Bebidas","es_oferta":"No","productor":"Cawana","fracciones":null,"descripcion":null,"id_producto":"P0326","distancia_km":"2","fraccionable":"No","id_productor":"PROD017"},{"nombre":"¡EN OFERTA! 4 VACAS GORDAS BLEND MALBEC-CABERNET","origen":"Mendoza","precio":4903,"unidad":"litro","categoria":"Bebidas","es_oferta":"Sí","productor":"Malevo Vinos","fracciones":null,"descripcion":null,"id_producto":"P0327","distancia_km":"630","fraccionable":"No","id_productor":"PROD046"},{"nombre":"¡EN OFERTA! RESERVA CALIGLIORE","origen":"Mendoza","precio":8389,"unidad":"litro","categoria":"Bebidas","es_oferta":"Sí","productor":"Malevo Vinos","fracciones":null,"descripcion":null,"id_producto":"P0328","distancia_km":"630","fraccionable":"No","id_productor":"PROD046"},{"nombre":"APERITIVO SERRANO X 500 CC","origen":"Cabana","precio":14000,"unidad":"litro","categoria":"Bebidas","es_oferta":"No","productor":"Apacheta","fracciones":null,"descripcion":null,"id_producto":"P0329","distancia_km":"2","fraccionable":"No","id_productor":"PROD018"},{"nombre":"APERITIVO SERRANO X 500 CC + 2 TÓNICAS","origen":"Cabana","precio":18000,"unidad":"pack","categoria":"Bebidas","es_oferta":"No","productor":"Apacheta","fracciones":null,"descripcion":null,"id_producto":"P0330","distancia_km":"2","fraccionable":"No","id_productor":"PROD018"},{"nombre":"GIN CLÁSICO 750 CC","origen":"Cabana","precio":22000,"unidad":"litro","categoria":"Bebidas","es_oferta":"No","productor":"Apacheta","fracciones":null,"descripcion":null,"id_producto":"P0331","distancia_km":"2","fraccionable":"No","id_productor":"PROD018"},{"nombre":"GIN 750 CC + 2 TÓNICAS","origen":"Cabana","precio":25000,"unidad":"pack","categoria":"Bebidas","es_oferta":"No","productor":"Apacheta","fracciones":null,"descripcion":null,"id_producto":"P0332","distancia_km":"2","fraccionable":"No","id_productor":"PROD018"}]
   </script>
   <script>
     (function () {
@@ -346,15 +346,84 @@ __CATEGORIAS_JSON__
       var catalogoRaw = document.getElementById('categorias-json').textContent.trim();
       var categorias;
       try {
-        categorias = JSON.parse(catalogoRaw);
+        var parsed = JSON.parse(catalogoRaw);
+        categorias = normalizarCatalogo(parsed);
       } catch (err) {
         // Datos de prueba para desarrollo cuando el template no fue procesado
-        if (/^__CATEGORIAS/.test(catalogoRaw) || /^\{\{/.test(catalogoRaw)) {
+        if (/^\[?\s*\{\{/.test(catalogoRaw) || /^__CATEGORIAS/.test(catalogoRaw)) {
           categorias = makeDemoData();
         } else {
           console.error('JSON inválido', err);
           categorias = [];
         }
+      }
+
+      // Acepta dos formatos:
+      //  a) Array de categorías anidadas: [{id, nombre, productos:[...]}, ...]
+      //  b) Array plano de productos con campo "categoria": [{nombre, precio, categoria}, ...]
+      //     → en este caso los agrupa por categoría acá, en el navegador.
+      function normalizarCatalogo(arr) {
+        if (!Array.isArray(arr) || arr.length === 0) return [];
+      // Convertir "Sí"/"No" (texto de la planilla) a booleanos reales
+        function esSi(v) {
+          if (v === true) return true;
+          if (v === null || v === undefined) return false;
+          var s = String(v).trim().toLowerCase();
+          return s === 'sí' || s === 'si' || s === 'true';
+        }
+        arr.forEach(function (p) {
+          p.fraccionable = esSi(p.fraccionable);
+          p.es_oferta = esSi(p.es_oferta);
+          // Fracciones propias del producto: texto "1/4,1/2,1" → lista de opciones
+          if (typeof p.fracciones === 'string') {
+            var lista = p.fracciones.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+            p.fracciones = lista.length ? lista : null;
+          }
+        });
+        // Si el primer elemento ya tiene .productos, es el formato anidado
+        if (arr[0] && Array.isArray(arr[0].productos)) return arr;
+
+        // Formato plano: agrupar por campo "categoria"
+        var grupos = {};
+        var orden = [];
+        arr.forEach(function (p) {
+          var cat = (p.categoria && String(p.categoria).trim()) || 'Otros';
+          if (!grupos[cat]) {
+            grupos[cat] = [];
+            orden.push(cat);
+          }
+          // Derivar fracciones si el producto es fraccionable y no las trae
+          if (p.fraccionable && !p.fracciones) {
+            p.fracciones = ['1/4', '1/2', '1'];
+          }
+          grupos[cat].push(p);
+        });
+
+        // Orden alfabético de categorías, con "Ofertas" primero si existiera
+        // ══════════════════════════════════════════════════════════
+        // Orden de categorías: llega desde la herramienta del equipo
+        // (generar-edicion.html). Si no llegó, orden alfabético.
+        var ORDEN_RAW = 'Almacén|Panificados|Bebidas|Lácteos|Aromáticas|Dulces|Cosmética|Elaborados|Especias|Fiambres|Frutas|Frutos Secos|Granja|Granos|Hongos|Hortalizas|Infusiones|Medicina Natural|Moliendas';
+        var ORDEN_CATEGORIAS = [];
+        if (ORDEN_RAW && ORDEN_RAW.indexOf('{{') === -1) {
+          ORDEN_CATEGORIAS = ORDEN_RAW.split('|').map(function (s) { return s.trim(); }).filter(Boolean);
+        }
+        orden.sort(function (a, b) {
+          var ia = ORDEN_CATEGORIAS.indexOf(a);
+          var ib = ORDEN_CATEGORIAS.indexOf(b);
+          if (ia === -1 && ib === -1) return a.localeCompare(b, 'es');
+          if (ia === -1) return 1;
+          if (ib === -1) return -1;
+          return ia - ib;
+        });
+
+        return orden.map(function (cat) {
+          return {
+            id: cat.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+            nombre: cat,
+            productos: grupos[cat],
+          };
+        });
       }
 
       function makeDemoData() {
@@ -421,20 +490,36 @@ __CATEGORIAS_JSON__
         }
 
         var meta = '';
-        if (p.origen) meta += escapeHtml(p.origen) + ' · ';
+        if (p.descripcion) meta += escapeHtml(p.descripcion) + ' · ';
+        if (p.origen) {
+          meta += escapeHtml(p.origen);
+          if (p.distancia_km) meta += ' (a ' + escapeHtml(p.distancia_km) + ' km)';
+          meta += ' · ';
+        }
+        if (p.productor) meta += escapeHtml(p.productor) + ' · ';
         meta += 'por ' + escapeHtml(p.unidad);
 
         var control = '';
+
+        // Cantidad: combo de 0 a 5 (0 = no pedir), sin escritura libre
+        control += '<label class="product__ctl-label">Cantidad ';
+        control += '<select class="select" data-product="' + p.id_producto + '" data-field="cantidad" style="width:auto;">';
+        for (var i = 0; i <= 5; i++) {
+          control += '<option value="' + i + '">' + i + '</option>';
+        }
+        control += '</select></label>';
+
+        // Fracción: SOLO si el producto es fraccionable.
+        // Por defecto queda seleccionada la fracción más grande (la última de la lista).
         if (p.fraccionable && p.fracciones && p.fracciones.length) {
-          control += '<select class="select" data-product="' + p.id_producto + '" data-field="fraccion" style="width: auto;">';
-          control += '<option value="0">— sin elegir —</option>';
-          p.fracciones.forEach(function (f) {
-            control += '<option value="' + f + '">' + f + ' ' + escapeHtml(p.unidad) + '</option>';
+          var ultima = p.fracciones.length - 1;
+          control += '<label class="product__ctl-label">Fracción ';
+          control += '<select class="select" data-product="' + p.id_producto + '" data-field="fraccion" style="width:auto;">';
+          p.fracciones.forEach(function (f, idx) {
+            var sel = (idx === ultima) ? ' selected' : '';
+            control += '<option value="' + f + '"' + sel + '>' + f + ' ' + escapeHtml(p.unidad) + '</option>';
           });
-          control += '</select>';
-          control += '<input class="input" type="number" min="0" step="1" value="0" data-product="' + p.id_producto + '" data-field="cantidad" placeholder="cant." style="width: 80px;">';
-        } else {
-          control += '<input class="input" type="number" min="0" step="1" value="0" data-product="' + p.id_producto + '" data-field="cantidad" placeholder="0" style="width: 100px;">';
+          control += '</select></label>';
         }
 
         return '' +
@@ -451,7 +536,6 @@ __CATEGORIAS_JSON__
           '  </div>' +
           '</div>';
       }
-
       function escapeHtml(s) {
         if (s === null || s === undefined) return '';
         return String(s)
@@ -467,13 +551,14 @@ __CATEGORIAS_JSON__
 
       var wizard = NM.initWizard(wizardEl, {
         onStepChange: function (idx, stepEl) {
-          // Marcar productos en este paso como "activos" visualmente
           stepEl.querySelectorAll('.product').forEach(function (p) {
             p.classList.add('is-active');
           });
+          var y = stepEl.getBoundingClientRect().top + window.pageYOffset - 90;
+          window.scrollTo({ top: y, behavior: 'smooth' });
         }
       });
-
+      window.scrollTo(0, 0);
       // El botón "Revisar pedido" muestra la sección final
       var btnFinish = wizardEl.querySelector('[data-action="wizard-finish"]');
       btnFinish.addEventListener('click', function () {
@@ -493,7 +578,7 @@ __CATEGORIAS_JSON__
       // ----------------------------------------------------------------
       // 4. Captura de cantidades y fracciones
       // ----------------------------------------------------------------
-      stepsContainer.addEventListener('input', function (e) {
+      function onControlChange(e) {
         var t = e.target;
         if (!t.dataset || !t.dataset.product) return;
         var id = t.dataset.product;
@@ -507,7 +592,9 @@ __CATEGORIAS_JSON__
         } else if (field === 'fraccion') {
           stateProductos[id].fraccion = t.value === '0' ? null : t.value;
         }
-      });
+      }
+      stepsContainer.addEventListener('input', onControlChange);
+      stepsContainer.addEventListener('change', onControlChange);
 
       // ----------------------------------------------------------------
       // 5. Cálculo del resumen
@@ -520,7 +607,11 @@ __CATEGORIAS_JSON__
           cat.productos.forEach(function (p) {
             var s = stateProductos[p.id_producto];
             if (!s || s.cantidad <= 0) return;
-
+            // Leer la fracción directamente del combo (el default no dispara "change")
+            if (p.fraccionable && !s.fraccion) {
+              var sel = document.querySelector('select[data-product="' + p.id_producto + '"][data-field="fraccion"]');
+              if (sel && sel.value && sel.value !== '0') s.fraccion = sel.value;
+            }
             // Si es fraccionable y eligió fracción, multiplicar por la fracción
             var multiplicador = 1;
             if (p.fraccionable && s.fraccion) {
@@ -592,7 +683,7 @@ __CATEGORIAS_JSON__
 
       function actualizarTotales(subtotal) {
         var aportePorc = getAportePorc();
-        var aporte = subtotal * (aportePorc / 100);
+        var aporte = Math.round(subtotal * (aportePorc / 100));
         var total = subtotal + aporte;
 
         document.getElementById('subtotal').textContent = formatMoney(subtotal);
@@ -608,6 +699,43 @@ __CATEGORIAS_JSON__
       if (emailParam) {
         var emailField = document.getElementById('email');
         if (emailField) emailField.value = decodeURIComponent(emailParam);
+        cargarDatosConsumidor(decodeURIComponent(emailParam));
+      }
+
+      // Si el email viene en el link y el consumidor ya existe en el padrón,
+      // pre-llenamos nombre y teléfono, y marcamos "ya pedí antes".
+      function cargarDatosConsumidor(email) {
+        var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
+        var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
+          '/gviz/tq?tqx=out:json&sheet=Consumidores_API&headers=1';
+
+        fetch(url)
+          .then(function (r) { return r.text(); })
+          .then(function (text) {
+            var m = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+            if (!m) return;
+            var data = JSON.parse(m[1]);
+            var fila = data.table.rows.find(function (row) {
+              var mail = row.c[3] ? String(row.c[3].v).trim().toLowerCase() : '';
+              return mail === email.trim().toLowerCase();
+            });
+            if (!fila) return; // consumidor nuevo, no pasa nada
+
+            var nombre = fila.c[1] ? fila.c[1].v : '';
+            var tel    = fila.c[2] ? fila.c[2].v : '';
+
+            var nombreField = document.getElementById('nombre');
+            var telField    = document.getElementById('telefono');
+            if (nombreField && nombre && !nombreField.value) nombreField.value = nombre;
+            if (telField && tel && !telField.value) telField.value = tel;
+
+            // Marcar "No, ya pedí antes"
+            var radioNo = document.querySelector('input[name="primera_vez"][value="no"]');
+            if (radioNo) radioNo.checked = true;
+          })
+          .catch(function (err) {
+            console.warn('No se pudieron precargar los datos del consumidor:', err);
+          });
       }
 
       // Mostrar/ocultar campo de dirección según la entrega
@@ -626,7 +754,7 @@ __CATEGORIAS_JSON__
 
       function getAportePorc() {
         var checked = document.querySelector('input[name="aporte_porcent"]:checked');
-        if (!checked) return 20;
+        if (!checked) return 15;
         if (checked.value === 'otro') {
           return parseFloat(aporteInputCustom.value) || 0;
         }
