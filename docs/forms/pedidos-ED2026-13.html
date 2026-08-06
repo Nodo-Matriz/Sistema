@@ -403,7 +403,7 @@
         // ══════════════════════════════════════════════════════════
         // Orden de categorías: llega desde la herramienta del equipo
         // (generar-edicion.html). Si no llegó, orden alfabético.
-        var ORDEN_RAW = 'Almacén|Aromáticas|Bebidas|Cosmética|Dulces|Elaborados|Especias|Fiambres|Frutas|Frutos Secos|Granja|Granos|Hongos|Hortalizas|Infusiones|Lácteos|Medicina Natural|Moliendas|Panificados';
+        var ORDEN_RAW = 'Almacén|Aromáticas|Bebidas|Dulces|Elaborados|Especias|Fiambres|Frutas|Frutos Secos|Cosmética|Granja|Granos|Hongos|Hortalizas|Infusiones|Lácteos|Medicina Natural|Moliendas|Panificados';
         var ORDEN_CATEGORIAS = [];
         if (ORDEN_RAW && ORDEN_RAW.indexOf('{{') === -1) {
           ORDEN_CATEGORIAS = ORDEN_RAW.split('|').map(function (s) { return s.trim(); }).filter(Boolean);
