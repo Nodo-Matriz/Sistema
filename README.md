@@ -178,6 +178,6 @@ El form de demo (`pedidos-DEMO.html`) está pre-cargado con productos de ejemplo
 
 Este sistema se libera con licencia [MIT](LICENSE) para que otros nodos lo puedan adoptar, modificar y mejorar.
 
-## Contacto
+## Contacto 
 
 Nodo Matriz Agroecológico · Unquillo, Sierras Chicas · Córdoba, Argentina
