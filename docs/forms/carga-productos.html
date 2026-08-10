@@ -250,6 +250,8 @@
 
       var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
       // Una carga se considera "al día" si tiene menos de esta cantidad de días
+      // Si la edición vigente no tiene fecha_apertura_stocks, se usa esta
+      // ventana móvil como respaldo.
       var DIAS_AL_DIA = 7;
 
       var $ = function (id) { return document.getElementById(id); };
@@ -257,7 +259,9 @@
       var productores = [];    // {id, nombre, telefono}
       var ultimaCarga = {};    // id_productor -> Date de la última carga
       var totProductos = 0;    // productos en el catálogo
-      var actProductos = 0;    // productos con actualización reciente
+      var actProductos = 0;    // productos actualizados para esta edición
+      var corteCarga = null;   // fecha_apertura_stocks de la edición vigente
+      var idEdicion = '';      // ej: ED2026-13
 
       function gviz(params) {
         var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
@@ -308,8 +312,10 @@
         Promise.all([
           gviz('sheet=Productores&range=A1:N300&headers=1&_=' + Date.now()),
           gviz('sheet=Log_Cambios_Stock&range=A1:N10000&headers=1&_=' + Date.now()),
-          gviz('sheet=Productos&range=A1:N1000&headers=1&_=' + Date.now())
+          gviz('sheet=Productos&range=A1:N1000&headers=1&_=' + Date.now()),
+          gviz('sheet=Ediciones&range=A1:L100&headers=1&_=' + Date.now())
         ]).then(function (res) {
+          parseEdicion(res[3]);
           productores = [];
           res[0].table.rows.forEach(function (r) {
             var id = String(celda(r, 0)).trim();
@@ -324,9 +330,18 @@
           procesarLog(res[1]);
           procesarProductos(res[2]);
           render();
-          $('estado').className = 'aviso';
-          $('estado').textContent = 'Datos leídos de la planilla. ' +
-            'Se considera al día una carga de los últimos ' + DIAS_AL_DIA + ' días.';
+          if (corteCarga) {
+            $('estado').className = 'aviso';
+            $('estado').innerHTML = 'Cargas para la edición <strong>' + idEdicion +
+              '</strong>, abierta el ' + fechaHuman(corteCarga) + '. ' +
+              'Lo cargado antes de esa fecha cuenta como pendiente.';
+          } else {
+            $('estado').className = 'aviso rojo';
+            $('estado').innerHTML = '⚠️ La edición <strong>' + (idEdicion || '—') +
+              '</strong> no tiene <strong>fecha_apertura_stocks</strong> cargada en la hoja ' +
+              'Ediciones, así que no se puede saber qué cargas son de esta edición. ' +
+              'Mientras tanto se muestran las de los últimos ' + DIAS_AL_DIA + ' días.';
+          }
         }).catch(function () {
           $('estado').className = 'aviso rojo';
           $('estado').textContent = 'No pudimos leer la planilla. Revisá la conexión y recargá.';
@@ -347,17 +362,35 @@
 
       // Productos del catálogo: total y cuántos tienen actualización reciente
       // (columna N ultima_actualizacion, índice 13)
+      // Edición vigente: última fila con formato ED####-##
+      function parseEdicion(res) {
+        corteCarga = null;
+        idEdicion = '';
+        if (!res) return;
+        var fila = null;
+        res.table.rows.forEach(function (r) {
+          if (/^ED\d{4}-\d{2}$/.test(String(celda(r, 0)).trim())) fila = r;
+        });
+        if (!fila) return;
+        idEdicion = String(celda(fila, 0)).trim();
+        corteCarga = parseFecha(celda(fila, 4));   // E: fecha_apertura_stocks
+      }
+
+      // ¿Esta carga corresponde a la edición vigente?
+      function esDeEstaEdicion(f) {
+        if (!f) return false;
+        if (corteCarga) return f >= corteCarga;
+        return (new Date() - f) < DIAS_AL_DIA * 24 * 60 * 60 * 1000;
+      }
+
       function procesarProductos(res) {
         totProductos = 0;
         actProductos = 0;
         if (!res) return;
-        var ahora = new Date();
-        var corte = DIAS_AL_DIA * 24 * 60 * 60 * 1000;
         res.table.rows.forEach(function (r) {
           if (!String(celda(r, 0)).trim()) return;
           totProductos++;
-          var f = parseFecha(celda(r, 13));
-          if (f && (ahora - f) < corte) actProductos++;
+          if (esDeEstaEdicion(parseFecha(celda(r, 13)))) actProductos++;
         });
       }
 
@@ -365,14 +398,10 @@
         var cont = $('lista');
         cont.innerHTML = '';
 
-        var ahora = new Date();
-        var corte = DIAS_AL_DIA * 24 * 60 * 60 * 1000;
-
         // pendientes primero, después al día; cada grupo por nombre
         var orden = productores.slice().sort(function (a, b) {
-          var fa = ultimaCarga[a.id], fb = ultimaCarga[b.id];
-          var alDiaA = fa && (ahora - fa) < corte;
-          var alDiaB = fb && (ahora - fb) < corte;
+          var alDiaA = esDeEstaEdicion(ultimaCarga[a.id]);
+          var alDiaB = esDeEstaEdicion(ultimaCarga[b.id]);
           if (alDiaA !== alDiaB) return alDiaA ? 1 : -1;
           return a.nombre.localeCompare(b.nombre, 'es');
         });
@@ -380,7 +409,7 @@
         var alDia = 0;
         orden.forEach(function (p) {
           var f = ultimaCarga[p.id];
-          var esAlDia = f && (ahora - f) < corte;
+          var esAlDia = esDeEstaEdicion(f);
           if (esAlDia) alDia++;
 
           var div = document.createElement('div');
@@ -389,10 +418,10 @@
           var estadoClase, estadoTxt;
           if (esAlDia) {
             estadoClase = 'ok';
-            estadoTxt = '✓ Actualizó el ' + fechaHuman(f);
+            estadoTxt = '✓ Cargó para esta edición · ' + fechaHuman(f);
           } else if (f) {
             estadoClase = 'viejo';
-            estadoTxt = 'Última carga: ' + fechaHuman(f);
+            estadoTxt = 'Pendiente · última carga: ' + fechaHuman(f);
           } else {
             estadoClase = 'nunca';
             estadoTxt = 'Sin cargas registradas';
