@@ -501,24 +501,24 @@
 
         var control = '';
 
-        // Cantidad: combo de 0 a 5 (0 = no pedir), sin escritura libre
-        control += '<label class="product__ctl-label">Cantidad ';
-        control += '<select class="select" data-product="' + p.id_producto + '" data-field="cantidad" style="width:auto;">';
-        for (var i = 0; i <= 5; i++) {
-          control += '<option value="' + i + '">' + i + '</option>';
-        }
-        control += '</select></label>';
-
-        // Fracción: SOLO si el producto es fraccionable.
-        // Por defecto queda seleccionada la fracción más grande (la última de la lista).
+        // UNA sola selección por producto, con el precio final en cada opción.
         if (p.fraccionable && p.fracciones && p.fracciones.length) {
-          var ultima = p.fracciones.length - 1;
-          control += '<label class="product__ctl-label">Fracción ';
-          control += '<select class="select" data-product="' + p.id_producto + '" data-field="fraccion" style="width:auto;">';
-          p.fracciones.forEach(function (f, idx) {
-            var sel = (idx === ultima) ? ' selected' : '';
-            control += '<option value="' + f + '"' + sel + '>' + f + ' ' + escapeHtml(p.unidad) + '</option>';
+          control += '<label class="product__ctl-label">¿Cuánto? ';
+          control += '<select class="select" data-product="' + p.id_producto + '" data-field="total" style="width:auto;">';
+          control += '<option value="">— no pedir —</option>';
+          opcionesTotales(p).forEach(function (o) {
+            control += '<option value="' + o.cantidad + '@' + o.fraccion + '">' +
+              o.etiqueta + ' ' + escapeHtml(p.unidad) + ' · ' +
+              formatMoney(o.total * (p.precio || 0)) + '</option>';
           });
+          control += '</select></label>';
+        } else {
+          control += '<label class="product__ctl-label">Cantidad ';
+          control += '<select class="select" data-product="' + p.id_producto + '" data-field="cantidad" style="width:auto;">';
+          control += '<option value="0">— no pedir —</option>';
+          for (var i = 1; i <= 5; i++) {
+            control += '<option value="' + i + '">' + i + ' · ' + formatMoney(i * (p.precio || 0)) + '</option>';
+          }
           control += '</select></label>';
         }
 
@@ -543,17 +543,67 @@
           .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
       }
 
+      // ── Totales ofrecidos para un producto fraccionable ──────────
+      // Escalera desde la fracción más chica hasta 2× la más grande,
+      // y después múltiplos enteros de la más grande.
+      function opcionesTotales(p) {
+        var fs = p.fracciones.map(function (f) {
+          return { txt: f, val: parseFraction(f) };
+        }).filter(function (f) { return f.val > 0; })
+          .sort(function (a, b) { return a.val - b.val; });
+        if (!fs.length) return [];
+
+        var fmin = fs[0].val;
+        var fmax = fs[fs.length - 1].val;
+        var totales = [];
+        var kMax = Math.round((fmax * 2) / fmin);
+        for (var k = 1; k <= kMax; k++) {
+          totales.push(Math.round(k * fmin * 1000) / 1000);
+        }
+        [3, 4, 5].forEach(function (j) {
+          var t = Math.round(j * fmax * 1000) / 1000;
+          if (totales.indexOf(t) === -1) totales.push(t);
+        });
+        totales.sort(function (a, b) { return a - b; });
+
+        // Representación interna: la fracción más GRANDE que divida exacto
+        // (menos paquetes para el galpón).
+        return totales.map(function (T) {
+          for (var i = fs.length - 1; i >= 0; i--) {
+            var c = T / fs[i].val;
+            if (Math.abs(c - Math.round(c)) < 0.000001) {
+              return { total: T, cantidad: Math.round(c), fraccion: fs[i].txt, etiqueta: etiquetaTotal(T) };
+            }
+          }
+          return null;
+        }).filter(Boolean);
+      }
+
+      function etiquetaTotal(T) {
+        var entero = Math.floor(T + 0.000001);
+        var resto = Math.round((T - entero) * 1000) / 1000;
+        var mapa = { 0.125: '⅛', 0.25: '¼', 0.333: '⅓', 0.5: '½', 0.667: '⅔', 0.75: '¾' };
+        var fr = resto > 0 ? (mapa[resto] || String(resto).replace('.', ',')) : '';
+        if (entero && fr) return entero + ' ' + fr;
+        if (entero) return String(entero);
+        return fr || String(T);
+      }
+
       // ----------------------------------------------------------------
       // 3. Inicialización del wizard
       // ----------------------------------------------------------------
       var wizardEl = document.getElementById('wizard');
       var finalSection = document.getElementById('final-section');
 
+      // Al abrir, la página queda arriba (se ve el encabezado). El scroll
+      // automático a la categoría recién actúa al navegar entre categorías.
+      var primerPaso = true;
       var wizard = NM.initWizard(wizardEl, {
         onStepChange: function (idx, stepEl) {
           stepEl.querySelectorAll('.product').forEach(function (p) {
             p.classList.add('is-active');
           });
+          if (primerPaso) { primerPaso = false; return; }
           var y = stepEl.getBoundingClientRect().top + window.pageYOffset - 90;
           window.scrollTo({ top: y, behavior: 'smooth' });
         }
@@ -582,15 +632,37 @@
         var t = e.target;
         if (!t.dataset || !t.dataset.product) return;
         var id = t.dataset.product;
-        var field = t.dataset.field;
+        var card = t.closest('.product');
 
         if (!stateProductos[id]) {
           stateProductos[id] = { cantidad: 0, fraccion: null };
         }
-        if (field === 'cantidad') {
+        if (t.dataset.field === 'total') {
+          if (!t.value) {
+            stateProductos[id] = { cantidad: 0, fraccion: null };
+          } else {
+            var partes = t.value.split('@');
+            stateProductos[id] = {
+              cantidad: parseInt(partes[0], 10) || 0,
+              fraccion: partes[1] || null
+            };
+          }
+        } else if (t.dataset.field === 'cantidad') {
           stateProductos[id].cantidad = parseInt(t.value, 10) || 0;
-        } else if (field === 'fraccion') {
-          stateProductos[id].fraccion = t.value === '0' ? null : t.value;
+          stateProductos[id].fraccion = null;
+        }
+
+        // El precio de la tarjeta pasa a ser el TOTAL del producto elegido
+        if (card) {
+          var s = stateProductos[id];
+          var precio = parseFloat(card.dataset.precio) || 0;
+          var mult = s.fraccion ? parseFraction(s.fraccion) : 1;
+          var precioEl = card.querySelector('.product__price');
+          if (precioEl) {
+            precioEl.textContent = s.cantidad > 0
+              ? formatMoney(precio * s.cantidad * mult)
+              : formatMoney(precio);
+          }
         }
       }
       stepsContainer.addEventListener('input', onControlChange);
@@ -607,11 +679,6 @@
           cat.productos.forEach(function (p) {
             var s = stateProductos[p.id_producto];
             if (!s || s.cantidad <= 0) return;
-            // Leer la fracción directamente del combo (el default no dispara "change")
-            if (p.fraccionable && !s.fraccion) {
-              var sel = document.querySelector('select[data-product="' + p.id_producto + '"][data-field="fraccion"]');
-              if (sel && sel.value && sel.value !== '0') s.fraccion = sel.value;
-            }
             // Si es fraccionable y eligió fracción, multiplicar por la fracción
             var multiplicador = 1;
             if (p.fraccionable && s.fraccion) {
