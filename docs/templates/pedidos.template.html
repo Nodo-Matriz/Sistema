@@ -497,27 +497,29 @@
           meta += ' · ';
         }
         if (p.productor) meta += escapeHtml(p.productor) + ' · ';
-        meta += 'por ' + escapeHtml(p.unidad);
+        meta += formatMoney(p.precio) + ' por ' + escapeHtml(p.unidad);
 
         var control = '';
 
-        // UNA sola selección por producto, con el precio final en cada opción.
+        // UNA sola selección por producto.
         if (p.fraccionable && p.fracciones && p.fracciones.length) {
+          // Fraccionable: exactamente las fracciones cargadas en la planilla,
+          // cada una con lo que se paga por ella.
           control += '<label class="product__ctl-label">¿Cuánto? ';
           control += '<select class="select" data-product="' + p.id_producto + '" data-field="total" style="width:auto;">';
-          control += '<option value="">— no pedir —</option>';
-          opcionesTotales(p).forEach(function (o) {
-            control += '<option value="' + o.cantidad + '@' + o.fraccion + '">' +
+          control += '<option value="">0</option>';
+          opcionesFraccion(p).forEach(function (o) {
+            control += '<option value="1@' + o.fraccion + '">' +
               o.etiqueta + ' ' + escapeHtml(p.unidad) + ' · ' +
-              formatMoney(o.total * (p.precio || 0)) + '</option>';
+              formatMoney(o.valor * (p.precio || 0)) + '</option>';
           });
           control += '</select></label>';
         } else {
+          // No fraccionable: cantidad de unidades, de 0 a 5.
           control += '<label class="product__ctl-label">Cantidad ';
           control += '<select class="select" data-product="' + p.id_producto + '" data-field="cantidad" style="width:auto;">';
-          control += '<option value="0">— no pedir —</option>';
-          for (var i = 1; i <= 5; i++) {
-            control += '<option value="' + i + '">' + i + ' · ' + formatMoney(i * (p.precio || 0)) + '</option>';
+          for (var i = 0; i <= 5; i++) {
+            control += '<option value="' + i + '">' + i + '</option>';
           }
           control += '</select></label>';
         }
@@ -528,7 +530,6 @@
           '    <span class="product__name">' + escapeHtml(p.nombre) + ' ' + tags + '</span>' +
           '    <span class="product__meta">' +
           '      <span>' + meta + '</span>' +
-          '      <span class="product__price">' + formatMoney(p.precio) + '</span>' +
           '    </span>' +
           '  </div>' +
           '  <div class="product__control">' +
@@ -543,40 +544,22 @@
           .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
       }
 
-      // ── Totales ofrecidos para un producto fraccionable ──────────
-      // Escalera desde la fracción más chica hasta 2× la más grande,
-      // y después múltiplos enteros de la más grande.
-      function opcionesTotales(p) {
-        var fs = p.fracciones.map(function (f) {
-          return { txt: f, val: parseFraction(f) };
-        }).filter(function (f) { return f.val > 0; })
-          .sort(function (a, b) { return a.val - b.val; });
-        if (!fs.length) return [];
-
-        var fmin = fs[0].val;
-        var fmax = fs[fs.length - 1].val;
-        var totales = [];
-        var kMax = Math.round((fmax * 2) / fmin);
-        for (var k = 1; k <= kMax; k++) {
-          totales.push(Math.round(k * fmin * 1000) / 1000);
-        }
-        [3, 4, 5].forEach(function (j) {
-          var t = Math.round(j * fmax * 1000) / 1000;
-          if (totales.indexOf(t) === -1) totales.push(t);
-        });
-        totales.sort(function (a, b) { return a - b; });
-
-        // Representación interna: la fracción más GRANDE que divida exacto
-        // (menos paquetes para el galpón).
-        return totales.map(function (T) {
-          for (var i = fs.length - 1; i >= 0; i--) {
-            var c = T / fs[i].val;
-            if (Math.abs(c - Math.round(c)) < 0.000001) {
-              return { total: T, cantidad: Math.round(c), fraccion: fs[i].txt, etiqueta: etiquetaTotal(T) };
-            }
-          }
-          return null;
-        }).filter(Boolean);
+      // ── Opciones de un producto fraccionable ─────────────────────
+      // Son exactamente las fracciones declaradas en la planilla
+      // (Productos!F), ordenadas de menor a mayor. Una opción = un paquete.
+      function opcionesFraccion(p) {
+        return p.fracciones.map(function (f) {
+          return { fraccion: f, valor: parseFraction(f) };
+        }).filter(function (o) { return o.valor > 0; })
+          .sort(function (a, b) { return a.valor - b.valor; })
+          .map(function (o) {
+            return {
+              // una fracción de valor 1 es la unidad entera: no se fracciona
+              fraccion: (o.valor === 1) ? '' : o.fraccion,
+              valor: o.valor,
+              etiqueta: etiquetaTotal(o.valor)
+            };
+          });
       }
 
       function etiquetaTotal(T) {
@@ -632,7 +615,6 @@
         var t = e.target;
         if (!t.dataset || !t.dataset.product) return;
         var id = t.dataset.product;
-        var card = t.closest('.product');
 
         if (!stateProductos[id]) {
           stateProductos[id] = { cantidad: 0, fraccion: null };
@@ -650,19 +632,6 @@
         } else if (t.dataset.field === 'cantidad') {
           stateProductos[id].cantidad = parseInt(t.value, 10) || 0;
           stateProductos[id].fraccion = null;
-        }
-
-        // El precio de la tarjeta pasa a ser el TOTAL del producto elegido
-        if (card) {
-          var s = stateProductos[id];
-          var precio = parseFloat(card.dataset.precio) || 0;
-          var mult = s.fraccion ? parseFraction(s.fraccion) : 1;
-          var precioEl = card.querySelector('.product__price');
-          if (precioEl) {
-            precioEl.textContent = s.cantidad > 0
-              ? formatMoney(precio * s.cantidad * mult)
-              : formatMoney(precio);
-          }
         }
       }
       stepsContainer.addEventListener('input', onControlChange);
