@@ -509,17 +509,18 @@
           control += '<select class="select" data-product="' + p.id_producto + '" data-field="total" style="width:auto;">';
           control += '<option value="">0</option>';
           opcionesFraccion(p).forEach(function (o) {
-            control += '<option value="1@' + o.fraccion + '">' +
-              o.etiqueta + ' ' + escapeHtml(p.unidad) + ' · ' +
+            control += '<option value="' + o.cantidad + '@' + o.fraccion + '">' +
+              conUnidad(o.etiqueta, o.valor, p.unidad) + ' · ' +
               formatMoney(o.valor * (p.precio || 0)) + '</option>';
           });
           control += '</select></label>';
         } else {
-          // No fraccionable: cantidad de unidades, de 0 a 5.
+          // No fraccionable: cantidad de unidades, de 0 a 5, con su unidad.
           control += '<label class="product__ctl-label">Cantidad ';
           control += '<select class="select" data-product="' + p.id_producto + '" data-field="cantidad" style="width:auto;">';
-          for (var i = 0; i <= 5; i++) {
-            control += '<option value="' + i + '">' + i + '</option>';
+          control += '<option value="0">0</option>';
+          for (var i = 1; i <= 5; i++) {
+            control += '<option value="' + i + '">' + conUnidad(String(i), i, p.unidad) + '</option>';
           }
           control += '</select></label>';
         }
@@ -546,20 +547,33 @@
 
       // ── Opciones de un producto fraccionable ─────────────────────
       // Son exactamente las fracciones declaradas en la planilla
-      // (Productos!F), ordenadas de menor a mayor. Una opción = un paquete.
+      // (Productos!F), ordenadas de menor a mayor. Los valores enteros
+      // (1, 2, 3…) se piden como unidades enteras: no generan trabajo de
+      // fraccionamiento. Los valores menores a 1, como un paquete de esa
+      // fracción.
       function opcionesFraccion(p) {
         return p.fracciones.map(function (f) {
           return { fraccion: f, valor: parseFraction(f) };
         }).filter(function (o) { return o.valor > 0; })
           .sort(function (a, b) { return a.valor - b.valor; })
           .map(function (o) {
+            var entero = Math.abs(o.valor - Math.round(o.valor)) < 0.000001;
             return {
-              // una fracción de valor 1 es la unidad entera: no se fracciona
-              fraccion: (o.valor === 1) ? '' : o.fraccion,
+              cantidad: entero ? Math.round(o.valor) : 1,
+              fraccion: entero ? '' : o.fraccion,
               valor: o.valor,
               etiqueta: etiquetaTotal(o.valor)
             };
           });
+      }
+
+      // "2" + kg -> "2 kg" · "3" + unidad -> "3 unidades" · "½" + kg -> "½ kg"
+      function conUnidad(etq, valor, unidad) {
+        var u = String(unidad || '').trim();
+        if (!u) return etq;
+        var abreviaturas = ['kg', 'g', 'gr', 'grs', 'lt', 'l', 'ml', 'cc', 'mt', 'm', 'cm'];
+        var plural = (valor > 1 && abreviaturas.indexOf(u.toLowerCase()) === -1) ? 's' : '';
+        return etq + ' ' + escapeHtml(u) + plural;
       }
 
       function etiquetaTotal(T) {
