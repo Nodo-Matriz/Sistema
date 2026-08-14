@@ -317,6 +317,33 @@
       var formatMoney = NM.formatMoney;
 
       // ----------------------------------------------------------------
+      // 0. Cierre por fecha
+      // ----------------------------------------------------------------
+      // Make (A3) inyecta la fecha de cierre en formato ISO. Si ya pasó,
+      // el form se bloquea solo: oculta el wizard y muestra el aviso.
+      // (B1 valida además del lado del servidor: esta es la cortesía
+      // al usuario; aquella, la barrera real.)
+      var CIERRE_ISO = '{{fecha_cierre_iso}}';
+      if (CIERRE_ISO && CIERRE_ISO.indexOf('{{') === -1) {
+        var fechaCierre = new Date(CIERRE_ISO);
+        if (!isNaN(fechaCierre.getTime()) && new Date() >= fechaCierre) {
+          var wizardEl = document.getElementById('wizard');
+          var finalEl = document.getElementById('final-section');
+          if (wizardEl) wizardEl.classList.add('hidden');
+          if (finalEl) finalEl.classList.add('hidden');
+          var aviso = document.createElement('div');
+          aviso.className = 'note note--info';
+          aviso.innerHTML = '<strong>Esta edición ya cerró.</strong> ' +
+            'El período de pedidos terminó el {{fecha_cierre_human}}. ' +
+            '¡Gracias por sostener esta red! Nos vemos en la próxima edición.';
+          var mainEl = document.querySelector('main.wrap') || document.body;
+          var headerEl = mainEl.querySelector('header');
+          mainEl.insertBefore(aviso, headerEl ? headerEl.nextSibling : mainEl.firstChild);
+          return; // no inicializar el resto del form
+        }
+      }
+
+      // ----------------------------------------------------------------
       // 1. Leer el catálogo de productos (inyectado por Make en categorias_json)
       // ----------------------------------------------------------------
       //
