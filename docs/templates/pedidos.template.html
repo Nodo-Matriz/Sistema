@@ -536,8 +536,9 @@
           control += '<select class="select" data-product="' + p.id_producto + '" data-field="total" style="width:auto;">';
           control += '<option value="">' + conUnidad('0', 0, p.unidad) + '</option>';
           opcionesFraccion(p).forEach(function (o) {
+            var texto = o.etiquetaFija ? o.etiqueta : conUnidad(o.etiqueta, o.valor, p.unidad);
             control += '<option value="' + o.cantidad + '@' + o.fraccion + '">' +
-              conUnidad(o.etiqueta, o.valor, p.unidad) + ' · ' +
+              texto + ' · ' +
               formatMoney(o.valor * (p.precio || 0)) + '</option>';
           });
           control += '</select></label>';
@@ -580,18 +581,39 @@
       // fracción.
       function opcionesFraccion(p) {
         return p.fracciones.map(function (f) {
-          return { fraccion: f, valor: parseFraction(f) };
+          var esp = parseFraccionEspecial(f, p.unidad);
+          return {
+            fraccion: f,
+            valor: esp ? esp.valor : parseFraction(f),
+            etiquetaFija: esp ? esp.etiqueta : null
+          };
         }).filter(function (o) { return o.valor > 0; })
           .sort(function (a, b) { return a.valor - b.valor; })
           .map(function (o) {
-            var entero = Math.abs(o.valor - Math.round(o.valor)) < 0.000001;
+            var entero = !o.etiquetaFija && Math.abs(o.valor - Math.round(o.valor)) < 0.000001;
             return {
               cantidad: entero ? Math.round(o.valor) : 1,
               fraccion: entero ? '' : o.fraccion,
               valor: o.valor,
-              etiqueta: etiquetaTotal(o.valor)
+              etiqueta: o.etiquetaFija || etiquetaTotal(o.valor),
+              etiquetaFija: !!o.etiquetaFija
             };
           });
+      }
+
+      // Reconoce fracciones expresadas en gramos o mililitros respecto de
+      // la unidad del producto: "100grs" con unidad kg -> 0,1 · "250 g" -> 0,25
+      // "500cc" con unidad litro -> 0,5. Devuelve null si no aplica.
+      function parseFraccionEspecial(f, unidad) {
+        var m = String(f || '').trim().match(/^(\d+(?:[.,]\d+)?)\s*(g|gr|grs|gramos?|ml|cc)\.?$/i);
+        if (!m) return null;
+        var n = parseFloat(m[1].replace(',', '.'));
+        if (!n) return null;
+        var esMasa = m[2].toLowerCase().charAt(0) === 'g';
+        var u = String(unidad || '').trim().toLowerCase();
+        if (esMasa && !/^(kg|kilo|kilos|kilogramos?)$/.test(u)) return null;
+        if (!esMasa && !/^(l|lt|litros?)$/.test(u)) return null;
+        return { valor: n / 1000, etiqueta: n + ' ' + (esMasa ? 'g' : 'ml') };
       }
 
       // "2" + kg -> "2 kg" · "3" + unidad -> "3 unidades" · "½" + kg -> "½ kg"
@@ -699,7 +721,8 @@
             // Si es fraccionable y eligió fracción, multiplicar por la fracción
             var multiplicador = 1;
             if (p.fraccionable && s.fraccion) {
-              multiplicador = parseFraction(s.fraccion);
+              var esp = parseFraccionEspecial(s.fraccion, p.unidad);
+              multiplicador = esp ? esp.valor : parseFraction(s.fraccion);
             }
             var subtotalItem = (p.precio || 0) * s.cantidad * multiplicador;
             subtotal += subtotalItem;
@@ -733,7 +756,8 @@
       function detalleItem(p, s) {
         var partes = [];
         if (p.fraccionable && s.fraccion) {
-          partes.push(s.cantidad + ' × ' + s.fraccion + ' ' + p.unidad);
+          var esp = parseFraccionEspecial(s.fraccion, p.unidad);
+          partes.push(s.cantidad + ' × ' + (esp ? esp.etiqueta : s.fraccion + ' ' + p.unidad));
         } else {
           partes.push(s.cantidad + ' ' + p.unidad + (s.cantidad > 1 ? 's' : ''));
         }
