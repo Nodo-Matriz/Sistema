@@ -532,9 +532,9 @@
         if (p.fraccionable && p.fracciones && p.fracciones.length) {
           // Fraccionable: exactamente las fracciones cargadas en la planilla,
           // cada una con lo que se paga por ella.
-          control += '<label class="product__ctl-label">¿Cuánto? ';
+          control += '<label class="product__ctl-label">Cantidad ';
           control += '<select class="select" data-product="' + p.id_producto + '" data-field="total" style="width:auto;">';
-          control += '<option value="">0</option>';
+          control += '<option value="">' + conUnidad('0', 0, p.unidad) + '</option>';
           opcionesFraccion(p).forEach(function (o) {
             control += '<option value="' + o.cantidad + '@' + o.fraccion + '">' +
               conUnidad(o.etiqueta, o.valor, p.unidad) + ' · ' +
@@ -545,7 +545,7 @@
           // No fraccionable: cantidad de unidades, de 0 a 5, con su unidad.
           control += '<label class="product__ctl-label">Cantidad ';
           control += '<select class="select" data-product="' + p.id_producto + '" data-field="cantidad" style="width:auto;">';
-          control += '<option value="0">0</option>';
+          control += '<option value="0">' + conUnidad('0', 0, p.unidad) + '</option>';
           for (var i = 1; i <= 5; i++) {
             control += '<option value="' + i + '">' + conUnidad(String(i), i, p.unidad) + '</option>';
           }
@@ -599,8 +599,15 @@
         var u = String(unidad || '').trim();
         if (!u) return etq;
         var abreviaturas = ['kg', 'g', 'gr', 'grs', 'lt', 'l', 'ml', 'cc', 'mt', 'm', 'cm'];
-        var plural = (valor > 1 && abreviaturas.indexOf(u.toLowerCase()) === -1) ? 's' : '';
-        return etq + ' ' + escapeHtml(u) + plural;
+        var lower = u.toLowerCase();
+        var yaPlural = lower.slice(-1) === 's';
+        if (valor !== 1 && !yaPlural && abreviaturas.indexOf(lower) === -1) {
+          // Pluralizar en castellano: vocal + s · "z" -> "ces" · consonante + es
+          if (/[aeiouáéíóú]$/.test(lower)) u = u + 's';
+          else if (lower.slice(-1) === 'z') u = u.slice(0, -1) + 'ces';
+          else u = u + 'es';
+        }
+        return etq + ' ' + escapeHtml(u);
       }
 
       function etiquetaTotal(T) {
