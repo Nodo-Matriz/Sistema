@@ -105,6 +105,16 @@
     }).then(function (res) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return res.json().catch(function () { return { ok: true }; });
+    }).then(function (data) {
+      // El escenario puede rechazar el envío (ej: form cerrado).
+      // En ese caso responde 200 con { ok: false, mensaje: "..." }.
+      if (data && data.ok === false) {
+        var err = new Error(data.error || 'rechazado');
+        err.userMessage = data.mensaje ||
+          'El sistema no pudo aceptar tu envío. Avisanos al Nodo.';
+        throw err;
+      }
+      return data;
     });
   }
 
@@ -141,7 +151,8 @@
         .catch(function (err) {
           console.error('[NodoMatriz] Error al enviar:', err);
           if (opts.onError) opts.onError(err);
-          else showErrorMessage(formEl, 'No pudimos guardar tu envío. Probá de nuevo o avisanos al Nodo.');
+          else showErrorMessage(formEl, err.userMessage ||
+            'No pudimos guardar tu envío. Probá de nuevo o avisanos al Nodo.');
         })
         .finally(function () {
           if (btn) {
