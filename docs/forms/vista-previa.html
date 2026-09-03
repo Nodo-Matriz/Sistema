@@ -428,6 +428,7 @@
                 origen: String(celda(r, 7)).trim(),
                 categoria: String(celda(r, 8)).trim(),
                 disponible: siNo(celda(r, 9)),
+                disponible_raw: String(celda(r, 9)).trim(),
                 stock: String(celda(r, 10) || '').trim(),
                 es_oferta: siNo(celda(r, 11)),
                 descripcion: String(celda(r, 15) || '').trim(),
@@ -512,8 +513,18 @@
       // ── Tabla de curaduría pendiente ────────────────────────────
       function filaPendiente(p) {
         var i = p.id_producto;
-        return '<tr id="fila-' + i + '" class="' + (p.disponible ? 'estado-si' : 'estado-no') + '">' +
-          '<td class="col-disponible">' + selectSiNo('disponible-' + i, p.disponible) + '</td>' +
+        // Tres estados: vacío = sin decisión (sin tinte) · No = rechazado
+        // (rojo) · Sí = camino a publicarse (verde; al completar categoría
+        // pasa al catálogo de abajo y sale de esta tabla).
+        var clase = p.disponible_raw === 'No' ? 'estado-no' :
+                    (p.disponible_raw === 'Sí' ? 'estado-si' : '');
+        var sel = '<select class="select" id="disponible-' + i + '">' +
+          '<option value=""' + (!p.disponible_raw ? ' selected' : '') + '>— elegir —</option>' +
+          '<option value="Sí"' + (p.disponible_raw === 'Sí' ? ' selected' : '') + '>Sí</option>' +
+          '<option value="No"' + (p.disponible_raw === 'No' ? ' selected' : '') + '>No</option>' +
+          '</select>';
+        return '<tr id="fila-' + i + '" class="' + clase + '">' +
+          '<td class="col-disponible">' + sel + '</td>' +
           '<td class="col-nombre">' +
           '  <input class="input" id="nombre-' + i + '" value="' + escapeHtml(p.nombre) + '">' +
           '  <div class="quien-carga">' + escapeHtml(p.productor || p.id_productor) +
@@ -774,14 +785,20 @@
         }
 
         envio.then(function () {
-          btn.textContent = disponible === 'Sí' ? '✔ Publicado' : '✔ Rechazado';
+          btn.textContent = disponible === 'Sí' ? '✔ Publicado' :
+                            (disponible === 'No' ? '✔ Rechazado' : '✔ Guardado');
           var fila = $('fila-' + id);
           if (fila) {
             fila.classList.remove('fila-ok', 'fila-no');
-            fila.classList.add(disponible === 'Sí' ? 'fila-ok' : 'fila-no');
+            if (disponible === 'Sí') fila.classList.add('fila-ok');
+            else if (disponible === 'No') fila.classList.add('fila-no');
           }
           hint.textContent = '';
-          setTimeout(cargar, 6000);
+          // ~2 s de flash y la página se realinea con la planilla:
+          // los publicados pasan al catálogo, los rechazados quedan rojos.
+          // (segunda pasada a los 8 s por si Make tardó en escribir)
+          setTimeout(cargar, 2500);
+          setTimeout(cargar, 8000);
         }).catch(function () {
           btn.disabled = false;
           btn.textContent = 'Guardar';
