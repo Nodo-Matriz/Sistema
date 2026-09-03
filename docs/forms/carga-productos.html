@@ -396,6 +396,9 @@
       // mezclaba cargas de la edición anterior.)
       function esDeEstaEdicion(f) {
         if (!f) return false;
+        // Una carga real nunca puede ser futura: si la fecha está adelante
+        // del reloj (más de 5 minutos), es un dato erróneo y no cuenta.
+        if (f.getTime() > Date.now() + 5 * 60 * 1000) return false;
         if (corteCarga) return f >= corteCarga;
         return false;
       }
