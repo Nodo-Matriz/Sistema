@@ -295,7 +295,10 @@
             var numero = fila.c[1] && fila.c[1].v ? String(fila.c[1].v).replace(/\.0$/, '') : id.slice(-2);
             var anio = fila.c[2] && fila.c[2].v ? String(fila.c[2].v).replace(/\.0$/, '') : id.slice(2, 6);
             var estado = fila.c[3] && fila.c[3].v ? String(fila.c[3].v).trim() : '';
-            if (!$('numero').value) $('numero').value = parseInt(numero, 10) || '';
+            // Pisar SIEMPRE número y año con la edición en curso: el navegador
+            // suele restaurar valores viejos tipeados antes, y generar para
+            // una edición equivocada es peor que re-tipear un caso raro.
+            $('numero').value = parseInt(numero, 10) || '';
             if (anio) $('anio').value = parseInt(anio, 10) || $('anio').value;
             // fecha_cierre_form (H, índice 7): precargar si está y el campo está vacío
             var h = fila.c[7] && fila.c[7].v ? String(fila.c[7].v) : '';
