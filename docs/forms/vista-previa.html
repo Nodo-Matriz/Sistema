@@ -110,7 +110,11 @@
       font-weight: 700;
     }
 
-    /* resultado tras guardar */
+    /* estado persistente: refleja disponible_edicion_actual de la planilla */
+    tr.estado-si td { background: rgba(76, 145, 65, 0.08); }
+    tr.estado-no td { background: rgba(166, 64, 43, 0.08); }
+
+    /* resultado tras guardar (más intenso, momentáneo hasta el refresco) */
     tr.fila-ok td { background: rgba(76, 145, 65, 0.18) !important; }
     tr.fila-no td { background: rgba(166, 64, 43, 0.16) !important; }
     .product.fila-ok { background: rgba(76, 145, 65, 0.14) !important; border-color: var(--c-verde-ok, #2f7d32) !important; }
@@ -508,7 +512,7 @@
       // ── Tabla de curaduría pendiente ────────────────────────────
       function filaPendiente(p) {
         var i = p.id_producto;
-        return '<tr id="fila-' + i + '">' +
+        return '<tr id="fila-' + i + '" class="' + (p.disponible ? 'estado-si' : 'estado-no') + '">' +
           '<td class="col-disponible">' + selectSiNo('disponible-' + i, p.disponible) + '</td>' +
           '<td class="col-nombre">' +
           '  <input class="input" id="nombre-' + i + '" value="' + escapeHtml(p.nombre) + '">' +
