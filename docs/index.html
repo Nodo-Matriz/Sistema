@@ -284,15 +284,22 @@
         <div class="num">3</div>
         <div class="aca">⬤ estamos acá</div>
         <div class="quien">Equipo</div>
-        <h3>Generar la edición</h3>
+        <h3>Revisar el catálogo y generar la edición</h3>
         <p>
-          Con las cargas al día, se genera el formulario público de pedidos:
+          <strong>Primero la revisión, siempre.</strong> En la vista previa el
+          catálogo se ve tal como lo va a ver el consumidor: ahí se corrige
+          cualquier dato de cualquier producto y se completa la curaduría de
+          los productos nuevos (aparecen destacados esperando aprobación).
+          Recién con el catálogo revisado se genera el formulario público:
           número de edición, fecha de cierre, aporte solidario y orden de las
-          categorías. En un par de minutos el form queda publicado.
+          categorías.
         </p>
         <p>
+          <a href="forms/vista-previa.html" class="btn btn--ghost btn--small">
+            1° Revisar el catálogo
+          </a>
           <a href="forms/generar-edicion.html" class="btn btn--ghost btn--small">
-            Abrir generar edición
+            2° Generar la edición
           </a>
         </p>
       </div>
@@ -432,9 +439,11 @@
         if (e.indexOf('stock') !== -1 || e.indexOf('carga') !== -1 ||
             e.indexOf('revis') !== -1) return 2;
         if (e.indexOf('abierto') !== -1 || e.indexOf('pedidos') !== -1) return 4;
-        if (e.indexOf('comanda') !== -1 || e.indexOf('cierre') !== -1) return 5;
+        if (e.indexOf('comanda') !== -1 || e.indexOf('cierre') !== -1 ||
+            e.indexOf('cerrado') !== -1) return 5;
         if (e.indexOf('recep') !== -1 || e.indexOf('galp') !== -1 ||
             e.indexOf('entrega') !== -1) return 6;
+        if (e.indexOf('liquid') !== -1) return 7;
         return 0;
       }
 
