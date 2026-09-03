@@ -253,8 +253,10 @@
           </button>
         </div>
         <p class="nota">
-          Escenario A1 — pendiente de configurar en Make. Hasta entonces el
-          botón avisa que no está conectado y no envía nada.
+          El botón cambia la edición a "Captura stocks" y registra la fecha de
+          apertura (necesita una edición en estado Planificación en la
+          planilla). Los avisos automáticos a productores se suman cuando esté
+          conectado WhatsApp.
         </p>
         <div class="ok-mini" id="ok-a1"></div>
       </div>
@@ -390,7 +392,7 @@
       var BASE_FORMS = 'forms/';
       // Escenario A1 (avisar a productores que abre la carga).
       // Pegar acá la dirección del webhook cuando esté armado en Make.
-      var WEBHOOK_A1 = '';
+      var WEBHOOK_A1 = 'https://hook.us2.make.com/cwy19mjkoqqyuexr1xv4lm6ddsowk563';
 
       var $ = function (id) { return document.getElementById(id); };
 
@@ -479,8 +481,10 @@
         function fin() {
           btn.disabled = false;
           btn.textContent = 'Iniciar edición → avisar a productores';
-          aviso('✅ Disparado. En unos minutos cada productor recibe su link ' +
-            'de carga por WhatsApp y por correo.', false);
+          aviso('✅ Edición iniciada: estado y fecha de apertura registrados. ' +
+            'En un momento esta guía pasa al paso 2. (Los avisos automáticos ' +
+            'a productores se suman cuando esté conectado WhatsApp.)', false);
+          setTimeout(function () { location.reload(); }, 6000);
         }
       });
 
