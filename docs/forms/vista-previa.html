@@ -35,7 +35,7 @@
 
     .cat-card { margin-top: var(--s-5); }
 
-    /* ── Bloque de curaduría pendiente ─────────────────────── */
+    /* ── Bloque de curaduría pendiente (tabla) ─────────────── */
     .card.curaduria {
       border: 2px solid var(--c-mostaza, #C49543);
       background: rgba(196, 149, 67, 0.07);
@@ -54,18 +54,80 @@
       vertical-align: middle;
     }
 
-    .product.pendiente {
-      border: 1.5px solid var(--c-mostaza, #C49543);
-      background: rgba(196, 149, 67, 0.06);
-      border-radius: 14px;
-      padding: var(--s-3);
+    .tabla-scroll {
+      overflow-x: auto;
+      margin-top: var(--s-3);
+      -webkit-overflow-scrolling: touch;
     }
 
-    /* ── Edición inline ─────────────────────────────────────── */
-    .fila-acciones {
-      margin-top: var(--s-2);
-      text-align: right;
+    table.curaduria-tabla {
+      border-collapse: collapse;
+      min-width: 1150px;
+      width: 100%;
+      font-size: 0.85rem;
     }
+
+    .curaduria-tabla th {
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--c-corteza);
+      text-align: left;
+      padding: 6px 8px;
+      border-bottom: 2px solid rgba(122, 90, 28, 0.35);
+      white-space: nowrap;
+    }
+
+    .curaduria-tabla td {
+      padding: 8px 8px;
+      border-bottom: 1px solid rgba(122, 90, 28, 0.18);
+      vertical-align: top;
+      background: var(--c-leche, #fff);
+    }
+
+    .curaduria-tabla .input,
+    .curaduria-tabla .select {
+      width: 100%;
+      min-width: 90px;
+      box-sizing: border-box;
+      font-size: 0.85rem;
+      padding: 6px 8px;
+    }
+
+    .curaduria-tabla td.col-nombre { min-width: 190px; }
+    .curaduria-tabla td.col-nombre .quien-carga {
+      font-size: 0.75rem;
+      color: var(--c-tierra);
+      font-style: italic;
+      margin-top: 2px;
+    }
+    .curaduria-tabla td.col-precio .input { min-width: 80px; }
+    .curaduria-tabla td.col-stock .input { min-width: 70px; }
+    .curaduria-tabla td.col-desc .input { min-width: 150px; }
+    .curaduria-tabla td.col-disponible .select {
+      min-width: 75px;
+      font-weight: 700;
+    }
+
+    /* resultado tras guardar */
+    tr.fila-ok td { background: rgba(76, 145, 65, 0.18) !important; }
+    tr.fila-no td { background: rgba(166, 64, 43, 0.16) !important; }
+    .product.fila-ok { background: rgba(76, 145, 65, 0.14) !important; border-color: var(--c-verde-ok, #2f7d32) !important; }
+    .product.fila-no { background: rgba(166, 64, 43, 0.12) !important; border-color: var(--c-rojo) !important; }
+
+    .hint-fila {
+      font-size: 0.76rem;
+      color: var(--c-rojo);
+      font-weight: 700;
+      margin-top: 3px;
+      display: block;
+      max-width: 160px;
+      white-space: normal;
+    }
+
+    /* ── Edición inline del catálogo ────────────────────────── */
+    .fila-acciones { margin-top: var(--s-2); text-align: right; }
 
     .btn-editar {
       display: inline-block;
@@ -90,6 +152,8 @@
 
     .panel-edicion {
       display: none;
+      width: 100%;
+      box-sizing: border-box;
       margin-top: var(--s-3);
       padding: var(--s-4);
       border-radius: 14px;
@@ -101,17 +165,17 @@
 
     .grid-campos {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 1fr 1fr;
       gap: var(--s-3);
     }
 
-    @media (max-width: 540px) {
-      .grid-campos { grid-template-columns: 1fr; }
+    @media (max-width: 600px) {
+      .grid-campos { grid-template-columns: 1fr 1fr; }
     }
 
     .campo label {
       display: block;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       font-weight: 700;
       letter-spacing: 0.04em;
       text-transform: uppercase;
@@ -119,23 +183,10 @@
       margin-bottom: 3px;
     }
 
-    .campo .input, .campo .select, .campo textarea {
-      width: 100%;
-      box-sizing: border-box;
-    }
-
+    .campo .input, .campo .select { width: 100%; box-sizing: border-box; }
     .campo.ancho { grid-column: 1 / -1; }
-
-    .campo textarea {
-      font-family: var(--f-body);
-      font-size: 0.92rem;
-      border: 1.5px solid rgba(74, 107, 58, 0.25);
-      border-radius: 10px;
-      padding: 8px 10px;
-      min-height: 60px;
-      resize: vertical;
-      background: var(--c-leche, #fff);
-    }
+    .campo.principal label { color: var(--c-musgo); font-size: 0.78rem; }
+    .campo.principal .select { font-weight: 700; border-width: 2px; }
 
     .acciones-panel {
       display: flex;
@@ -153,13 +204,6 @@
       margin-right: auto;
     }
 
-    .guardado-ok {
-      color: var(--c-verde-ok, #2f7d32);
-      font-weight: 700;
-      font-size: 0.9rem;
-    }
-
-    /* clave de equipo */
     .fila-clave {
       display: flex;
       gap: var(--s-2);
@@ -195,10 +239,10 @@
     <section class="fade-in" data-delay="1">
       <h1>Revisión del catálogo</h1>
       <p class="lead">
-        Paso obligado antes de generar la edición: el catálogo tal como lo va
-        a ver el consumidor. Cualquier dato se corrige acá mismo con
-        <strong>✏️ Editar</strong>, y los productos nuevos esperan su
-        curaduría en el bloque destacado — nada se publica sin pasar por acá.
+        Paso obligado antes de generar la edición. Los productos nuevos esperan
+        curaduría en la tabla de arriba: la decisión principal es si entran o no
+        a esta edición. En el catálogo, cualquier dato se corrige con
+        <strong>✏️ Editar</strong> — nada se publica sin pasar por acá.
       </p>
     </section>
 
@@ -216,9 +260,11 @@
     <div id="catalogo"></div>
 
     <p class="nota-final">
-      Después de los productos, el form real sigue con los datos personales,
-      la entrega y el pago — esa parte no cambia entre ediciones. El aporte
-      solidario y la fecha de cierre se definen al generar la edición.
+      El campo <strong>stock</strong> queda preparado para cuando los
+      productores empiecen a declararlo (más adelante, con el uso ya
+      normalizado): por ahora puede dejarse vacío y no se toca lo que haya en
+      la planilla. Después de los productos, el form real sigue con los datos
+      personales, la entrega y el pago — esa parte no cambia entre ediciones.
     </p>
 
     <footer class="site-footer">
@@ -232,13 +278,15 @@
       'use strict';
 
       var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
-      var LS_KEY = 'nm_orden_categorias';   // misma clave que usa Generar edición
+      var LS_KEY = 'nm_orden_categorias';
       var WEBHOOK_CURADURIA = 'https://hook.us2.make.com/upk925v2qb2p2zrk8fsmo2eo26ebh6tx';
+      var OTRO = '__OTRO__';
 
       var $ = function (id) { return document.getElementById(id); };
-      var categoriasExistentes = [];
 
-      // clave de equipo: se recuerda durante la sesión de la pestaña
+      // valores existentes en la planilla, para los desplegables
+      var listas = { unidad: [], origen: [], categoria: [], fracciones: [] };
+
       try {
         var claveGuardada = sessionStorage.getItem('nm_clave_equipo');
         if (claveGuardada) $('clave').value = claveGuardada;
@@ -354,7 +402,7 @@
           .then(function (res) {
             var disponibles = [];
             var pendientes = [];
-            var cats = {};
+            var sets = { unidad: {}, origen: {}, categoria: {}, fracciones: {} };
 
             res.table.rows.forEach(function (r) {
               var id = String(celda(r, 0)).trim();
@@ -373,25 +421,29 @@
                 origen: String(celda(r, 7)).trim(),
                 categoria: String(celda(r, 8)).trim(),
                 disponible: siNo(celda(r, 9)),
+                stock: String(celda(r, 10) || '').trim(),
                 es_oferta: siNo(celda(r, 11)),
                 descripcion: String(celda(r, 15) || '').trim(),
                 productor: String(celda(r, 16)).trim(),
                 quien_fracciona: String(celda(r, 18) || '').trim()
               };
-              if (p.categoria) cats[p.categoria] = true;
+              if (p.unidad) sets.unidad[p.unidad] = true;
+              if (p.origen) sets.origen[p.origen] = true;
+              if (p.categoria) sets.categoria[p.categoria] = true;
+              if (p.fracciones_raw) sets.fracciones[p.fracciones_raw] = true;
 
               if (!p.categoria) {
-                // Sin categoría = curaduría pendiente (alta nueva de productor)
-                pendientes.push(p);
+                pendientes.push(p);          // curaduría pendiente
               } else if (p.disponible) {
-                disponibles.push(p);
+                disponibles.push(p);         // catálogo publicado
               }
-              // con categoría y no disponible: fuera de la edición a propósito,
-              // no se muestra (se reactiva desde la carga del productor)
+              // con categoría y no disponible: fuera de la edición, no se lista
             });
 
-            categoriasExistentes = Object.keys(cats)
-              .sort(function (a, b) { return a.localeCompare(b, 'es'); });
+            Object.keys(sets).forEach(function (k) {
+              listas[k] = Object.keys(sets[k])
+                .sort(function (a, b) { return a.localeCompare(b, 'es'); });
+            });
 
             render(disponibles, pendientes);
           })
@@ -412,35 +464,35 @@
         return resultado.concat(nuevas);
       }
 
-      // ── Tarjeta de producto (fiel al form real) ─────────────────
-      function controlFiel(p) {
-        var control = '';
-        if (p.fraccionable && p.fracciones.length) {
-          control += '<label class="product__ctl-label">Cantidad ';
-          control += '<select class="select" style="width:auto;">';
-          control += '<option>' + conUnidad('0', 0, p.unidad) + '</option>';
-          opcionesFraccion(p).forEach(function (o) {
-            var texto = o.etiquetaFija ? o.etiqueta : conUnidad(o.etiqueta, o.valor, p.unidad);
-            control += '<option>' + texto + ' · ' + formatMoney(o.valor * (p.precio || 0)) + '</option>';
-          });
-          control += '</select></label>';
-        } else {
-          control += '<label class="product__ctl-label">Cantidad ';
-          control += '<select class="select" style="width:auto;">';
-          control += '<option>' + conUnidad('0', 0, p.unidad) + '</option>';
-          for (var i = 1; i <= 5; i++) {
-            control += '<option>' + conUnidad(String(i), i, p.unidad) + '</option>';
-          }
-          control += '</select></label>';
+      // ── Desplegables con opción "Otro…" ─────────────────────────
+      function selectConOtro(id, opciones, valor, conVacio) {
+        var h = '<select class="select" id="' + id + '" data-otro="1">';
+        if (conVacio) h += '<option value=""' + (!valor ? ' selected' : '') + '>—</option>';
+        var enLista = opciones.indexOf(valor) !== -1;
+        if (valor && !enLista) {
+          h += '<option value="' + escapeHtml(valor) + '" selected>' + escapeHtml(valor) + '</option>';
         }
-        return control;
+        opciones.forEach(function (o) {
+          h += '<option value="' + escapeHtml(o) + '"' +
+            (o === valor ? ' selected' : '') + '>' + escapeHtml(o) + '</option>';
+        });
+        h += '<option value="' + OTRO + '">✏️ Otro…</option>';
+        h += '</select>';
+        return h;
       }
 
-      function campo(idProd, campoId, etiqueta, inputHtml) {
-        return '<div class="campo' + (/descripcion|nombre/.test(campoId) ? ' ancho' : '') + '">' +
-          '<label for="' + campoId + '-' + idProd + '">' + etiqueta + '</label>' +
-          inputHtml + '</div>';
-      }
+      // cambiar un select a input de texto cuando eligen "Otro…"
+      document.addEventListener('change', function (e) {
+        var el = e.target;
+        if (el.getAttribute && el.getAttribute('data-otro') === '1' && el.value === OTRO) {
+          var input = document.createElement('input');
+          input.className = 'input';
+          input.id = el.id;
+          input.placeholder = 'escribí el valor nuevo';
+          el.parentNode.replaceChild(input, el);
+          input.focus();
+        }
+      });
 
       function selectSiNo(id, valor) {
         return '<select class="select" id="' + id + '">' +
@@ -449,49 +501,119 @@
           '</select>';
       }
 
-      function panelEdicion(p, esPendiente) {
+      // ── Tabla de curaduría pendiente ────────────────────────────
+      function filaPendiente(p) {
         var i = p.id_producto;
-        var h = '<div class="panel-edicion' + (esPendiente ? ' abierto' : '') + '" id="panel-' + i + '">';
+        return '<tr id="fila-' + i + '">' +
+          '<td class="col-disponible">' + selectSiNo('disponible-' + i, true) + '</td>' +
+          '<td class="col-nombre">' +
+          '  <input class="input" id="nombre-' + i + '" value="' + escapeHtml(p.nombre) + '">' +
+          '  <div class="quien-carga">' + escapeHtml(p.productor || p.id_productor) +
+          '     · ' + formatMoney(p.precio) + '</div>' +
+          '  <span class="hint-fila" id="hint-' + i + '"></span>' +
+          '</td>' +
+          '<td class="col-precio"><input class="input" type="number" min="0" step="any" id="precio-' + i + '" value="' + (p.precio || '') + '"></td>' +
+          '<td>' + selectConOtro('unidad-' + i, listas.unidad, p.unidad, false) + '</td>' +
+          '<td>' + selectConOtro('origen-' + i, listas.origen, p.origen, true) + '</td>' +
+          '<td>' + selectConOtro('categoria-' + i, listas.categoria, p.categoria, true) + '</td>' +
+          '<td>' + selectSiNo('fraccionable-' + i, p.fraccionable) + '</td>' +
+          '<td>' + selectConOtro('fracciones-' + i, listas.fracciones, p.fracciones_raw, true) + '</td>' +
+          '<td><select class="select" id="quien-' + i + '">' +
+          '  <option value=""' + (!p.quien_fracciona ? ' selected' : '') + '>—</option>' +
+          '  <option' + (p.quien_fracciona === 'Productor' ? ' selected' : '') + '>Productor</option>' +
+          '  <option' + (p.quien_fracciona === 'Galpón' ? ' selected' : '') + '>Galpón</option>' +
+          '</select></td>' +
+          '<td>' + selectSiNo('oferta-' + i, p.es_oferta) + '</td>' +
+          '<td class="col-stock"><input class="input" type="number" min="0" step="any" id="stock-' + i + '" value="' + escapeHtml(p.stock) + '" placeholder="—"></td>' +
+          '<td class="col-desc"><input class="input" id="descripcion-' + i + '" value="' + escapeHtml(p.descripcion) + '" placeholder="opcional"></td>' +
+          '<td><button type="button" class="btn btn--primary btn--small" data-guardar="' + i + '">Guardar</button></td>' +
+          '</tr>';
+      }
+
+      function renderPendientes(pendientes) {
+        var contP = $('curaduria');
+        contP.innerHTML = '';
+        if (!pendientes.length) return;
+
+        var card = document.createElement('div');
+        card.className = 'card cat-card curaduria';
+        var h = '<h2>🧐 Curaduría pendiente <span class="badge-curaduria">' +
+          pendientes.length + '</span></h2>';
+        h += '<p class="resumen" style="margin-top:var(--s-2);">Productos nuevos cargados por ' +
+          'productores. La decisión principal es la primera columna: <strong>¿entra a esta ' +
+          'edición?</strong> Sí = se publica (pide categoría) · No = queda rechazado para esta edición.</p>';
+        h += '<div class="tabla-scroll"><table class="curaduria-tabla">';
+        h += '<thead><tr>' +
+          '<th>Disponible</th><th>Producto</th><th>Precio $</th><th>Unidad</th>' +
+          '<th>Origen</th><th>Categoría</th><th>Fracciona</th><th>Fracciones</th>' +
+          '<th>Quién</th><th>Oferta</th><th>Stock</th><th>Descripción</th><th></th>' +
+          '</tr></thead><tbody>';
+        pendientes.forEach(function (p) { h += filaPendiente(p); });
+        h += '</tbody></table></div>';
+        card.innerHTML = h;
+        contP.appendChild(card);
+      }
+
+      // ── Catálogo publicado (tarjetas fieles + edición) ──────────
+      function controlFiel(p) {
+        var control = '<label class="product__ctl-label">Cantidad ';
+        control += '<select class="select" style="width:auto;">';
+        control += '<option>' + conUnidad('0', 0, p.unidad) + '</option>';
+        if (p.fraccionable && p.fracciones.length) {
+          opcionesFraccion(p).forEach(function (o) {
+            var texto = o.etiquetaFija ? o.etiqueta : conUnidad(o.etiqueta, o.valor, p.unidad);
+            control += '<option>' + texto + ' · ' + formatMoney(o.valor * (p.precio || 0)) + '</option>';
+          });
+        } else {
+          for (var i = 1; i <= 5; i++) {
+            control += '<option>' + conUnidad(String(i), i, p.unidad) + '</option>';
+          }
+        }
+        control += '</select></label>';
+        return control;
+      }
+
+      function campo(clase, etiqueta, inputHtml) {
+        return '<div class="campo ' + clase + '"><label>' + etiqueta + '</label>' + inputHtml + '</div>';
+      }
+
+      function panelEdicion(p) {
+        var i = p.id_producto;
+        var h = '<div class="panel-edicion" id="panel-' + i + '">';
         h += '<div class="grid-campos">';
-        h += campo(i, 'nombre', 'Nombre',
-          '<input class="input" id="nombre-' + i + '" value="' + escapeHtml(p.nombre) + '">');
-        h += campo(i, 'precio', 'Precio ($)',
+        h += campo('principal', 'Disponible en esta edición', selectSiNo('disponible-' + i, p.disponible));
+        h += campo('', 'Precio ($)',
           '<input class="input" type="number" min="0" step="any" id="precio-' + i + '" value="' + (p.precio || '') + '">');
-        h += campo(i, 'unidad', 'Unidad de venta',
-          '<input class="input" id="unidad-' + i + '" value="' + escapeHtml(p.unidad) + '" placeholder="kg · unidad · litro">');
-        h += campo(i, 'origen', 'Origen',
-          '<input class="input" id="origen-' + i + '" value="' + escapeHtml(p.origen) + '" placeholder="Unquillo · Cabana…">');
-        h += campo(i, 'categoria', 'Categoría',
-          '<input class="input" id="categoria-' + i + '" value="' + escapeHtml(p.categoria) + '" list="lista-categorias" placeholder="elegí o escribí una nueva">');
-        h += campo(i, 'fraccionable', 'Fraccionable', selectSiNo('fraccionable-' + i, p.fraccionable));
-        h += campo(i, 'fracciones', 'Fracciones (si fracciona)',
-          '<input class="input" id="fracciones-' + i + '" value="' + escapeHtml(p.fracciones_raw) + '" placeholder="1, 1/2, 1/4, 100grs">');
-        h += campo(i, 'quien', 'Quién fracciona',
+        h += campo('', 'Unidad de venta', selectConOtro('unidad-' + i, listas.unidad, p.unidad, false));
+        h += campo('ancho', 'Nombre',
+          '<input class="input" id="nombre-' + i + '" value="' + escapeHtml(p.nombre) + '">');
+        h += campo('', 'Origen', selectConOtro('origen-' + i, listas.origen, p.origen, true));
+        h += campo('', 'Categoría', selectConOtro('categoria-' + i, listas.categoria, p.categoria, true));
+        h += campo('', 'Es oferta', selectSiNo('oferta-' + i, p.es_oferta));
+        h += campo('', 'Fraccionable', selectSiNo('fraccionable-' + i, p.fraccionable));
+        h += campo('', 'Fracciones', selectConOtro('fracciones-' + i, listas.fracciones, p.fracciones_raw, true));
+        h += campo('', 'Quién fracciona',
           '<select class="select" id="quien-' + i + '">' +
           '<option value=""' + (!p.quien_fracciona ? ' selected' : '') + '>—</option>' +
           '<option' + (p.quien_fracciona === 'Productor' ? ' selected' : '') + '>Productor</option>' +
           '<option' + (p.quien_fracciona === 'Galpón' ? ' selected' : '') + '>Galpón</option>' +
           '</select>');
-        h += campo(i, 'oferta', 'Es oferta', selectSiNo('oferta-' + i, p.es_oferta));
-        h += campo(i, 'disponible', 'Disponible en esta edición',
-          selectSiNo('disponible-' + i, esPendiente ? true : p.disponible));
-        h += campo(i, 'descripcion', 'Descripción (opcional)',
-          '<textarea id="descripcion-' + i + '">' + escapeHtml(p.descripcion) + '</textarea>');
+        h += campo('', 'Stock (futuro)',
+          '<input class="input" type="number" min="0" step="any" id="stock-' + i + '" value="' + escapeHtml(p.stock) + '" placeholder="—">');
+        h += campo('ancho', 'Descripción (opcional)',
+          '<input class="input" id="descripcion-' + i + '" value="' + escapeHtml(p.descripcion) + '">');
         h += '</div>';
         h += '<div class="acciones-panel">';
-        h += '<span class="hint-guardar" id="hint-' + i + '">' +
-          (esPendiente ? 'Completá categoría y origen para publicarlo.' : '') + '</span>';
-        h += '<button type="button" class="btn btn--primary btn--small" data-guardar="' + i + '">' +
-          (esPendiente ? 'Aprobar y guardar' : 'Guardar cambios') + '</button>';
+        h += '<span class="hint-guardar" id="hint-' + i + '"></span>';
+        h += '<button type="button" class="btn btn--primary btn--small" data-guardar="' + i + '">Guardar cambios</button>';
         h += '</div>';
         h += '</div>';
         return h;
       }
 
-      function renderProductCard(p, esPendiente) {
+      function renderProductCard(p) {
         var tags = '';
         if (p.es_oferta) tags += ' <span class="product__tag product__tag--oferta">Oferta</span>';
-        if (esPendiente) tags += ' <span class="badge-curaduria">Curaduría pendiente</span>';
 
         var meta = '';
         if (p.origen) meta += escapeHtml(p.origen) + ' · ';
@@ -499,48 +621,24 @@
         meta += formatMoney(p.precio) + ' por ' + escapeHtml(p.unidad || '—');
 
         return '' +
-          '<div class="product' + (esPendiente ? ' pendiente' : '') + '" id="prod-' + p.id_producto + '">' +
+          '<div class="product" id="fila-' + p.id_producto + '">' +
           '  <div class="product__head">' +
           '    <span class="product__name">' + escapeHtml(p.nombre) + tags + '</span>' +
           '    <span class="product__meta"><span>' + meta + '</span></span>' +
           '  </div>' +
           '  <div class="product__control">' + controlFiel(p) + '</div>' +
           '  <div class="fila-acciones">' +
-          (esPendiente ? '' :
-          '    <button type="button" class="btn-editar" data-editar="' + p.id_producto + '">✏️ Editar</button>') +
+          '    <button type="button" class="btn-editar" data-editar="' + p.id_producto + '">✏️ Editar</button>' +
           '  </div>' +
-          panelEdicion(p, esPendiente) +
+          panelEdicion(p) +
           '</div>';
       }
 
       function render(disponibles, pendientes) {
-        var contP = $('curaduria');
+        renderPendientes(pendientes);
+
         var cont = $('catalogo');
-        contP.innerHTML = '';
         cont.innerHTML = '';
-
-        // datalist de categorías para los paneles
-        var dl = '<datalist id="lista-categorias">';
-        categoriasExistentes.forEach(function (c) {
-          dl += '<option value="' + escapeHtml(c) + '">';
-        });
-        dl += '</datalist>';
-        contP.insertAdjacentHTML('beforebegin', '');
-        document.body.insertAdjacentHTML('beforeend', dl);
-
-        if (pendientes.length) {
-          var cardP = document.createElement('div');
-          cardP.className = 'card cat-card curaduria';
-          var hp = '<h2>🧐 Curaduría pendiente <span class="badge-curaduria">' +
-            pendientes.length + '</span></h2>';
-          hp += '<p class="resumen" style="margin-top:var(--s-2);">Productos nuevos cargados por productores. ' +
-            'No aparecen en el form hasta que el equipo los complete y apruebe acá.</p>';
-          hp += '<div class="product-list mt-3">';
-          pendientes.forEach(function (p) { hp += renderProductCard(p, true); });
-          hp += '</div>';
-          cardP.innerHTML = hp;
-          contP.appendChild(cardP);
-        }
 
         if (!disponibles.length && !pendientes.length) {
           $('estado').className = 'aviso rojo';
@@ -561,7 +659,7 @@
           card.className = 'card cat-card';
           var html = '<h2>' + escapeHtml(cat) + '</h2>';
           html += '<div class="product-list mt-3">';
-          porCat[cat].forEach(function (p) { html += renderProductCard(p, false); });
+          porCat[cat].forEach(function (p) { html += renderProductCard(p); });
           html += '</div>';
           card.innerHTML = html;
           cont.appendChild(card);
@@ -569,7 +667,7 @@
 
         $('estado').className = 'aviso';
         $('estado').innerHTML = 'Catálogo con los datos <strong>actuales</strong> de la planilla. ' +
-          'Todo lo que corrijas acá se guarda de verdad (pide la clave de equipo). ' +
+          'Todo lo que guardes acá cambia la planilla de verdad (pide la clave de equipo). ' +
           'El orden de las categorías es el elegido en Generar edición' +
           (localStorage.getItem(LS_KEY) ? '' : ' (todavía no se eligió: se muestra alfabético)') + '.';
 
@@ -577,7 +675,6 @@
           disponibles.length + ' productos publicados' +
           (pendientes.length ? ' · ' + pendientes.length + ' esperando curaduría' : '');
 
-        // listeners
         document.querySelectorAll('[data-editar]').forEach(function (b) {
           b.addEventListener('click', function () {
             var panel = $('panel-' + b.getAttribute('data-editar'));
@@ -589,7 +686,7 @@
         });
       }
 
-      // ── Guardar cambios de un producto ───────────────────────────
+      // ── Guardar un producto ──────────────────────────────────────
       function guardar(id, btn) {
         var hint = $('hint-' + id);
         var clave = $('clave').value.trim();
@@ -601,17 +698,19 @@
 
         var val = function (campoId) {
           var el = $(campoId + '-' + id);
-          return el ? el.value.trim() : '';
+          if (!el) return '';
+          if (el.value === OTRO) return '';
+          return el.value.trim();
         };
 
         var disponible = val('disponible');
         var categoria = val('categoria');
         if (disponible === 'Sí' && !categoria) {
-          hint.textContent = '⚠️ Sin categoría no puede publicarse: completala o dejalo en No.';
+          hint.textContent = '⚠️ Para publicarlo falta la categoría (o poné Disponible en No).';
           return;
         }
         if (val('fraccionable') === 'Sí' && !val('fracciones')) {
-          hint.textContent = '⚠️ Marcaste fraccionable: indicá las fracciones (ej: 1, 1/2).';
+          hint.textContent = '⚠️ Marcaste fraccionable: elegí o escribí las fracciones.';
           return;
         }
 
@@ -629,6 +728,7 @@
           quien_fracciona: val('quien'),
           es_oferta: val('oferta'),
           disponible: disponible,
+          stock: val('stock'),
           descripcion: val('descripcion')
         };
 
@@ -649,13 +749,17 @@
         }
 
         envio.then(function () {
-          btn.textContent = '✔ Guardado';
-          btn.classList.add('guardado-ok');
-          hint.textContent = 'Actualizando la vista en unos segundos…';
-          setTimeout(cargar, 5000);
+          btn.textContent = disponible === 'Sí' ? '✔ Publicado' : '✔ Rechazado';
+          var fila = $('fila-' + id);
+          if (fila) {
+            fila.classList.remove('fila-ok', 'fila-no');
+            fila.classList.add(disponible === 'Sí' ? 'fila-ok' : 'fila-no');
+          }
+          hint.textContent = '';
+          setTimeout(cargar, 6000);
         }).catch(function () {
           btn.disabled = false;
-          btn.textContent = 'Guardar cambios';
+          btn.textContent = 'Guardar';
           hint.textContent = '⚠️ No se pudo enviar. Probá de nuevo.';
         });
       }
