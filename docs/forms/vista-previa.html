@@ -241,8 +241,10 @@
       <p class="lead">
         Paso obligado antes de generar la edición. Los productos nuevos esperan
         curaduría en la tabla de arriba: la decisión principal es si entran o no
-        a esta edición. En el catálogo, cualquier dato se corrige con
-        <strong>✏️ Editar</strong> — nada se publica sin pasar por acá.
+        a esta edición. En el catálogo, cualquier dato de cualquier producto se
+        corrige acá mismo con <strong>✏️ Editar</strong> — precio, nombre,
+        categoría, fracciones — sin abrir la página de ningún productor. Nada
+        se publica sin pasar por acá.
       </p>
     </section>
 
@@ -402,6 +404,7 @@
           .then(function (res) {
             var disponibles = [];
             var pendientes = [];
+            var fuera = [];
             var sets = { unidad: {}, origen: {}, categoria: {}, fracciones: {} };
 
             res.table.rows.forEach(function (r) {
@@ -436,8 +439,9 @@
                 pendientes.push(p);          // curaduría pendiente
               } else if (p.disponible) {
                 disponibles.push(p);         // catálogo publicado
+              } else {
+                fuera.push(p);               // con categoría pero fuera de la edición
               }
-              // con categoría y no disponible: fuera de la edición, no se lista
             });
 
             Object.keys(sets).forEach(function (k) {
@@ -445,7 +449,7 @@
                 .sort(function (a, b) { return a.localeCompare(b, 'es'); });
             });
 
-            render(disponibles, pendientes);
+            render(disponibles, pendientes, fuera);
           })
           .catch(function () {
             $('estado').className = 'aviso rojo';
@@ -505,7 +509,7 @@
       function filaPendiente(p) {
         var i = p.id_producto;
         return '<tr id="fila-' + i + '">' +
-          '<td class="col-disponible">' + selectSiNo('disponible-' + i, true) + '</td>' +
+          '<td class="col-disponible">' + selectSiNo('disponible-' + i, p.disponible) + '</td>' +
           '<td class="col-nombre">' +
           '  <input class="input" id="nombre-' + i + '" value="' + escapeHtml(p.nombre) + '">' +
           '  <div class="quien-carga">' + escapeHtml(p.productor || p.id_productor) +
@@ -611,7 +615,7 @@
         return h;
       }
 
-      function renderProductCard(p) {
+      function renderProductCard(p, sinControl) {
         var tags = '';
         if (p.es_oferta) tags += ' <span class="product__tag product__tag--oferta">Oferta</span>';
 
@@ -619,6 +623,7 @@
         if (p.origen) meta += escapeHtml(p.origen) + ' · ';
         if (p.productor) meta += escapeHtml(p.productor) + ' · ';
         meta += formatMoney(p.precio) + ' por ' + escapeHtml(p.unidad || '—');
+        if (sinControl) meta += ' · ' + escapeHtml(p.categoria);
 
         return '' +
           '<div class="product" id="fila-' + p.id_producto + '">' +
@@ -626,7 +631,6 @@
           '    <span class="product__name">' + escapeHtml(p.nombre) + tags + '</span>' +
           '    <span class="product__meta"><span>' + meta + '</span></span>' +
           '  </div>' +
-          '  <div class="product__control">' + controlFiel(p) + '</div>' +
           '  <div class="fila-acciones">' +
           '    <button type="button" class="btn-editar" data-editar="' + p.id_producto + '">✏️ Editar</button>' +
           '  </div>' +
@@ -634,13 +638,13 @@
           '</div>';
       }
 
-      function render(disponibles, pendientes) {
+      function render(disponibles, pendientes, fuera) {
         renderPendientes(pendientes);
 
         var cont = $('catalogo');
         cont.innerHTML = '';
 
-        if (!disponibles.length && !pendientes.length) {
+        if (!disponibles.length && !pendientes.length && !(fuera && fuera.length)) {
           $('estado').className = 'aviso rojo';
           $('estado').textContent = 'No hay productos marcados como disponibles para la edición. ' +
             'Primero hay que hacer la carga de productos.';
@@ -665,6 +669,22 @@
           cont.appendChild(card);
         });
 
+        // Fuera de esta edición: rechazados y despublicados, para no perderlos de vista
+        if (fuera && fuera.length) {
+          var cardF = document.createElement('div');
+          cardF.className = 'card cat-card';
+          var hf = '<details><summary style="cursor:pointer; font-weight:700; color:var(--c-corteza);">' +
+            '🚫 Fuera de esta edición (' + fuera.length + ') — tocá para ver</summary>';
+          hf += '<p class="resumen" style="margin-top:var(--s-2);">Con categoría pero no disponibles: ' +
+            'rechazados en curaduría o despublicados. Para reactivar uno: ✏️ Editar → Disponible en Sí.</p>';
+          hf += '<div class="product-list mt-3">';
+          fuera.sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); })
+            .forEach(function (p) { hf += renderProductCard(p, true); });
+          hf += '</div></details>';
+          cardF.innerHTML = hf;
+          cont.appendChild(cardF);
+        }
+
         $('estado').className = 'aviso';
         $('estado').innerHTML = 'Catálogo con los datos <strong>actuales</strong> de la planilla. ' +
           'Todo lo que guardes acá cambia la planilla de verdad (pide la clave de equipo). ' +
@@ -673,7 +693,8 @@
 
         $('resumen').textContent = orden.length + ' categorías · ' +
           disponibles.length + ' productos publicados' +
-          (pendientes.length ? ' · ' + pendientes.length + ' esperando curaduría' : '');
+          (pendientes.length ? ' · ' + pendientes.length + ' esperando curaduría' : '') +
+          (fuera && fuera.length ? ' · ' + fuera.length + ' fuera de la edición' : '');
 
         document.querySelectorAll('[data-editar]').forEach(function (b) {
           b.addEventListener('click', function () {
