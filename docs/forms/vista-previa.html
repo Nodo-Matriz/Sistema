@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex">
-  <title>Vista previa del form de pedidos · Nodo Matríz (equipo)</title>
+  <title>Revisión del catálogo · Nodo Matríz (equipo)</title>
   <link rel="stylesheet" href="../assets/styles.css">
   <link rel="icon" type="image/png" href="../assets/favicon-nodo.png">
   <style>
@@ -33,8 +33,41 @@
       margin: var(--s-3) 0 var(--s-4);
     }
 
-    /* el lapicito de corrección, propio de la previa */
-    .btn-corregir {
+    .cat-card { margin-top: var(--s-5); }
+
+    /* ── Bloque de curaduría pendiente ─────────────────────── */
+    .card.curaduria {
+      border: 2px solid var(--c-mostaza, #C49543);
+      background: rgba(196, 149, 67, 0.07);
+    }
+
+    .badge-curaduria {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #7a5a1c;
+      background: rgba(196, 149, 67, 0.25);
+      border-radius: var(--r-pill);
+      padding: 3px 10px;
+      vertical-align: middle;
+    }
+
+    .product.pendiente {
+      border: 1.5px solid var(--c-mostaza, #C49543);
+      background: rgba(196, 149, 67, 0.06);
+      border-radius: 14px;
+      padding: var(--s-3);
+    }
+
+    /* ── Edición inline ─────────────────────────────────────── */
+    .fila-acciones {
+      margin-top: var(--s-2);
+      text-align: right;
+    }
+
+    .btn-editar {
       display: inline-block;
       font-family: var(--f-body);
       font-size: 0.78rem;
@@ -44,25 +77,98 @@
       border: 1.5px solid var(--c-salvia);
       color: var(--c-tierra);
       background: transparent;
-      text-decoration: none;
+      cursor: pointer;
       white-space: nowrap;
       transition: border-color 0.15s, color 0.15s, background 0.15s;
     }
 
-    .btn-corregir:hover {
+    .btn-editar:hover {
       border-color: var(--c-oliva);
       color: var(--c-musgo);
       background: rgba(110, 142, 85, 0.10);
     }
 
-    .product { position: relative; }
-
-    .fila-corregir {
-      margin-top: var(--s-2);
-      text-align: right;
+    .panel-edicion {
+      display: none;
+      margin-top: var(--s-3);
+      padding: var(--s-4);
+      border-radius: 14px;
+      background: var(--c-crema-osc, rgba(0,0,0,0.03));
+      border: 1px solid rgba(74, 107, 58, 0.14);
     }
 
-    .cat-card { margin-top: var(--s-5); }
+    .panel-edicion.abierto { display: block; }
+
+    .grid-campos {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--s-3);
+    }
+
+    @media (max-width: 540px) {
+      .grid-campos { grid-template-columns: 1fr; }
+    }
+
+    .campo label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--c-corteza);
+      margin-bottom: 3px;
+    }
+
+    .campo .input, .campo .select, .campo textarea {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .campo.ancho { grid-column: 1 / -1; }
+
+    .campo textarea {
+      font-family: var(--f-body);
+      font-size: 0.92rem;
+      border: 1.5px solid rgba(74, 107, 58, 0.25);
+      border-radius: 10px;
+      padding: 8px 10px;
+      min-height: 60px;
+      resize: vertical;
+      background: var(--c-leche, #fff);
+    }
+
+    .acciones-panel {
+      display: flex;
+      gap: var(--s-2);
+      justify-content: flex-end;
+      align-items: center;
+      margin-top: var(--s-3);
+      flex-wrap: wrap;
+    }
+
+    .hint-guardar {
+      font-size: 0.8rem;
+      color: var(--c-tierra);
+      font-style: italic;
+      margin-right: auto;
+    }
+
+    .guardado-ok {
+      color: var(--c-verde-ok, #2f7d32);
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    /* clave de equipo */
+    .fila-clave {
+      display: flex;
+      gap: var(--s-2);
+      align-items: center;
+      flex-wrap: wrap;
+      margin: var(--s-4) 0;
+    }
+    .fila-clave .input { width: 180px; }
+    .fila-clave label { font-size: 0.85rem; font-weight: 700; color: var(--c-corteza); }
 
     .nota-final {
       font-size: 0.9rem;
@@ -81,35 +187,32 @@
         <img src="../assets/logo-nodo-verde.png" alt="Nodo Matríz" style="width:48px; height:48px;">
         <span>
           <span class="site-mark__name">Nodo Matríz</span>
-          <span class="site-mark__sub">vista previa · equipo</span>
+          <span class="site-mark__sub">revisión del catálogo · equipo</span>
         </span>
       </a>
     </header>
 
     <section class="fade-in" data-delay="1">
-      <h1>Vista previa del form de pedidos</h1>
+      <h1>Revisión del catálogo</h1>
       <p class="lead">
-        Así se van a ver los productos en el formulario de la próxima edición,
-        con los datos reales de la planilla y el orden de categorías elegido.
+        Paso obligado antes de generar la edición: el catálogo tal como lo va
+        a ver el consumidor. Cualquier dato se corrige acá mismo con
+        <strong>✏️ Editar</strong>, y los productos nuevos esperan su
+        curaduría en el bloque destacado — nada se publica sin pasar por acá.
       </p>
     </section>
 
     <div class="aviso" id="estado">Leyendo la planilla…</div>
 
-    <div class="aviso" style="background: rgba(196, 149, 67, 0.12); border-left-color: var(--c-mostaza);">
-      🔍 Esto es una <strong>previa</strong>: nada de lo que toques acá envía
-      pedidos ni cambia la planilla. Si un producto está mal, tocá
-      <strong>✏️ Corregir</strong>: se abre el form de carga del productor,
-      lo arreglás ahí, y volvés a esta pestaña y tocás
-      <strong>↻ Actualizar</strong>.
+    <div class="fila-clave">
+      <label for="clave">Clave de equipo</label>
+      <input class="input" type="password" id="clave" placeholder="para guardar cambios">
+      <button type="button" class="btn btn--ghost btn--small" id="btn-refrescar">↻ Actualizar</button>
     </div>
-
-    <p style="margin: var(--s-4) 0;">
-      <button type="button" class="btn btn--ghost btn--small" id="btn-refrescar">↻ Actualizar previa</button>
-    </p>
 
     <p class="resumen" id="resumen"></p>
 
+    <div id="curaduria"></div>
     <div id="catalogo"></div>
 
     <p class="nota-final">
@@ -129,9 +232,20 @@
       'use strict';
 
       var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
-      var LS_KEY = 'nm_orden_categorias';  // misma clave que usa Generar edición
+      var LS_KEY = 'nm_orden_categorias';   // misma clave que usa Generar edición
+      var WEBHOOK_CURADURIA = 'https://hook.us2.make.com/upk925v2qb2p2zrk8fsmo2eo26ebh6tx';
 
       var $ = function (id) { return document.getElementById(id); };
+      var categoriasExistentes = [];
+
+      // clave de equipo: se recuerda durante la sesión de la pestaña
+      try {
+        var claveGuardada = sessionStorage.getItem('nm_clave_equipo');
+        if (claveGuardada) $('clave').value = claveGuardada;
+      } catch (e) {}
+      $('clave').addEventListener('change', function () {
+        try { sessionStorage.setItem('nm_clave_equipo', $('clave').value); } catch (e) {}
+      });
 
       function gviz(params) {
         var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
@@ -159,44 +273,127 @@
       }
 
       function formatMoney(n) {
-        return '$' + Math.round(n || 0).toLocaleString('es-AR');
+        if (n === null || n === undefined || isNaN(n)) return '$ 0';
+        return '$ ' + Math.round(Number(n)).toLocaleString('es-AR');
       }
 
       function siNo(v) {
         return String(v || '').trim().toLowerCase().indexOf('s') === 0;
       }
 
-      // ── Cargar y armar el catálogo igual que lo arma A3 ──────────
+      // ── Fracciones: misma lógica que el form real ────────────────
+      function parseFraction(s) {
+        if (!s) return 1;
+        if (s.indexOf('/') === -1) return parseFloat(s) || 1;
+        var parts = s.split('/');
+        var n = parseFloat(parts[0]);
+        var d = parseFloat(parts[1]);
+        return d ? (n / d) : 1;
+      }
+
+      function parseFraccionEspecial(f, unidad) {
+        var m = String(f || '').trim().match(/^(\d+(?:[.,]\d+)?)\s*(g|gr|grs|gramos?|ml|cc)\.?$/i);
+        if (!m) return null;
+        var n = parseFloat(m[1].replace(',', '.'));
+        if (!n) return null;
+        var esMasa = m[2].toLowerCase().charAt(0) === 'g';
+        var u = String(unidad || '').trim().toLowerCase();
+        if (esMasa && !/^(kg|kilo|kilos|kilogramos?)$/.test(u)) return null;
+        if (!esMasa && !/^(l|lt|litros?)$/.test(u)) return null;
+        return { valor: n / 1000, etiqueta: n + ' ' + (esMasa ? 'g' : 'ml') };
+      }
+
+      function etiquetaTotal(T) {
+        var entero = Math.floor(T + 0.000001);
+        var resto = Math.round((T - entero) * 1000) / 1000;
+        var mapa = { 0.125: '⅛', 0.25: '¼', 0.333: '⅓', 0.5: '½', 0.667: '⅔', 0.75: '¾' };
+        var fr = resto > 0 ? (mapa[resto] || String(resto).replace('.', ',')) : '';
+        if (entero && fr) return entero + ' ' + fr;
+        if (entero) return String(entero);
+        return fr || String(T);
+      }
+
+      function conUnidad(etq, valor, unidad) {
+        var u = String(unidad || '').trim();
+        if (!u) return etq;
+        var abreviaturas = ['kg', 'g', 'gr', 'grs', 'lt', 'l', 'ml', 'cc', 'mt', 'm', 'cm'];
+        var lower = u.toLowerCase();
+        var yaPlural = lower.slice(-1) === 's';
+        if (valor !== 1 && !yaPlural && abreviaturas.indexOf(lower) === -1) {
+          if (/[aeiouáéíóú]$/.test(lower)) u = u + 's';
+          else if (lower.slice(-1) === 'z') u = u.slice(0, -1) + 'ces';
+          else u = u + 'es';
+        }
+        return etq + ' ' + escapeHtml(u);
+      }
+
+      function opcionesFraccion(p) {
+        return p.fracciones.map(function (f) {
+          var esp = parseFraccionEspecial(f, p.unidad);
+          return {
+            valor: esp ? esp.valor : parseFraction(f),
+            etiquetaFija: esp ? esp.etiqueta : null
+          };
+        }).filter(function (o) { return o.valor > 0; })
+          .sort(function (a, b) { return a.valor - b.valor; })
+          .map(function (o) {
+            return {
+              valor: o.valor,
+              etiqueta: o.etiquetaFija || etiquetaTotal(o.valor),
+              etiquetaFija: !!o.etiquetaFija
+            };
+          });
+      }
+
+      // ── Cargar la planilla ───────────────────────────────────────
       function cargar() {
         $('estado').className = 'aviso';
         $('estado').textContent = 'Leyendo la planilla…';
 
         gviz('sheet=Productos&range=A1:S1000&headers=1&_=' + Date.now())
           .then(function (res) {
-            var productos = [];
+            var disponibles = [];
+            var pendientes = [];
+            var cats = {};
+
             res.table.rows.forEach(function (r) {
               var id = String(celda(r, 0)).trim();
               if (!id) return;
-              if (!siNo(celda(r, 9))) return;  // J: disponible_edicion_actual
-              productos.push({
+              var p = {
                 id_producto: id,
                 id_productor: String(celda(r, 1)).trim(),
                 nombre: String(celda(r, 2)).trim(),
                 unidad: String(celda(r, 3)).trim(),
                 fraccionable: siNo(celda(r, 4)),
+                fracciones_raw: String(celda(r, 5) || '').trim(),
                 fracciones: String(celda(r, 5) || '').split(/[|,;]/)
                   .map(function (f) { return f.trim(); })
                   .filter(function (f) { return f; }),
                 precio: parseFloat(celda(r, 6)) || 0,
                 origen: String(celda(r, 7)).trim(),
-                categoria: String(celda(r, 8)).trim() || 'Sin categoría',
+                categoria: String(celda(r, 8)).trim(),
+                disponible: siNo(celda(r, 9)),
                 es_oferta: siNo(celda(r, 11)),
-                notas: String(celda(r, 14) || '').trim(),
-                productor: String(celda(r, 16)).trim()
-              });
+                descripcion: String(celda(r, 15) || '').trim(),
+                productor: String(celda(r, 16)).trim(),
+                quien_fracciona: String(celda(r, 18) || '').trim()
+              };
+              if (p.categoria) cats[p.categoria] = true;
+
+              if (!p.categoria) {
+                // Sin categoría = curaduría pendiente (alta nueva de productor)
+                pendientes.push(p);
+              } else if (p.disponible) {
+                disponibles.push(p);
+              }
+              // con categoría y no disponible: fuera de la edición a propósito,
+              // no se muestra (se reactiva desde la carga del productor)
             });
 
-            render(productos);
+            categoriasExistentes = Object.keys(cats)
+              .sort(function (a, b) { return a.localeCompare(b, 'es'); });
+
+            render(disponibles, pendientes);
           })
           .catch(function () {
             $('estado').className = 'aviso rojo';
@@ -215,51 +412,137 @@
         return resultado.concat(nuevas);
       }
 
-      function renderProductCard(p) {
+      // ── Tarjeta de producto (fiel al form real) ─────────────────
+      function controlFiel(p) {
+        var control = '';
+        if (p.fraccionable && p.fracciones.length) {
+          control += '<label class="product__ctl-label">Cantidad ';
+          control += '<select class="select" style="width:auto;">';
+          control += '<option>' + conUnidad('0', 0, p.unidad) + '</option>';
+          opcionesFraccion(p).forEach(function (o) {
+            var texto = o.etiquetaFija ? o.etiqueta : conUnidad(o.etiqueta, o.valor, p.unidad);
+            control += '<option>' + texto + ' · ' + formatMoney(o.valor * (p.precio || 0)) + '</option>';
+          });
+          control += '</select></label>';
+        } else {
+          control += '<label class="product__ctl-label">Cantidad ';
+          control += '<select class="select" style="width:auto;">';
+          control += '<option>' + conUnidad('0', 0, p.unidad) + '</option>';
+          for (var i = 1; i <= 5; i++) {
+            control += '<option>' + conUnidad(String(i), i, p.unidad) + '</option>';
+          }
+          control += '</select></label>';
+        }
+        return control;
+      }
+
+      function campo(idProd, campoId, etiqueta, inputHtml) {
+        return '<div class="campo' + (/descripcion|nombre/.test(campoId) ? ' ancho' : '') + '">' +
+          '<label for="' + campoId + '-' + idProd + '">' + etiqueta + '</label>' +
+          inputHtml + '</div>';
+      }
+
+      function selectSiNo(id, valor) {
+        return '<select class="select" id="' + id + '">' +
+          '<option value="Sí"' + (valor ? ' selected' : '') + '>Sí</option>' +
+          '<option value="No"' + (!valor ? ' selected' : '') + '>No</option>' +
+          '</select>';
+      }
+
+      function panelEdicion(p, esPendiente) {
+        var i = p.id_producto;
+        var h = '<div class="panel-edicion' + (esPendiente ? ' abierto' : '') + '" id="panel-' + i + '">';
+        h += '<div class="grid-campos">';
+        h += campo(i, 'nombre', 'Nombre',
+          '<input class="input" id="nombre-' + i + '" value="' + escapeHtml(p.nombre) + '">');
+        h += campo(i, 'precio', 'Precio ($)',
+          '<input class="input" type="number" min="0" step="any" id="precio-' + i + '" value="' + (p.precio || '') + '">');
+        h += campo(i, 'unidad', 'Unidad de venta',
+          '<input class="input" id="unidad-' + i + '" value="' + escapeHtml(p.unidad) + '" placeholder="kg · unidad · litro">');
+        h += campo(i, 'origen', 'Origen',
+          '<input class="input" id="origen-' + i + '" value="' + escapeHtml(p.origen) + '" placeholder="Unquillo · Cabana…">');
+        h += campo(i, 'categoria', 'Categoría',
+          '<input class="input" id="categoria-' + i + '" value="' + escapeHtml(p.categoria) + '" list="lista-categorias" placeholder="elegí o escribí una nueva">');
+        h += campo(i, 'fraccionable', 'Fraccionable', selectSiNo('fraccionable-' + i, p.fraccionable));
+        h += campo(i, 'fracciones', 'Fracciones (si fracciona)',
+          '<input class="input" id="fracciones-' + i + '" value="' + escapeHtml(p.fracciones_raw) + '" placeholder="1, 1/2, 1/4, 100grs">');
+        h += campo(i, 'quien', 'Quién fracciona',
+          '<select class="select" id="quien-' + i + '">' +
+          '<option value=""' + (!p.quien_fracciona ? ' selected' : '') + '>—</option>' +
+          '<option' + (p.quien_fracciona === 'Productor' ? ' selected' : '') + '>Productor</option>' +
+          '<option' + (p.quien_fracciona === 'Galpón' ? ' selected' : '') + '>Galpón</option>' +
+          '</select>');
+        h += campo(i, 'oferta', 'Es oferta', selectSiNo('oferta-' + i, p.es_oferta));
+        h += campo(i, 'disponible', 'Disponible en esta edición',
+          selectSiNo('disponible-' + i, esPendiente ? true : p.disponible));
+        h += campo(i, 'descripcion', 'Descripción (opcional)',
+          '<textarea id="descripcion-' + i + '">' + escapeHtml(p.descripcion) + '</textarea>');
+        h += '</div>';
+        h += '<div class="acciones-panel">';
+        h += '<span class="hint-guardar" id="hint-' + i + '">' +
+          (esPendiente ? 'Completá categoría y origen para publicarlo.' : '') + '</span>';
+        h += '<button type="button" class="btn btn--primary btn--small" data-guardar="' + i + '">' +
+          (esPendiente ? 'Aprobar y guardar' : 'Guardar cambios') + '</button>';
+        h += '</div>';
+        h += '</div>';
+        return h;
+      }
+
+      function renderProductCard(p, esPendiente) {
         var tags = '';
-        if (p.es_oferta) tags += '<span class="product__tag product__tag--oferta">Oferta</span>';
+        if (p.es_oferta) tags += ' <span class="product__tag product__tag--oferta">Oferta</span>';
+        if (esPendiente) tags += ' <span class="badge-curaduria">Curaduría pendiente</span>';
 
         var meta = '';
         if (p.origen) meta += escapeHtml(p.origen) + ' · ';
-        meta += 'por ' + escapeHtml(p.unidad);
-
-        var control = '';
-        if (p.fraccionable && p.fracciones.length) {
-          control += '<select class="select" style="width: auto;">';
-          control += '<option value="0">— sin elegir —</option>';
-          p.fracciones.forEach(function (f) {
-            control += '<option>' + escapeHtml(f) + ' ' + escapeHtml(p.unidad) + '</option>';
-          });
-          control += '</select>';
-          control += '<input class="input" type="number" min="0" step="1" value="0" placeholder="cant." style="width: 80px;">';
-        } else {
-          control += '<input class="input" type="number" min="0" step="1" value="0" placeholder="0" style="width: 100px;">';
-        }
+        if (p.productor) meta += escapeHtml(p.productor) + ' · ';
+        meta += formatMoney(p.precio) + ' por ' + escapeHtml(p.unidad || '—');
 
         return '' +
-          '<div class="product">' +
+          '<div class="product' + (esPendiente ? ' pendiente' : '') + '" id="prod-' + p.id_producto + '">' +
           '  <div class="product__head">' +
-          '    <span class="product__name">' + escapeHtml(p.nombre) + ' ' + tags + '</span>' +
-          '    <span class="product__meta">' +
-          '      <span>' + meta + '</span>' +
-          '      <span class="product__price">' + formatMoney(p.precio) + '</span>' +
-          '    </span>' +
+          '    <span class="product__name">' + escapeHtml(p.nombre) + tags + '</span>' +
+          '    <span class="product__meta"><span>' + meta + '</span></span>' +
           '  </div>' +
-          '  <div class="product__control">' + control + '</div>' +
-          '  <div class="fila-corregir">' +
-          '    <a class="btn-corregir" target="_blank" rel="noopener" ' +
-          '       href="stock.html?id_productor=' + encodeURIComponent(p.id_productor) + '">' +
-          '      ✏️ Corregir' + (p.productor ? ' (' + escapeHtml(p.productor) + ')' : '') +
-          '    </a>' +
+          '  <div class="product__control">' + controlFiel(p) + '</div>' +
+          '  <div class="fila-acciones">' +
+          (esPendiente ? '' :
+          '    <button type="button" class="btn-editar" data-editar="' + p.id_producto + '">✏️ Editar</button>') +
           '  </div>' +
+          panelEdicion(p, esPendiente) +
           '</div>';
       }
 
-      function render(productos) {
+      function render(disponibles, pendientes) {
+        var contP = $('curaduria');
         var cont = $('catalogo');
+        contP.innerHTML = '';
         cont.innerHTML = '';
 
-        if (!productos.length) {
+        // datalist de categorías para los paneles
+        var dl = '<datalist id="lista-categorias">';
+        categoriasExistentes.forEach(function (c) {
+          dl += '<option value="' + escapeHtml(c) + '">';
+        });
+        dl += '</datalist>';
+        contP.insertAdjacentHTML('beforebegin', '');
+        document.body.insertAdjacentHTML('beforeend', dl);
+
+        if (pendientes.length) {
+          var cardP = document.createElement('div');
+          cardP.className = 'card cat-card curaduria';
+          var hp = '<h2>🧐 Curaduría pendiente <span class="badge-curaduria">' +
+            pendientes.length + '</span></h2>';
+          hp += '<p class="resumen" style="margin-top:var(--s-2);">Productos nuevos cargados por productores. ' +
+            'No aparecen en el form hasta que el equipo los complete y apruebe acá.</p>';
+          hp += '<div class="product-list mt-3">';
+          pendientes.forEach(function (p) { hp += renderProductCard(p, true); });
+          hp += '</div>';
+          cardP.innerHTML = hp;
+          contP.appendChild(cardP);
+        }
+
+        if (!disponibles.length && !pendientes.length) {
           $('estado').className = 'aviso rojo';
           $('estado').textContent = 'No hay productos marcados como disponibles para la edición. ' +
             'Primero hay que hacer la carga de productos.';
@@ -267,12 +550,10 @@
           return;
         }
 
-        // agrupar por categoría
         var porCat = {};
-        productos.forEach(function (p) {
+        disponibles.forEach(function (p) {
           (porCat[p.categoria] = porCat[p.categoria] || []).push(p);
         });
-
         var orden = ordenCategorias(Object.keys(porCat));
 
         orden.forEach(function (cat) {
@@ -280,23 +561,106 @@
           card.className = 'card cat-card';
           var html = '<h2>' + escapeHtml(cat) + '</h2>';
           html += '<div class="product-list mt-3">';
-          porCat[cat].forEach(function (p) { html += renderProductCard(p); });
+          porCat[cat].forEach(function (p) { html += renderProductCard(p, false); });
           html += '</div>';
           card.innerHTML = html;
           cont.appendChild(card);
         });
 
         $('estado').className = 'aviso';
-        $('estado').innerHTML = 'Previa armada con los datos <strong>actuales</strong> de la ' +
-          'planilla. El orden de las categorías es el elegido en Generar edición' +
+        $('estado').innerHTML = 'Catálogo con los datos <strong>actuales</strong> de la planilla. ' +
+          'Todo lo que corrijas acá se guarda de verdad (pide la clave de equipo). ' +
+          'El orden de las categorías es el elegido en Generar edición' +
           (localStorage.getItem(LS_KEY) ? '' : ' (todavía no se eligió: se muestra alfabético)') + '.';
 
         $('resumen').textContent = orden.length + ' categorías · ' +
-          productos.length + ' productos disponibles';
+          disponibles.length + ' productos publicados' +
+          (pendientes.length ? ' · ' + pendientes.length + ' esperando curaduría' : '');
+
+        // listeners
+        document.querySelectorAll('[data-editar]').forEach(function (b) {
+          b.addEventListener('click', function () {
+            var panel = $('panel-' + b.getAttribute('data-editar'));
+            if (panel) panel.classList.toggle('abierto');
+          });
+        });
+        document.querySelectorAll('[data-guardar]').forEach(function (b) {
+          b.addEventListener('click', function () { guardar(b.getAttribute('data-guardar'), b); });
+        });
+      }
+
+      // ── Guardar cambios de un producto ───────────────────────────
+      function guardar(id, btn) {
+        var hint = $('hint-' + id);
+        var clave = $('clave').value.trim();
+        if (!clave) {
+          hint.textContent = '⚠️ Falta la clave de equipo (arriba de todo).';
+          $('clave').focus();
+          return;
+        }
+
+        var val = function (campoId) {
+          var el = $(campoId + '-' + id);
+          return el ? el.value.trim() : '';
+        };
+
+        var disponible = val('disponible');
+        var categoria = val('categoria');
+        if (disponible === 'Sí' && !categoria) {
+          hint.textContent = '⚠️ Sin categoría no puede publicarse: completala o dejalo en No.';
+          return;
+        }
+        if (val('fraccionable') === 'Sí' && !val('fracciones')) {
+          hint.textContent = '⚠️ Marcaste fraccionable: indicá las fracciones (ej: 1, 1/2).';
+          return;
+        }
+
+        var payload = {
+          tipo: 'curaduria',
+          clave: clave,
+          id_producto: id,
+          nombre: val('nombre'),
+          unidad: val('unidad'),
+          precio: parseFloat(val('precio')) || 0,
+          origen: val('origen'),
+          categoria: categoria,
+          fraccionable: val('fraccionable'),
+          fracciones: val('fracciones'),
+          quien_fracciona: val('quien'),
+          es_oferta: val('oferta'),
+          disponible: disponible,
+          descripcion: val('descripcion')
+        };
+
+        btn.disabled = true;
+        btn.textContent = 'Guardando…';
+
+        var envio;
+        if (/PEGAR_AQUI|REEMPLAZAR|TEST_LOCAL/.test(WEBHOOK_CURADURIA)) {
+          console.log('[NodoMatriz · modo dev] Curaduría que se enviaría:', payload);
+          envio = Promise.resolve();
+        } else {
+          envio = fetch(WEBHOOK_CURADURIA, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify(payload)
+          });
+        }
+
+        envio.then(function () {
+          btn.textContent = '✔ Guardado';
+          btn.classList.add('guardado-ok');
+          hint.textContent = 'Actualizando la vista en unos segundos…';
+          setTimeout(cargar, 5000);
+        }).catch(function () {
+          btn.disabled = false;
+          btn.textContent = 'Guardar cambios';
+          hint.textContent = '⚠️ No se pudo enviar. Probá de nuevo.';
+        });
       }
 
       $('btn-refrescar').addEventListener('click', cargar);
-
       cargar();
     })();
   </script>
