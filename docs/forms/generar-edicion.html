@@ -153,6 +153,7 @@
       <div class="campo">
         <label for="numero">Número de edición *</label>
         <input type="number" id="numero" inputmode="numeric" min="1" max="99" placeholder="Ej: 11">
+        <small id="pista-edicion">Leyendo la edición en curso…</small>
       </div>
 
       <div class="campo">
@@ -266,6 +267,53 @@
       $('anio').value = new Date().getFullYear();
 
       function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+      // ── Precargar número, año y cierre desde la edición en curso ──
+      // Toma la última fila con formato ED####-## de la hoja Ediciones
+      // (la misma regla que usan la guía y el tablero de carga).
+      (function precargarEdicion() {
+        var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
+          '/gviz/tq?tqx=out:json&sheet=Ediciones&range=A1:N100&headers=1&_=' + Date.now();
+        fetch(url)
+          .then(function (r) { return r.text(); })
+          .then(function (text) {
+            var m = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+            if (!m) throw new Error('gviz');
+            var res = JSON.parse(m[1]);
+            var fila = null;
+            res.table.rows.forEach(function (r) {
+              var c = r.c[0];
+              var id = c && c.v ? String(c.v).trim() : '';
+              if (/^ED\d{4}-\d{2}$/.test(id)) fila = r;
+            });
+            var pista = $('pista-edicion');
+            if (!fila) {
+              if (pista) pista.textContent = 'No encontré ninguna edición en la planilla: completalo a mano.';
+              return;
+            }
+            var id = String(fila.c[0].v).trim();
+            var numero = fila.c[1] && fila.c[1].v ? String(fila.c[1].v).replace(/\.0$/, '') : id.slice(-2);
+            var anio = fila.c[2] && fila.c[2].v ? String(fila.c[2].v).replace(/\.0$/, '') : id.slice(2, 6);
+            var estado = fila.c[3] && fila.c[3].v ? String(fila.c[3].v).trim() : '';
+            if (!$('numero').value) $('numero').value = parseInt(numero, 10) || '';
+            if (anio) $('anio').value = parseInt(anio, 10) || $('anio').value;
+            // fecha_cierre_form (H, índice 7): precargar si está y el campo está vacío
+            var h = fila.c[7] && fila.c[7].v ? String(fila.c[7].v) : '';
+            var fm = h.match(/^Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+))?/);
+            if (fm && !$('cierre').value) {
+              $('cierre').value = fm[1] + '-' + pad2(+fm[2] + 1) + '-' + pad2(+fm[3]) +
+                'T' + pad2(+(fm[4] || 12)) + ':' + pad2(+(fm[5] || 0));
+            }
+            if (pista) {
+              pista.textContent = 'Edición en curso: ' + id +
+                (estado ? ' (' + estado + ')' : '') + ' — datos precargados, revisalos.';
+            }
+          })
+          .catch(function () {
+            var pista = $('pista-edicion');
+            if (pista) pista.textContent = 'No pude leer la planilla: completalo a mano.';
+          });
+      })();
 
       // ── Categorías: cargar desde la planilla + orden guardado ────
       function cargarCategorias() {
