@@ -409,6 +409,13 @@
     var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
     var WEBHOOK_URL    = 'https://hook.us2.make.com/thlpwqa9epg354ekwp44ijr1fhpg5xsq';
 
+    // ── Interruptor de stock ───────────────────────────────────────
+    // Cuando el Nodo decida pedirles stock a los productores, cambiar
+    // esta línea a true y subir el archivo: aparece el campo "stock"
+    // en cada producto y viaja en el envío (A2 ya lo graba en la
+    // planilla y la curaduría ya lo puede corregir). Nada más que tocar.
+    var STOCK_ACTIVO = false;
+
     // Columnas de la hoja Productos_API_Stock (en orden, 0-based):
     // 0:id_producto, 1:id_productor, 2:nombre, 3:unidad_venta,
     // 4:precio_unitario, 5:disponible_edicion_actual, 6:stock_estimado,
@@ -577,6 +584,11 @@
             '<input class="celda-editable precio" type="number" inputmode="numeric" ' +
               'min="0" step="50" value="' + (precio || '') + '" data-campo="precio" ' +
               'placeholder="$ precio" title="Editá el precio">' +
+            (STOCK_ACTIVO ?
+              '<input class="celda-editable" type="number" inputmode="numeric" min="0" step="any" ' +
+                'value="' + (cols[COL.stock_estimado] || '') + '" data-campo="stock" ' +
+                'placeholder="stock disp." title="Cuánto tenés para esta edición" ' +
+                'style="margin-top:4px;">' : '') +
           '</td>' +
 
           '<td class="td-oferta">' +
@@ -723,10 +735,17 @@
             '<option value="pack">por pack</option>' +
             '<option value="ramito">por ramito</option>' +
           '</select>' +
+          '<textarea class="celda-editable" data-campo="descripcion" rows="2" ' +
+            'style="width:100%; box-sizing:border-box; min-width:160px; margin-top:4px; resize:vertical;" ' +
+            'placeholder="Descripción para el catálogo (opcional): cómo lo hacés, presentación, ingredientes…"></textarea>' +
           '<button type="button" class="btn-cancelar-nuevo" data-accion="eliminar-nuevo">✕ Cancelar</button>' +
         '</td>' +
         '<td class="td-precio"><input class="celda-editable precio" type="number" inputmode="numeric" ' +
-          'min="0" step="50" placeholder="$ precio" data-campo="precio"></td>' +
+          'min="0" step="50" placeholder="$ precio" data-campo="precio">' +
+          (STOCK_ACTIVO ?
+            '<input class="celda-editable" type="number" inputmode="numeric" min="0" step="any" ' +
+              'data-campo="stock" placeholder="stock disp." style="margin-top:4px;">' : '') +
+        '</td>' +
         '<td class="td-oferta">' +
           '<label class="toggle-oferta">' +
             '<input type="checkbox" data-campo="es_oferta">' +
@@ -763,12 +782,13 @@
         var tr = tbody.querySelector('tr[data-id="' + id + '"]');
         if (!tr) return;
 
+        var elStock = tr.querySelector('[data-campo="stock"]');
         productos.push({
           id_producto:    id,
           nombre:         cols[COL.nombre],
           unidad:         cols[COL.unidad_venta],
           precio:         parseFloat(tr.querySelector('[data-campo="precio"]').value) || null,
-          stock_estimado: null,  // columna reservada para más adelante
+          stock_estimado: (STOCK_ACTIVO && elStock) ? (parseFloat(elStock.value) || null) : null,
           disponible:     tr.querySelector('[data-campo="disponible"]').checked,
           es_oferta:      tr.querySelector('[data-campo="es_oferta"]').checked,
           accion:         'actualizar',
@@ -780,12 +800,15 @@
         var tr = p.tr;
         var nombre = tr.querySelector('[data-campo="nombre"]').value.trim();
         if (!nombre) return;
+        var elStockN = tr.querySelector('[data-campo="stock"]');
+        var elDesc = tr.querySelector('[data-campo="descripcion"]');
         productos.push({
           id_producto:    null,  // Make genera el ID
           nombre:         nombre,
           unidad:         tr.querySelector('[data-campo="unidad"]').value,
           precio:         parseFloat(tr.querySelector('[data-campo="precio"]').value) || null,
-          stock_estimado: null,  // columna reservada para más adelante
+          stock_estimado: (STOCK_ACTIVO && elStockN) ? (parseFloat(elStockN.value) || null) : null,
+          descripcion:    (elDesc ? elDesc.value.trim() : '') || null,
           disponible:     tr.querySelector('[data-campo="disponible"]').checked,
           es_oferta:      tr.querySelector('[data-campo="es_oferta"]').checked,
           accion:         'nuevo',
