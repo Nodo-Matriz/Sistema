@@ -249,10 +249,8 @@
       'use strict';
 
       var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
-      // Una carga se considera "al día" si tiene menos de esta cantidad de días
-      // Si la edición vigente no tiene fecha_apertura_stocks, se usa esta
-      // ventana móvil como respaldo.
-      var DIAS_AL_DIA = 7;
+      // Una carga cuenta como "de esta edición" solo si es posterior a
+      // fecha_apertura_stocks (Ediciones!E) de la edición vigente.
 
       var $ = function (id) { return document.getElementById(id); };
 
@@ -284,13 +282,27 @@
       // gviz devuelve fechas como "Date(2026,4,4,11,23,0)" (mes base 0)
       function parseFecha(v) {
         if (v instanceof Date) return v;
-        var s = String(v);
+        if (v === '' || v === null || v === undefined) return null;
+        var s = String(v).trim();
         var m = s.match(/^Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+)(?:,(\d+))?)?\)$/);
         if (m) {
           return new Date(+m[1], +m[2], +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0));
         }
+        // Un número suelto (precio, stock) NO es una fecha: new Date("60000")
+        // daría "año 60000" y contaría como actualización futura.
+        if (/^-?\d+([.,]\d+)?$/.test(s)) return null;
         var d = new Date(s.replace(' ', 'T'));
         return isNaN(d.getTime()) ? null : d;
+      }
+
+      // Índice de columna por nombre de encabezado (así el tablero no se
+      // rompe si en la planilla agregan o mueven columnas).
+      function idxPorEncabezado(res, regex) {
+        if (!res || !res.table || !res.table.cols) return -1;
+        for (var i = 0; i < res.table.cols.length; i++) {
+          if (regex.test(String(res.table.cols[i].label || ''))) return i;
+        }
+        return -1;
       }
 
       function limpiarTelefono(t) {
@@ -312,7 +324,7 @@
         Promise.all([
           gviz('sheet=Productores&range=A1:N300&headers=1&_=' + Date.now()),
           gviz('sheet=Log_Cambios_Stock&range=A1:N10000&headers=1&_=' + Date.now()),
-          gviz('sheet=Productos&range=A1:N1000&headers=1&_=' + Date.now()),
+          gviz('sheet=Productos&range=A1:AZ1000&headers=1&_=' + Date.now()),
           gviz('sheet=Ediciones&range=A1:L100&headers=1&_=' + Date.now())
         ]).then(function (res) {
           parseEdicion(res[3]);
@@ -340,7 +352,8 @@
             $('estado').innerHTML = '⚠️ La edición <strong>' + (idEdicion || '—') +
               '</strong> no tiene <strong>fecha_apertura_stocks</strong> cargada en la hoja ' +
               'Ediciones, así que no se puede saber qué cargas son de esta edición. ' +
-              'Mientras tanto se muestran las de los últimos ' + DIAS_AL_DIA + ' días.';
+              'Hasta que se cargue (a mano o iniciando la edición desde la guía), ' +
+              'todos figuran como pendientes.';
           }
         }).catch(function () {
           $('estado').className = 'aviso rojo';
@@ -377,20 +390,32 @@
       }
 
       // ¿Esta carga corresponde a la edición vigente?
+      // Sin fecha_apertura_stocks NO hay forma de saberlo, así que nada
+      // cuenta como confirmado: las barras arrancan en cero y el aviso
+      // rojo explica qué falta. (Antes caía a una ventana de 7 días, que
+      // mezclaba cargas de la edición anterior.)
       function esDeEstaEdicion(f) {
         if (!f) return false;
         if (corteCarga) return f >= corteCarga;
-        return (new Date() - f) < DIAS_AL_DIA * 24 * 60 * 60 * 1000;
+        return false;
       }
 
       function procesarProductos(res) {
         totProductos = 0;
         actProductos = 0;
         if (!res) return;
+        // Buscar la columna por nombre; si no aparece, se usa N (14ª) como
+        // estaba antes, pero avisando por consola.
+        var idxUlt = idxPorEncabezado(res, /ltima.{0,2}actualizaci/i);
+        if (idxUlt === -1) {
+          idxUlt = 13;
+          console.warn('[NodoMatriz] No encontré la columna ultima_actualizacion ' +
+            'por nombre en Productos; uso la columna N. Verificar encabezados.');
+        }
         res.table.rows.forEach(function (r) {
           if (!String(celda(r, 0)).trim()) return;
           totProductos++;
-          if (esDeEstaEdicion(parseFecha(celda(r, 13)))) actProductos++;
+          if (esDeEstaEdicion(parseFecha(celda(r, idxUlt)))) actProductos++;
         });
       }
 
