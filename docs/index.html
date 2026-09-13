@@ -382,7 +382,7 @@
         </p>
         <p>
           <a href="forms/comandas.html" class="btn btn--ghost btn--small" id="btn-paso5">
-            Abrir comandas a productores
+            Enviar comandas a productores
           </a>
           <span class="porque" id="porque-paso5"></span>
         </p>
@@ -464,7 +464,7 @@
       var WEBHOOK_A1 = 'https://hook.us2.make.com/cwy19mjkoqqyuexr1xv4lm6ddsowk563';
       // Escenario A5 (finalizar pedidos / cerrar edición — controles de prueba).
       // Pegar acá la dirección del webhook cuando esté armado en Make.
-      var WEBHOOK_A5 = 'https://hook.us2.make.com/qyqw5eh5f6gcbdd558o4t21krx4k72hy';
+      var WEBHOOK_A5 = '';
 
       var $ = function (id) { return document.getElementById(id); };
 
@@ -535,8 +535,8 @@
       function pasoDeEstado(estado) {
         var e = estado.toLowerCase();
         if (e.indexOf('planific') !== -1 || e.indexOf('apertura') !== -1) return 1;
-        if (e.indexOf('stock') !== -1 || e.indexOf('carga') !== -1 ||
-            e.indexOf('revis') !== -1) return 2;
+        if (e.indexOf('stock') !== -1 || e.indexOf('carga') !== -1) return 2;
+        if (e.indexOf('revis') !== -1 || e.indexOf('curad') !== -1) return 3;
         if (e.indexOf('abierto') !== -1 || e.indexOf('pedidos') !== -1) return 4;
         if (e.indexOf('comanda') !== -1 || e.indexOf('cierre') !== -1 ||
             e.indexOf('cerrado') !== -1) return 5;
