@@ -112,14 +112,23 @@
       <h2>Datos</h2>
 
       <div class="campo">
-        <label for="numero">Número de edición *</label>
-        <input type="number" id="numero" inputmode="numeric" min="1" max="99" placeholder="Ej: 11">
-        <small id="pista-edicion">Leyendo la edición en curso…</small>
+        <label>Edición</label>
+        <div id="ed-display" style="font-size:1.15rem; font-weight:700; color:var(--c-suelo);">
+          Leyendo la planilla…
+        </div>
+        <small id="pista-edicion">Las comandas se generan siempre para la edición en curso.</small>
       </div>
 
-      <div class="campo">
-        <label for="anio">Año *</label>
-        <input type="number" id="anio" inputmode="numeric" min="2026" max="2099">
+      <!-- solo aparece si no se pudo leer la planilla -->
+      <div id="campos-manual" hidden>
+        <div class="campo">
+          <label for="numero">Número de edición *</label>
+          <input type="number" id="numero" inputmode="numeric" min="1" max="99" placeholder="Ej: 11">
+        </div>
+        <div class="campo">
+          <label for="anio">Año *</label>
+          <input type="number" id="anio" inputmode="numeric" min="2026" max="2099">
+        </div>
       </div>
 
       <div class="campo">
@@ -159,6 +168,9 @@
       'use strict';
 
       var WEBHOOK_C2     = 'https://hook.us2.make.com/eexf11kq69s6e5dxsn7ef6urq5iqnrc8';
+      // Escenario A5 (cambios de estado): al confirmarse las comandas, pasa la
+      // edición a "Recepción" para que la guía avance al paso 6.
+      var WEBHOOK_A5     = 'https://hook.us2.make.com/qyqw5eh5f6gcbdd558o4t21krx4k72hy';
       var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
       var OFFSET         = '-03:00'; // Argentina
       var CLAVE_KEY      = 'nm_clave_equipo';
@@ -197,6 +209,8 @@
           });
           var pista = $('pista-edicion');
           if (!fila) {
+            $('ed-display').textContent = '—';
+            $('campos-manual').hidden = false;
             if (pista) pista.textContent = 'No encontré ninguna edición en la planilla: completalo a mano.';
             return;
           }
@@ -208,10 +222,7 @@
           // que re-tipear un caso raro.
           $('numero').value = parseInt(numero, 10) || '';
           if (anio) $('anio').value = parseInt(anio, 10) || $('anio').value;
-          if (pista) {
-            pista.textContent = 'Edición en curso: ' + id +
-              (estado ? ' (' + estado + ')' : '') + ' — datos precargados.';
-          }
+          $('ed-display').textContent = id + (estado ? ' · ' + estado : '');
           // aviso si la toma de pedidos sigue abierta
           var h = fila.c[7] && fila.c[7].v ? String(fila.c[7].v) : '';
           var fm = h.match(/^Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+))?/);
@@ -222,6 +233,8 @@
           if (abierta) $('alerta-abierta').style.display = 'block';
           refrescar();
         }).catch(function () {
+          $('ed-display').textContent = '—';
+          $('campos-manual').hidden = false;
           var pista = $('pista-edicion');
           if (pista) pista.textContent = 'No pude leer la planilla: completalo a mano.';
         });
@@ -321,8 +334,21 @@
               caja.innerHTML = '✅ <strong>¡Comandas de ' + id + ' registradas!</strong> (' +
                 n + ' comanda' + (n === 1 ? '' : 's') + ')<br>' +
                 'En un momento llega el correo al equipo con el mensaje de WhatsApp ' +
-                'de cada productor, con la entrega ' + fechaHuman(d) + '.<br><br>' +
+                'de cada productor, con la entrega ' + fechaHuman(d) + '. ' +
+                'La guía pasa al paso 6 (galpón).<br><br>' +
                 '<a href="../" class="btn btn--ghost btn--small">← Volver a la guía</a>';
+              // pasar la edición a "Recepción" para que la guía avance sola
+              if (WEBHOOK_A5.indexOf('https://hook.') === 0) {
+                fetch(WEBHOOK_A5, {
+                  method: 'POST',
+                  mode: 'no-cors',
+                  headers: { 'Content-Type': 'text/plain' },
+                  body: JSON.stringify({
+                    tipo: 'iniciar_recepcion',
+                    clave: $('clave').value.trim()
+                  })
+                }).catch(function () {});
+              }
             }
           }).catch(function () {});
         }, 8000);

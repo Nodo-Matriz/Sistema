@@ -707,9 +707,9 @@
       <h2>⚠️ Revisar faltantes</h2>
       <p class="muted">
         Cuando ya recibiste a <strong>todos</strong> los productores, tocá acá.
-        El sistema compara lo que se pidió contra lo que llegó y le manda al
-        equipo por mail el detalle de qué falta y qué pedidos quedan afectados,
-        para decidir juntas los ajustes.
+        El sistema compara lo que se pidió contra lo que llegó y muestra el
+        detalle acá mismo; los faltantes quedan además registrados para
+        repartirlos en la solapa <strong>Ajustes</strong>.
       </p>
 
       <div class="campo">
@@ -719,9 +719,8 @@
 
       <button type="button" class="btn-conf" id="btn-faltantes">Revisar faltantes de la edición</button>
 
-      <div class="ok-box" id="ok-faltantes">
-        ✅ Listo. En un minuto llega el mail con el detalle de faltantes.
-      </div>
+      <div class="ok-box" id="ok-faltantes"></div>
+      <div id="tabla-faltantes" style="margin-top:12px;"></div>
     </div>
 
     </div><!-- /vista-recepcion -->
@@ -862,6 +861,9 @@
       var WEBHOOK_RETIRO = 'https://hook.us2.make.com/gd5qh8wry0v9wmnsqfwp96vjmua55e36';
       var WEBHOOK_D2     = 'https://hook.us2.make.com/aodjwri3frhtfj8yk7mnegpb6czva9j9';
       var WEBHOOK_D3     = 'https://hook.us2.make.com/8w3cb9fk11gf9rj9352ai7k4pixpmm1n';
+      // Escenario A5 (cambios de estado): al entregar el último pedido, la
+      // edición pasa a "Liquidación" y la guía avanza al paso 7.
+      var WEBHOOK_A5     = 'https://hook.us2.make.com/qyqw5eh5f6gcbdd558o4t21krx4k72hy';
       var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
 
       var $ = function (id) { return document.getElementById(id); };
@@ -1242,6 +1244,8 @@
           div.querySelector('.linea-nombre').textContent =
             (l.producto || l.id_producto) + ' — esperado: ' + esperado + ' ' + unidadMuestra;
           div.querySelector('.cant').value = esperado;
+          // no se puede recibir más de lo solicitado
+          div.querySelector('.cant').max = esperado;
           div.querySelector('.detalle .muted').textContent = unidadMuestra;
 
           cont.appendChild(div);
@@ -1253,6 +1257,25 @@
         actualizarAvisoDup(idProd);
         actualizarProgreso();
       }
+
+      // Tope: no se puede registrar más cantidad de la solicitada
+      $('lista-items').addEventListener('input', function (e) {
+        if (!e.target.classList.contains('cant')) return;
+        var max = parseFloat(e.target.max);
+        var v = parseFloat(e.target.value);
+        if (!isNaN(max) && !isNaN(v) && v > max) {
+          e.target.value = max;
+          var nota = e.target.closest('.detalle').querySelector('.muted');
+          var original = nota.dataset.orig || nota.textContent;
+          nota.dataset.orig = original;
+          nota.textContent = '⚠ máximo: lo solicitado (' + max + ')';
+          nota.style.color = '#A6402B';
+          setTimeout(function () {
+            nota.textContent = original;
+            nota.style.color = '';
+          }, 2500);
+        }
+      });
 
       // Tildar / destildar
       $('lista-items').addEventListener('change', function (e) {
@@ -1727,7 +1750,31 @@
             ts: Date.now()
           };
           if (accion === 'armado') guardarTicks(p.id_pedido, []);
-          if (accion === 'entrega') pedAbierto = '';
+          if (accion === 'entrega') {
+            pedAbierto = '';
+            // ¿era el último? -> la edición pasa a Liquidación (paso 7)
+            var todos = pedidos.length > 0 && pedidos.every(function (p2) {
+              return estadoDe(p2) === 'Entregado';
+            });
+            if (todos && WEBHOOK_A5.indexOf('https://hook.') === 0) {
+              fetch(WEBHOOK_A5, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify({
+                  tipo: 'iniciar_liquidacion',
+                  clave: $('clave-entrega').value.trim()
+                })
+              }).catch(function () {});
+              var caja = $('aviso-entrega');
+              caja.style.display = 'block';
+              caja.style.background = 'rgba(110, 142, 85, 0.12)';
+              caja.style.borderLeftColor = 'var(--c-verde-ok, #5b7a3a)';
+              caja.style.color = 'var(--c-corteza, #4a4234)';
+              caja.textContent = '🎉 ¡Último pedido entregado! La edición pasa a ' +
+                'Liquidación y la guía avanza al paso 7.';
+            }
+          }
           renderEntrega();
         }
       }
@@ -1980,21 +2027,88 @@
         btn.disabled = true;
         btn.textContent = 'Revisando…';
 
+        // registro en Make (genera las propuestas de ajuste)
         fetch(WEBHOOK_D2, {
           method: 'POST',
           mode: 'no-cors',
           headers: { 'Content-Type': 'text/plain' },
           body: JSON.stringify({ tipo: 'faltantes', id_edicion: idEdicion, clave: clave })
-        }).then(finF).catch(finF);
+        }).catch(function () {});
 
-        function finF() {
-          btn.disabled = false;
-          btn.textContent = 'Revisar faltantes de la edición';
-          caja.style.display = 'block';
-          caja.style.background = '';
-          caja.style.color = '';
-          caja.innerHTML = '✅ Listo. En un minuto llega el mail con el detalle de faltantes.';
-        }
+        // detalle EN PANTALLA, leído directo de la planilla
+        gviz('sheet=Recepciones&range=A1:L4000&headers=1&_=' + Date.now())
+          .then(function (res) {
+            var agg = {};
+            var conRecepcion = {};
+            res.table.rows.forEach(function (r) {
+              if (String(celda(r, 1)).trim() !== idEdicion) return;
+              var idP = String(celda(r, 2)).trim();
+              var idProd = String(celda(r, 5)).trim();
+              if (!idProd) return;
+              conRecepcion[idP] = true;
+              var k = idP + '|' + idProd;
+              if (!agg[k]) agg[k] = { idP: idP, idProd: idProd, ped: 0, rec: 0 };
+              agg[k].ped += parseFloat(celda(r, 6)) || 0;
+              agg[k].rec += parseFloat(celda(r, 7)) || 0;
+            });
+
+            var falt = [];
+            Object.keys(agg).forEach(function (k) {
+              var a = agg[k];
+              if (a.rec < a.ped - 0.0001) falt.push(a);
+            });
+            falt.sort(function (a, b) { return (a.idP + a.idProd) < (b.idP + b.idProd) ? -1 : 1; });
+
+            // productores con comanda que todavía no tienen recepción registrada
+            var pendientes = {};
+            lineas.forEach(function (l) {
+              if (!conRecepcion[l.id_productor]) pendientes[l.id_productor] = true;
+            });
+            var sinRec = Object.keys(pendientes).map(function (id) {
+              return productores[id] || id;
+            });
+
+            function num(n) { return Math.round(n * 100) / 100; }
+            var html = '';
+            if (sinRec.length) {
+              html += '<div class="aviso rojo" style="display:block;">Todavía no se registró ' +
+                'la recepción de: <strong>' + sinRec.join(', ') + '</strong>. ' +
+                'Sus faltantes no están incluidos abajo.</div>';
+            }
+            if (!falt.length) {
+              html += '<p class="muted" style="font-size:0.95rem;">🎉 Sin faltantes: llegó todo lo pedido' +
+                (sinRec.length ? ' (de lo recibido hasta ahora)' : '') + '.</p>';
+            } else {
+              html += '<p style="font-weight:700; margin:6px 0;">' + falt.length +
+                ' producto' + (falt.length === 1 ? '' : 's') + ' con faltante:</p>';
+              falt.forEach(function (a) {
+                html += '<div class="item no-llego" style="display:block; padding:10px 14px;">' +
+                  '<strong>' + nombreProducto(a.idProd) + '</strong> · ' +
+                  (productores[a.idP] || a.idP) + '<br>' +
+                  '<span class="muted" style="font-size:0.88rem;">pedido: ' + num(a.ped) +
+                  ' · llegó: ' + num(a.rec) +
+                  ' · <strong style="color:#A6402B;">falta: ' + num(a.ped - a.rec) +
+                  '</strong></span></div>';
+              });
+            }
+            $('tabla-faltantes').innerHTML = html;
+
+            btn.disabled = false;
+            btn.textContent = 'Revisar faltantes de la edición';
+            caja.style.display = 'block';
+            caja.style.background = '';
+            caja.style.color = '';
+            caja.innerHTML = '✅ Revisión hecha: el detalle está acá abajo. Los faltantes ' +
+              'quedan registrados para repartirlos en la solapa <strong>Ajustes</strong>.';
+          })
+          .catch(function () {
+            btn.disabled = false;
+            btn.textContent = 'Revisar faltantes de la edición';
+            caja.style.display = 'block';
+            caja.style.background = 'rgba(166, 64, 43, 0.10)';
+            caja.style.color = '#A6402B';
+            caja.textContent = 'No pude leer la planilla para mostrar el detalle. Probá de nuevo.';
+          });
       });
 
       cargar();
