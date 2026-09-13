@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="robots" content="noindex">
   <title>Generar edición · Nodo Matríz (equipo)</title>
   <link rel="stylesheet" href="../assets/styles.css">
@@ -251,7 +254,7 @@
       (function precargarEdicion() {
         var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
           '/gviz/tq?tqx=out:json&sheet=Ediciones&range=A1:N100&headers=1&_=' + Date.now();
-        fetch(url)
+        fetch(url, { cache: 'no-store' })
           .then(function (r) { return r.text(); })
           .then(function (text) {
             var m = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
@@ -302,7 +305,7 @@
         var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
           '/gviz/tq?tqx=out:json&sheet=Productos&range=A1:S2000&headers=1&_=' + Date.now();
 
-        fetch(url)
+        fetch(url, { cache: 'no-store' })
           .then(function (r) { return r.text(); })
           .then(function (text) {
             var m = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
@@ -508,7 +511,7 @@
           }
           var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
             '/gviz/tq?tqx=out:json&sheet=Ediciones&range=A1:L100&headers=1&_=' + Date.now();
-          fetch(url)
+          fetch(url, { cache: 'no-store' })
             .then(function (r) { return r.text(); })
             .then(function (text) {
               var m = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);

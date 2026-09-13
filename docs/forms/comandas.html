@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="robots" content="noindex">
   <title>Comandas a productores · Nodo Matríz (equipo)</title>
   <link rel="stylesheet" href="../assets/styles.css">
@@ -148,11 +151,21 @@
         pedidos que entren después no van a estar incluidos.
       </div>
 
+      <div class="alerta" id="alerta-existentes"></div>
+
       <div class="preview" id="preview-com">Completá edición, fecha de entrega y clave…</div>
 
       <button type="button" class="btn btn--primary" id="btn-comandas" disabled style="width:100%;">
         Generar comandas de la edición
       </button>
+
+      <p id="zona-forzar" style="display:none; margin-top:10px; text-align:center;">
+        <button type="button" id="btn-forzar"
+          style="font-size:0.82rem; font-weight:700; padding:7px 14px; border-radius:999px;
+                 border:1.5px solid #A6402B; background:transparent; color:#A6402B; cursor:pointer;">
+          Generar igual (duplica las comandas)
+        </button>
+      </p>
 
       <div class="ok" id="resultado-com"></div>
     </div>
@@ -170,7 +183,7 @@
       var WEBHOOK_C2     = 'https://hook.us2.make.com/eexf11kq69s6e5dxsn7ef6urq5iqnrc8';
       // Escenario A5 (cambios de estado): al confirmarse las comandas, pasa la
       // edición a "Recepción" para que la guía avance al paso 6.
-      var WEBHOOK_A5     = 'https://hook.us2.make.com/qyqw5eh5f6gcbdd558o4t21krx4k72hy';
+      var WEBHOOK_A5     = '';
       var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
       var OFFSET         = '-03:00'; // Argentina
       var CLAVE_KEY      = 'nm_clave_equipo';
@@ -189,7 +202,7 @@
       function gviz(params) {
         var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
           '/gviz/tq?tqx=out:json&' + params + '&_=' + Date.now();
-        return fetch(url)
+        return fetch(url, { cache: 'no-store' })
           .then(function (r) { return r.text(); })
           .then(function (t) {
             var m = t.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
@@ -232,6 +245,7 @@
             (!cierre || cierre.getTime() > Date.now());
           if (abierta) $('alerta-abierta').style.display = 'block';
           refrescar();
+          contarComandas();   // ya sabemos la edición: contar lo generado
         }).catch(function () {
           $('ed-display').textContent = '—';
           $('campos-manual').hidden = false;
@@ -258,6 +272,29 @@
           'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':00' + OFFSET;
       }
 
+      // ── Protección contra el doble envío ─────────────────────────
+      // Las comandas ya generadas se cuentan en la planilla. Mientras
+      // existan, el botón queda bloqueado: generar de nuevo duplica todo.
+      var yaGeneradas = -1;      // -1 = todavía no sabemos
+      var forzado = false;
+
+      function contarComandas(cb) {
+        var id = idEdicion();
+        if (!id) { if (cb) cb(); return; }
+        gviz('sheet=Comandas&range=A1:C3000&headers=1').then(function (res) {
+          var n = 0;
+          res.table.rows.forEach(function (r) {
+            for (var i = 0; i < 3; i++) {
+              var vv = r.c[i] && r.c[i].v ? String(r.c[i].v) : '';
+              if (vv.indexOf(id) !== -1) { n++; break; }
+            }
+          });
+          yaGeneradas = n;
+          refrescar();
+          if (cb) cb();
+        }).catch(function () { if (cb) cb(); });
+      }
+
       function refrescar() {
         var id = idEdicion();
         var v = $('entrega').value;
@@ -271,8 +308,36 @@
         } else {
           $('preview-com').textContent = 'Completá edición, fecha de entrega y clave…';
         }
-        $('btn-comandas').disabled = !completos;
+
+        var bloqueado = (yaGeneradas > 0 && !forzado);
+        var caja = $('alerta-existentes');
+        if (yaGeneradas > 0) {
+          caja.style.display = 'block';
+          caja.innerHTML = '🚫 <strong>Esta edición ya tiene ' + yaGeneradas +
+            ' comanda' + (yaGeneradas === 1 ? '' : 's') + ' generada' +
+            (yaGeneradas === 1 ? '' : 's') + '.</strong><br>' +
+            'No hace falta volver a generarlas: ya están en la planilla y el correo ' +
+            'al equipo ya salió. Volver a generar <strong>duplica</strong> las comandas ' +
+            'y desordena los totales.' +
+            (forzado ? '<br><br>⚠ Modo forzado activado: el botón va a generar de nuevo.' : '');
+          $('zona-forzar').style.display = forzado ? 'none' : 'block';
+        } else {
+          caja.style.display = 'none';
+          $('zona-forzar').style.display = 'none';
+        }
+
+        $('btn-comandas').disabled = !completos || bloqueado || yaGeneradas === -1;
+        $('btn-comandas').textContent = bloqueado
+          ? 'Comandas ya generadas'
+          : 'Generar comandas de la edición';
       }
+
+      $('btn-forzar').addEventListener('click', function () {
+        if (!confirm('Las comandas de esta edición YA existen. Generarlas de nuevo ' +
+              'crea filas duplicadas en la planilla.\n\n¿Seguro que querés hacerlo?')) return;
+        forzado = true;
+        refrescar();
+      });
 
       campos.forEach(function (c) { $(c).addEventListener('input', refrescar); });
 
@@ -282,6 +347,7 @@
         var v = $('entrega').value;
         if (!id || !v) return;
         var d = new Date(v);
+        if (yaGeneradas > 0 && !forzado) return;   // doble protección
 
         try { sessionStorage.setItem(CLAVE_KEY, $('clave').value.trim()); } catch (e) {}
 
@@ -330,7 +396,10 @@
             });
             if (n > 0) {
               clearInterval(timer);
+              yaGeneradas = n;
+              forzado = false;
               btn.textContent = 'Comandas generadas ✓';
+              $('zona-forzar').style.display = 'none';
               caja.innerHTML = '✅ <strong>¡Comandas de ' + id + ' registradas!</strong> (' +
                 n + ' comanda' + (n === 1 ? '' : 's') + ')<br>' +
                 'En un momento llega el correo al equipo con el mensaje de WhatsApp ' +
@@ -356,6 +425,14 @@
 
       // ── Arrancar ─────────────────────────────────────────────────
       refrescar();
+      contarComandas();
+      // y revisar de nuevo al volver a la pestaña: si otra persona las generó
+      // desde otro teléfono, el botón se bloquea solo
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) contarComandas();
+      });
+      window.addEventListener('focus', function () { contarComandas(); });
+      setInterval(function () { if (!document.hidden) contarComandas(); }, 20000);
     })();
   </script>
   <a href="../" title="Volver a la guía de la edición"

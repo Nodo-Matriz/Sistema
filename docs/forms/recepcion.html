@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="robots" content="noindex">
   <title>Recepción en galpón · Nodo Matríz (equipo)</title>
   <link rel="stylesheet" href="../assets/styles.css">
@@ -669,6 +672,18 @@
 
     <div class="aviso" id="estado-edicion">Cargando la edición vigente…</div>
 
+    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+                margin: 0 0 12px;">
+      <button type="button" class="btn btn--ghost btn--small" id="btn-refrescar-todo"
+        title="Vuelve a leer la planilla ahora mismo">↻ Actualizar</button>
+      <span id="sello-refresco" style="font-size:0.82rem; color:var(--c-tierra); font-style:italic;">
+        datos al día
+      </span>
+      <span style="font-size:0.78rem; color:var(--c-tierra);">
+        · la pantalla se actualiza sola cada 25 s
+      </span>
+    </div>
+
     <div class="tabs">
       <button type="button" id="tab-recepcion" class="activa">📥 Recepción</button>
       <button type="button" id="tab-fracc">🔪 Fraccionamiento</button>
@@ -933,8 +948,8 @@
       // ── util gviz ────────────────────────────────────────────────
       function gviz(params) {
         var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
-          '/gviz/tq?tqx=out:json&' + params;
-        return fetch(url)
+          '/gviz/tq?tqx=out:json&' + params + '&_=' + Date.now();
+        return fetch(url, { cache: 'no-store' })
           .then(function (r) { return r.text(); })
           .then(function (t) {
             var m = t.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
@@ -1881,7 +1896,7 @@
       // (leer la planilla no gasta operaciones de Make)
       function refrescarPedidos() {
         if (!idEdicion) return;
-        gviz('sheet=Pedidos&range=A1:U3000&headers=1&_=' + Date.now())
+        gviz('sheet=Pedidos&range=A1:U3000&headers=1')
           .then(function (res) { parsePedidos(res); renderEntrega(); })
           .catch(function () {});
       }
@@ -1890,6 +1905,128 @@
         refrescarPedidos();
       }, 30000);
       document.getElementById('tab-entrega').addEventListener('click', refrescarPedidos);
+
+      // ══ Refresco en vivo de TODO el galpón ═══════════════════════
+      // Varios teléfonos trabajan a la vez sobre la misma edición: la
+      // pantalla relee la planilla sola y avisa cuándo fue la última vez.
+      // Nunca pisa lo que alguien está cargando sin guardar.
+      var ultimoRefrescoGalpon = Date.now();
+
+      function hayTrabajoSinGuardar() {
+        // recepción con un productor abierto y renglones ya tocados
+        if ($('card-items').style.display !== 'none' &&
+            $('lista-items').querySelectorAll('.chk:checked').length) return true;
+        // fraccionamiento con tildes nuevos
+        if ($('lista-fracc').querySelectorAll('.chk-f:checked:not(:disabled)').length) return true;
+        // ajustes con recortes cargados
+        var recortes = $('lista-ajustes').querySelectorAll('.in-aj');
+        for (var i = 0; i < recortes.length; i++) {
+          if (parseFloat(recortes[i].value) > 0) return true;
+        }
+        return false;
+      }
+
+      function textoAntiguedad() {
+        var seg = Math.round((Date.now() - ultimoRefrescoGalpon) / 1000);
+        if (seg < 15) return 'datos al día';
+        if (seg < 90) return 'actualizado hace ' + seg + ' s';
+        return 'actualizado hace ' + Math.round(seg / 60) + ' min';
+      }
+
+      function pintarAntiguedad() {
+        var el = $('sello-refresco');
+        if (!el) return;
+        var seg = Math.round((Date.now() - ultimoRefrescoGalpon) / 1000);
+        el.textContent = textoAntiguedad();
+        el.style.color = seg > 120 ? '#A6402B' : '';
+      }
+      setInterval(pintarAntiguedad, 5000);
+
+      function refrescoVivo(manual) {
+        if (!idEdicion) return;
+        var btn = $('btn-refrescar-todo');
+        if (manual && btn) { btn.disabled = true; btn.textContent = 'Actualizando…'; }
+
+        Promise.all([
+          gviz('sheet=Recepciones&range=A1:L4000&headers=1').catch(function () { return null; }),
+          gviz('sheet=Pedidos&range=A1:U3000&headers=1').catch(function () { return null; }),
+          gviz('sheet=Propuestas_Ajuste&range=A1:N500&headers=1').catch(function () { return null; }),
+          gviz('sheet=Plan_Fraccionamiento&range=A1:L500&headers=1').catch(function () { return null; })
+        ]).then(function (res) {
+          var ocupado = hayTrabajoSinGuardar();
+
+          // quién ya fue recibido (marca ✓ en el select de productores)
+          if (res[0]) {
+            parseRecepciones(res[0]);
+            if ($('card-items').style.display === 'none') armarSelect();
+            else actualizarAvisoDup($('card-items').dataset.idProd);
+          }
+
+          // pedidos y entrega: siempre seguro de re-renderizar
+          if (res[1]) { parsePedidos(res[1]); renderEntrega(); }
+
+          // ajustes: solo si nadie está cargando recortes
+          if (res[2] && !ocupado) {
+            propuestas = [];
+            res[2].table.rows.forEach(function (r) {
+              if (String(celda(r, 1)).trim() !== idEdicion) return;
+              if (String(celda(r, 10)).trim() !== 'Pendiente') return;
+              propuestas.push({
+                id_propuesta: String(celda(r, 0)).trim(),
+                id_producto: String(celda(r, 3)).trim(),
+                pedida: parseFloat(celda(r, 4)) || 0,
+                recibida: parseFloat(celda(r, 5)) || 0,
+                faltante: parseFloat(celda(r, 6)) || 0,
+                detalle: String(celda(r, 13)).trim()
+              });
+            });
+            renderAjustes();
+          }
+
+          // fraccionamiento: solo si nadie está tildando
+          if (res[3] && !ocupado) {
+            planFracc = [];
+            res[3].table.rows.forEach(function (r) {
+              if (String(celda(r, 1)).trim() !== idEdicion) return;
+              planFracc.push({
+                id_plan: String(celda(r, 0)).trim(),
+                id_producto: String(celda(r, 2)).trim(),
+                nombre: String(celda(r, 3)).trim(),
+                fraccion: String(celda(r, 4)).trim(),
+                porciones: celda(r, 5),
+                unidades: celda(r, 6),
+                estado: String(celda(r, 8)).trim(),
+                preparado_por: String(celda(r, 9)).trim()
+              });
+            });
+            renderFracc();
+          }
+
+          ultimoRefrescoGalpon = Date.now();
+          pintarAntiguedad();
+          if (manual && btn) {
+            btn.disabled = false;
+            btn.textContent = '↻ Actualizar';
+            if (ocupado) {
+              avisoEntrega('');
+              var s = $('sello-refresco');
+              if (s) s.textContent = 'actualizado (no se tocó lo que estás cargando)';
+            }
+          }
+        }).catch(function () {
+          if (manual && btn) { btn.disabled = false; btn.textContent = '↻ Actualizar'; }
+        });
+      }
+
+      $('btn-refrescar-todo').addEventListener('click', function () { refrescoVivo(true); });
+
+      // cada 25 segundos, al volver a la pestaña y al volver con "atrás"
+      setInterval(function () { if (!document.hidden) refrescoVivo(false); }, 25000);
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) refrescoVivo(false);
+      });
+      window.addEventListener('focus', function () { refrescoVivo(false); });
+      window.addEventListener('pageshow', function (e) { if (e.persisted) refrescoVivo(false); });
 
       // (compat: otras partes del código llaman a esta validación)
       function validarEntrega() { /* la validación ahora ocurre al tocar cada botón */ }
