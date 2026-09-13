@@ -39,6 +39,11 @@
     .card.curaduria {
       border: 2px solid var(--c-mostaza, #C49543);
       background: rgba(196, 149, 67, 0.07);
+      /* se sale del ancho de lectura para que la tabla entre completa */
+      width: min(1400px, calc(100vw - 32px));
+      margin-left: 50%;
+      transform: translateX(-50%);
+      box-sizing: border-box;
     }
 
     .badge-curaduria {
@@ -62,7 +67,7 @@
 
     table.curaduria-tabla {
       border-collapse: collapse;
-      min-width: 1150px;
+      min-width: 1100px;
       width: 100%;
       font-size: 0.85rem;
     }
@@ -515,15 +520,14 @@
       // ── Tabla de curaduría pendiente ────────────────────────────
       function filaPendiente(p) {
         var i = p.id_producto;
-        // Tres estados: vacío = sin decisión (sin tinte) · No = rechazado
-        // (rojo) · Sí = camino a publicarse (verde; al completar categoría
-        // pasa al catálogo de abajo y sale de esta tabla).
-        var clase = p.disponible_raw === 'No' ? 'estado-no' :
-                    (p.disponible_raw === 'Sí' ? 'estado-si' : '');
+        // Dos estados: No (rojo, valor por defecto — nada entra al catálogo
+        // sin una decisión explícita) · Sí = se publica (verde; al completar
+        // categoría pasa al catálogo de abajo y sale de esta tabla).
+        var esSi = p.disponible_raw === 'Sí';
+        var clase = esSi ? 'estado-si' : 'estado-no';
         var sel = '<select class="select" id="disponible-' + i + '">' +
-          '<option value=""' + (!p.disponible_raw ? ' selected' : '') + '>— elegir —</option>' +
-          '<option value="Sí"' + (p.disponible_raw === 'Sí' ? ' selected' : '') + '>Sí</option>' +
-          '<option value="No"' + (p.disponible_raw === 'No' ? ' selected' : '') + '>No</option>' +
+          '<option value="No"' + (!esSi ? ' selected' : '') + '>No</option>' +
+          '<option value="Sí"' + (esSi ? ' selected' : '') + '>Sí</option>' +
           '</select>';
         return '<tr id="fila-' + i + '" class="' + clase + '">' +
           '<td class="col-disponible">' + sel + '</td>' +

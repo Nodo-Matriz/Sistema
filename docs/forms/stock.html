@@ -290,13 +290,14 @@
   <main class="wrap">
 
 <header class="site-header fade-in">
-  <a class="site-mark" href="../">
+  <!-- Sin enlace al sistema: esta página es del productor -->
+  <span class="site-mark">
     <img src="../assets/logo-nodo-verde.png" alt="Nodo Matríz" style="width:48px; height:48px;">
     <span>
       <span class="site-mark__name">Nodo Matríz</span>
       <span class="site-mark__sub">actualización de productos</span>
     </span>
-  </a>
+  </span>
 </header>
 
     <!-- Estado de validación del link -->
@@ -362,7 +363,7 @@
           </tbody>
         </table>
       </div>
-      <p><small class="muted">✓ tildado = disponible en esta edición · los tildados son los que estuvieron la edición pasada</small></p>
+      <p><small class="muted">✓ tildado = disponible en esta edición</small></p>
 
       <!-- Botón agregar nuevo producto -->
       <div class="mt-4">
@@ -889,22 +890,7 @@
 
   })();
   </script>
-  <a href="../" id="nav-guia-equipo" title="Volver a la guía de la edición" hidden
-     style="position:fixed; right:18px; bottom:18px; z-index:9999;
-            background:var(--c-musgo, #3c5230); color:var(--c-crema, #f6f1e7);
-            font-weight:700; font-size:0.9rem; padding:10px 18px;
-            border-radius:999px; text-decoration:none;
-            box-shadow:0 4px 14px rgba(0,0,0,0.25);">🏠 Guía</a>
-  <script>
-    // El acceso rápido a la guía solo aparece para el equipo (que tiene la
-    // clave en la sesión); los productores que entran por su link no lo ven.
-    (function () {
-      try {
-        if (sessionStorage.getItem('nm_clave_equipo')) {
-          document.getElementById('nav-guia-equipo').hidden = false;
-        }
-      } catch (e) {}
-    })();
-  </script>
+  <!-- Sin acceso a la guía del equipo: esta página es exclusiva del productor
+       (aunque el equipo cargue en su nombre, la vista es la del productor). -->
 </body>
 </html>

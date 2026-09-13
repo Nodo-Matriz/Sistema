@@ -239,6 +239,25 @@
       <div id="lista"></div>
     </div>
 
+    <div class="card-eq fade-in" data-delay="3">
+      <h2>Cerrar la carga de productores</h2>
+      <p class="muted">
+        Cuando ya cargaron todos los productores (o no vamos a esperar más),
+        se cierra esta etapa y la guía pasa al paso 3: revisar el catálogo y
+        generar la edición. Los productores que no cargaron quedan fuera de
+        esta edición.
+      </p>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <input type="password" id="clave-cerrar-carga" placeholder="Clave de equipo"
+          style="flex:1 1 180px; font-size:0.95rem; padding:10px 14px;
+                 border:1.5px solid var(--c-salvia); border-radius:var(--r-input);">
+        <button type="button" class="btn btn--primary btn--small" id="btn-cerrar-carga">
+          Finalizar carga de productos
+        </button>
+      </div>
+      <div class="aviso" id="ok-cerrar-carga" style="display:none;"></div>
+    </div>
+
     <footer class="site-footer">
       <p>Nodo Matríz Agroecológico · Unquillo, Sierras Chicas</p>
     </footer>
@@ -524,6 +543,54 @@
 
       cargar();
       ultimoRefresco = Date.now();
+
+      // ── Finalizar la carga: la edición pasa a "Revisión" (paso 3) ──
+      // Escenario A5 (cambios de estado). Pegar acá su dirección.
+      var WEBHOOK_A5 = 'https://hook.us2.make.com/qyqw5eh5f6gcbdd558o4t21krx4k72hy';
+
+      try {
+        var cg = sessionStorage.getItem('nm_clave_equipo');
+        if (cg) $('clave-cerrar-carga').value = cg;
+      } catch (e) {}
+
+      $('btn-cerrar-carga').addEventListener('click', function () {
+        var caja = $('ok-cerrar-carga');
+        function aviso(msg, esError) {
+          caja.style.display = 'block';
+          caja.className = esError ? 'aviso rojo' : 'aviso';
+          caja.innerHTML = msg;
+        }
+
+        var clave = $('clave-cerrar-carga').value.trim();
+        if (!clave) { aviso('Falta la clave de equipo.', true); return; }
+        try { sessionStorage.setItem('nm_clave_equipo', clave); } catch (e) {}
+
+        if (WEBHOOK_A5.indexOf('https://hook.') !== 0) {
+          aviso('🚫 Este botón todavía no está conectado: falta cargar la ' +
+            'dirección del escenario A5 en este archivo. No se envió nada.', true);
+          return;
+        }
+
+        if (!confirm('¿Cerrar la carga de productores y pasar a revisar el catálogo?')) return;
+
+        var btn = $('btn-cerrar-carga');
+        btn.disabled = true;
+        btn.textContent = 'Cerrando…';
+
+        fetch(WEBHOOK_A5, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ tipo: 'finalizar_carga', clave: clave })
+        }).then(fin).catch(fin);
+
+        function fin() {
+          btn.textContent = 'Carga finalizada ✓';
+          aviso('✅ Carga cerrada. La guía pasa al paso 3: ' +
+            '<a href="vista-previa.html">revisar el catálogo</a> y después ' +
+            'generar la edición. · <a href="../">Volver a la guía</a>', false);
+        }
+      });
     })();
   </script>
   <a href="../" title="Volver a la guía de la edición"

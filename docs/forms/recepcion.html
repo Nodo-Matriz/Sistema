@@ -181,6 +181,23 @@
       border-color: var(--c-oliva);
     }
 
+    /* renglón con novedad: llegó de menos, o con observaciones/rechazo */
+    .item.novedad,
+    .item.tildado.novedad {
+      background: rgba(166, 64, 43, 0.10);
+      border-color: #A6402B;
+    }
+    .item.novedad .linea-nombre { color: #7a2f20; }
+    .item .nota-novedad {
+      display: none;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #A6402B;
+      margin-top: 4px;
+    }
+    .item.novedad .nota-novedad { display: block; }
+    .item .detalle input.cant { width: 92px; font-size: 1rem; }
+
     .item input[type="checkbox"] {
       width: 26px;
       height: 26px;
@@ -778,6 +795,11 @@
                  autocomplete="name" style="display:none; margin-top:8px;">
         </div>
 
+        <p style="margin:0 0 8px;">
+          <button type="button" class="btn btn--ghost btn--small" id="btn-refrescar-ajustes"
+            title="Vuelve a leer los faltantes registrados en la planilla">↻ Buscar faltantes nuevos</button>
+        </p>
+
         <div id="lista-ajustes"></div>
 
         <div class="campo">
@@ -863,7 +885,7 @@
       var WEBHOOK_D3     = 'https://hook.us2.make.com/8w3cb9fk11gf9rj9352ai7k4pixpmm1n';
       // Escenario A5 (cambios de estado): al entregar el último pedido, la
       // edición pasa a "Liquidación" y la guía avanza al paso 7.
-      var WEBHOOK_A5     = 'https://hook.us2.make.com/qyqw5eh5f6gcbdd558o4t21krx4k72hy';
+      var WEBHOOK_A5     = '';
       var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
 
       var $ = function (id) { return document.getElementById(id); };
@@ -924,6 +946,26 @@
         var c = row.c[i];
         if (!c || c.v === null || c.v === undefined) return '';
         return c.v;
+      }
+
+      // "2 paquetes de 200 g" · "1 paquete de 1/2 kg" · "2 kg"
+      // (si la fracción ya trae su propia unidad —200g, 500cc— no se repite)
+      function etiquetaUnidad(l, cant) {
+        if (!l.fraccion) return l.unidad;
+        var fr = String(l.fraccion).trim();
+        var traeUnidad = /(g|gr|grs|gramos?|ml|cc|kg|l|lt|litros?)\s*$/i.test(fr);
+        var plural = Math.abs(cant) === 1 ? 'paquete' : 'paquetes';
+        return plural + ' de ' + fr + (traeUnidad ? '' : ' ' + l.unidad);
+      }
+
+      // 0.25 -> "0,25" (coma, como se escribe acá) y al revés
+      function numeroAmable(n) {
+        if (n === '' || n === null || n === undefined) return '';
+        return String(n).replace('.', ',');
+      }
+      function aNumero(txt) {
+        var v = parseFloat(String(txt).replace(',', '.').trim());
+        return isNaN(v) ? null : v;
       }
 
       // ── factor de fracción: "1/2" → 0.5 · "2" → 2 · "100grs" → 1 ─
@@ -1217,9 +1259,7 @@
 
         propias.forEach(function (l, i) {
           var esperado = l.fraccion ? l.cant_paquetes : l.cant_efectiva;
-          var unidadMuestra = l.fraccion
-            ? 'paquetes de ' + l.fraccion + ' ' + l.unidad
-            : l.unidad;
+          var unidadMuestra = etiquetaUnidad(l, esperado);
 
           var div = document.createElement('div');
           div.className = 'item no-llego';
@@ -1230,7 +1270,7 @@
               '<div class="linea-nombre"></div>' +
               '<div class="detalle" style="display:none;">' +
                 '<label>Recibido:</label>' +
-                '<input type="number" class="cant" inputmode="decimal" min="0" step="any">' +
+                '<input type="text" class="cant" inputmode="decimal">' +
                 '<span class="muted" style="font-size:0.8rem;"></span>' +
                 '<select class="calidad">' +
                   '<option value="OK">Calidad OK</option>' +
@@ -1239,18 +1279,20 @@
                 '</select>' +
                 '<input type="text" class="obs" placeholder="Observación (opcional)">' +
               '</div>' +
+              '<div class="nota-novedad"></div>' +
             '</div>';
 
           div.querySelector('.linea-nombre').textContent =
-            (l.producto || l.id_producto) + ' — esperado: ' + esperado + ' ' + unidadMuestra;
-          div.querySelector('.cant').value = esperado;
-          // no se puede recibir más de lo solicitado
-          div.querySelector('.cant').max = esperado;
-          div.querySelector('.detalle .muted').textContent = unidadMuestra;
+            (l.producto || l.id_producto) + ' — esperado: ' + numeroAmable(esperado) + ' ' + unidadMuestra;
+          var inp = div.querySelector('.cant');
+          inp.value = numeroAmable(esperado);
+          inp.dataset.max = String(esperado);   // tope: lo solicitado
+          div.querySelector('.detalle .muted').textContent = etiquetaUnidad(l, 0);
 
           cont.appendChild(div);
         });
 
+        marcarTodos();
         $('titulo-productor').textContent = productores[idProd] || idProd;
         $('card-items').style.display = 'block';
         $('card-items').dataset.idProd = idProd;
@@ -1258,29 +1300,78 @@
         actualizarProgreso();
       }
 
-      // Tope: no se puede registrar más cantidad de la solicitada
+      // Estado visual de un renglón: verde si llegó completo y sin
+      // observaciones · rojo si hay novedad (falta, rechazo, observación).
+      function marcarNovedad(item) {
+        var chk = item.querySelector('.chk');
+        var inp = item.querySelector('.cant');
+        var cal = item.querySelector('.calidad').value;
+        var max = parseFloat(inp.dataset.max);
+        var v = aNumero(inp.value);
+        var nota = item.querySelector('.nota-novedad');
+        var msg = '';
+
+        if (!chk.checked) {
+          msg = '⚠ No llegó: se registra como faltante completo.';
+        } else if (cal === 'Rechazado') {
+          msg = '⚠ Rechazado: cuenta como faltante completo (' + numeroAmable(max) + ').';
+        } else if (v === null) {
+          msg = '⚠ Falta indicar cuánto llegó.';
+        } else if (!isNaN(max) && v < max - 0.0001) {
+          msg = '⚠ Llegó de menos: falta ' + numeroAmable(Math.round((max - v) * 1000) / 1000) + '.';
+        } else if (cal === 'Con observaciones') {
+          msg = '⚠ Llegó completo, pero con observaciones.';
+        }
+
+        nota.textContent = msg;
+        item.classList.toggle('novedad', !!msg);
+      }
+
+      function marcarTodos() {
+        Array.prototype.forEach.call($('lista-items').querySelectorAll('.item'), marcarNovedad);
+      }
+
+      // Tope y formato del campo "Recibido" (acepta coma: 0,25)
       $('lista-items').addEventListener('input', function (e) {
         if (!e.target.classList.contains('cant')) return;
-        var max = parseFloat(e.target.max);
-        var v = parseFloat(e.target.value);
-        if (!isNaN(max) && !isNaN(v) && v > max) {
-          e.target.value = max;
+        var max = parseFloat(e.target.dataset.max);
+        var v = aNumero(e.target.value);
+        if (!isNaN(max) && v !== null && v > max) {
+          e.target.value = numeroAmable(max);
           var nota = e.target.closest('.detalle').querySelector('.muted');
           var original = nota.dataset.orig || nota.textContent;
           nota.dataset.orig = original;
-          nota.textContent = '⚠ máximo: lo solicitado (' + max + ')';
+          nota.textContent = '⚠ máximo: lo solicitado (' + numeroAmable(max) + ')';
           nota.style.color = '#A6402B';
           setTimeout(function () {
             nota.textContent = original;
             nota.style.color = '';
           }, 2500);
         }
+        marcarNovedad(e.target.closest('.item'));
       });
 
-      // Tildar / destildar
+      // Tildar / destildar · cambio de calidad
       $('lista-items').addEventListener('change', function (e) {
-        if (!e.target.classList.contains('chk')) return;
         var item = e.target.closest('.item');
+        if (!item) return;
+
+        if (e.target.classList.contains('calidad')) {
+          var inp = item.querySelector('.cant');
+          if (e.target.value === 'Rechazado') {
+            // lo rechazado no se recibe: cuenta entero como faltante
+            inp.dataset.previo = inp.value;
+            inp.value = '0';
+            inp.disabled = true;
+          } else if (inp.disabled) {
+            inp.disabled = false;
+            inp.value = inp.dataset.previo || numeroAmable(inp.dataset.max);
+          }
+          marcarNovedad(item);
+          return;
+        }
+
+        if (!e.target.classList.contains('chk')) return;
         var det = item.querySelector('.detalle');
         if (e.target.checked) {
           item.classList.add('tildado');
@@ -1291,6 +1382,7 @@
           item.classList.add('no-llego');
           det.style.display = 'none';
         }
+        marcarNovedad(item);
         actualizarProgreso();
       });
 
@@ -1333,13 +1425,19 @@
         propias.forEach(function (l, i) {
           var div = divs[i];
           var tildado = div.querySelector('.chk').checked;
+          var calidad = tildado ? div.querySelector('.calidad').value : 'No llegó';
           var factor = l.fraccion ? factorFraccion(l.fraccion) : 1;
           var pedidaEf = l.cant_efectiva;
-          var recibidaMostrada = tildado ? (parseFloat(div.querySelector('.cant').value) || 0) : 0;
+          // lo rechazado no se recibe: cuenta como faltante completo
+          var recibidaMostrada = (tildado && calidad !== 'Rechazado')
+            ? (aNumero(div.querySelector('.cant').value) || 0) : 0;
           var recibidaEf = l.fraccion ? recibidaMostrada * factor : recibidaMostrada;
           recibidaEf = Math.round(recibidaEf * 1000) / 1000;
 
           var obs = tildado ? div.querySelector('.obs').value.trim() : 'No recibido';
+          if (calidad === 'Rechazado') {
+            obs = (obs ? obs + ' · ' : '') + 'Rechazado: no se recibe';
+          }
           if (l.fraccion && tildado) {
             obs = (obs ? obs + ' · ' : '') + recibidaMostrada + ' × ' + l.fraccion + ' ' + l.unidad;
           }
@@ -1351,7 +1449,7 @@
             cantidad_pedida: pedidaEf,
             cantidad_recibida: recibidaEf,
             diferencia: Math.round((recibidaEf - pedidaEf) * 1000) / 1000,
-            calidad: tildado ? div.querySelector('.calidad').value : 'No llegó',
+            calidad: calidad,
             observaciones: obs
           });
         });
@@ -1825,12 +1923,48 @@
         return out;
       }
 
+      // Relee Propuestas_Ajuste (las escribe D2 después de revisar faltantes)
+      function refrescarPropuestas(btn) {
+        if (!idEdicion) return;
+        if (btn) { btn.disabled = true; btn.textContent = 'Buscando…'; }
+        gviz('sheet=Propuestas_Ajuste&range=A1:N500&headers=1&_=' + Date.now())
+          .then(function (res) {
+            propuestas = [];
+            res.table.rows.forEach(function (r) {
+              if (String(celda(r, 1)).trim() !== idEdicion) return;
+              if (String(celda(r, 10)).trim() !== 'Pendiente') return;
+              propuestas.push({
+                id_propuesta: String(celda(r, 0)).trim(),
+                id_producto: String(celda(r, 3)).trim(),
+                pedida: parseFloat(celda(r, 4)) || 0,
+                recibida: parseFloat(celda(r, 5)) || 0,
+                faltante: parseFloat(celda(r, 6)) || 0,
+                detalle: String(celda(r, 13)).trim()
+              });
+            });
+            renderAjustes();
+          })
+          .catch(function () {})
+          .then(function () {
+            if (btn) { btn.disabled = false; btn.textContent = '↻ Buscar faltantes nuevos'; }
+          });
+      }
+
+      $('btn-refrescar-ajustes').addEventListener('click', function () {
+        refrescarPropuestas(this);
+      });
+      // al entrar a la solapa Ajustes, buscar lo último registrado
+      document.getElementById('tab-ajustes').addEventListener('click', function () {
+        refrescarPropuestas(null);
+      });
+
       function renderAjustes() {
         var cont = $('lista-ajustes');
         cont.innerHTML = '';
         if (!propuestas.length) {
           cont.innerHTML = '<p class="muted">No hay faltantes pendientes de repartir en esta edición. ' +
-            'Si recién corriste la revisión de faltantes, recargá la página.</p>';
+            'Si recién corriste la revisión de faltantes en la solapa Recepción, esperá unos ' +
+            'segundos y tocá «↻ Buscar faltantes nuevos».</p>';
           $('btn-ajustes').disabled = true;
           return;
         }
@@ -2100,6 +2234,9 @@
             caja.style.color = '';
             caja.innerHTML = '✅ Revisión hecha: el detalle está acá abajo. Los faltantes ' +
               'quedan registrados para repartirlos en la solapa <strong>Ajustes</strong>.';
+            // dar tiempo a que D2 escriba las propuestas y traerlas solas
+            setTimeout(function () { refrescarPropuestas(null); }, 12000);
+            setTimeout(function () { refrescarPropuestas(null); }, 30000);
           })
           .catch(function () {
             btn.disabled = false;

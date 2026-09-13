@@ -297,8 +297,10 @@
 
       // ── Categorías: cargar desde la planilla + orden guardado ────
       function cargarCategorias() {
+        // rango explícito + cache-buster: sin rango, gviz a veces devuelve
+        // una porción vieja de la hoja y faltan categorías
         var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
-          '/gviz/tq?tqx=out:json&sheet=Productos&headers=1';
+          '/gviz/tq?tqx=out:json&sheet=Productos&range=A1:S2000&headers=1&_=' + Date.now();
 
         fetch(url)
           .then(function (r) { return r.text(); })
