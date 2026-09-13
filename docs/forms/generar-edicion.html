@@ -177,15 +177,52 @@
         <label for="aporte">Aporte solidario por defecto (%) *</label>
         <input type="number" id="aporte" inputmode="numeric" min="0" max="100" value="15">
       </div>
+    </div>
+
+    <!-- ── Retiro de los pedidos ── -->
+    <div class="card-eq fade-in" data-delay="3">
+      <h2>Retiro de los pedidos</h2>
+      <p class="muted" style="font-size:0.9rem;">
+        Los días y horarios en que los consumidores pasan a buscar su pedido
+        por el galpón. Aparecen en el formulario y en la confirmación del
+        pedido. El segundo día es opcional.
+      </p>
 
       <div class="campo">
-        <label for="alias">Alias de pago del Nodo *</label>
-        <input type="text" id="alias" value="nodomatriz.mp">
+        <label for="retiro1-fecha">1º día de retiro *</label>
+        <input type="date" id="retiro1-fecha">
       </div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <div class="campo" style="flex:1 1 120px;">
+          <label for="retiro1-desde">Desde *</label>
+          <input type="time" id="retiro1-desde" value="11:00">
+        </div>
+        <div class="campo" style="flex:1 1 120px;">
+          <label for="retiro1-hasta">Hasta *</label>
+          <input type="time" id="retiro1-hasta" value="15:00">
+        </div>
+      </div>
+
+      <div class="campo">
+        <label for="retiro2-fecha">2º día de retiro (opcional)</label>
+        <input type="date" id="retiro2-fecha">
+      </div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <div class="campo" style="flex:1 1 120px;">
+          <label for="retiro2-desde">Desde</label>
+          <input type="time" id="retiro2-desde" value="11:00">
+        </div>
+        <div class="campo" style="flex:1 1 120px;">
+          <label for="retiro2-hasta">Hasta</label>
+          <input type="time" id="retiro2-hasta" value="13:30">
+        </div>
+      </div>
+
+      <div class="preview" id="preview-retiro">Completá el primer día de retiro…</div>
     </div>
 
     <!-- ── Orden de categorías ── -->
-    <div class="card-eq fade-in" data-delay="3">
+    <div class="card-eq fade-in" data-delay="4">
       <h2>Orden de las categorías</h2>
       <p class="muted" style="font-size:0.9rem;">
         Así van a aparecer en el formulario, de arriba hacia abajo.
@@ -199,7 +236,7 @@
     </div>
 
     <!-- ── Confirmación ── -->
-    <div class="card-eq fade-in" data-delay="4">
+    <div class="card-eq fade-in" data-delay="5">
       <div class="campo">
         <label for="clave">Clave de equipo *</label>
         <input type="password" id="clave" placeholder="La clave compartida del equipo">
@@ -234,7 +271,8 @@
       var LS_KEY         = 'nm_orden_categorias';
 
       var $ = function (id) { return document.getElementById(id); };
-      var campos = ['numero', 'anio', 'cierre', 'aporte', 'alias', 'clave'];
+      var campos = ['numero', 'anio', 'cierre', 'aporte', 'clave',
+                    'retiro1-fecha', 'retiro1-desde', 'retiro1-hasta'];
       var ordenCategorias = [];   // estado actual del orden
 
       $('anio').value = new Date().getFullYear();
@@ -439,6 +477,46 @@
         return v ? new Date(v) : null;
       }
 
+      // ── Días y horarios de retiro ────────────────────────────────
+      // Devuelve, por ejemplo:
+      // "Miércoles 17/09 de 11 a 15 hs · Jueves 18/09 de 11 a 13:30 hs"
+      function hhmm(t) {
+        if (!t) return '';
+        var p = t.split(':');
+        var h = parseInt(p[0], 10);
+        var m = p[1] || '00';
+        return m === '00' ? String(h) : h + ':' + m;
+      }
+
+      function unDia(fecha, desde, hasta) {
+        if (!fecha || !desde || !hasta) return '';
+        var partes = fecha.split('-');
+        var d = new Date(+partes[0], +partes[1] - 1, +partes[2]);
+        if (isNaN(d.getTime())) return '';
+        var dia = new Intl.DateTimeFormat('es-AR', { weekday: 'long' }).format(d);
+        dia = dia.charAt(0).toUpperCase() + dia.slice(1);
+        return dia + ' ' + pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) +
+          ' de ' + hhmm(desde) + ' a ' + hhmm(hasta) + ' hs';
+      }
+
+      function textoRetiro() {
+        var a = unDia($('retiro1-fecha').value, $('retiro1-desde').value, $('retiro1-hasta').value);
+        var b = unDia($('retiro2-fecha').value, $('retiro2-desde').value, $('retiro2-hasta').value);
+        return [a, b].filter(Boolean).join(' · ');
+      }
+
+      function refrescarRetiro() {
+        var t = textoRetiro();
+        $('preview-retiro').innerHTML = t
+          ? 'Los consumidores ven:<br><strong>' + t.replace(/ · /g, '</strong><br><strong>') + '</strong>'
+          : 'Completá el primer día de retiro…';
+      }
+
+      ['retiro1-fecha', 'retiro1-desde', 'retiro1-hasta',
+       'retiro2-fecha', 'retiro2-desde', 'retiro2-hasta'].forEach(function (c) {
+        $(c).addEventListener('input', function () { refrescarRetiro(); refrescar(); });
+      });
+
       function refrescar() {
         var id = idEdicion();
         var d = leerCierre();
@@ -448,7 +526,8 @@
           $('preview').innerHTML =
             'Se va a generar la edición <strong>' + id + '</strong><br>' +
             'Cierre del formulario: <strong>' + fechaHuman(d) + '</strong><br>' +
-            'Aporte por defecto: <strong>' + $('aporte').value + '%</strong> · Alias: <strong>' + $('alias').value + '</strong>';
+            'Aporte por defecto: <strong>' + $('aporte').value + '%</strong><br>' +
+            'Retiro: <strong>' + (textoRetiro() || '—') + '</strong>';
         } else {
           $('preview').textContent = 'Completá los campos para ver el resumen…';
         }
@@ -472,7 +551,7 @@
           fecha_cierre_human: fechaHuman(d),
           fecha_cierre_iso: fechaIso(d),
           aporte_default_porcent: $('aporte').value,
-          alias_pago_nodo: $('alias').value.trim(),
+          retiro_human: textoRetiro(),
           orden_categorias: ordenCategorias.join('|'),
           clave: $('clave').value.trim()
         });
@@ -538,6 +617,7 @@
       });
 
       // ── Arrancar ─────────────────────────────────────────────────
+      refrescarRetiro();
       refrescar();
       cargarCategorias();
     })();

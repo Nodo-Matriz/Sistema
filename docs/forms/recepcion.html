@@ -184,21 +184,30 @@
       border-color: var(--c-oliva);
     }
 
-    /* renglón con novedad: llegó de menos, o con observaciones/rechazo */
-    .item.novedad,
-    .item.tildado.novedad {
+    /* llegó algo, pero menos de lo pedido (o con observaciones): amarillo */
+    .item.parcial,
+    .item.tildado.parcial {
+      background: rgba(196, 149, 67, 0.16);
+      border-color: #C49543;
+    }
+    .item.parcial .linea-nombre { color: #6b4e12; }
+
+    /* no llegó nada (o vino rechazado): rojo */
+    .item.nada,
+    .item.tildado.nada {
       background: rgba(166, 64, 43, 0.10);
       border-color: #A6402B;
     }
-    .item.novedad .linea-nombre { color: #7a2f20; }
+    .item.nada .linea-nombre { color: #7a2f20; }
+
     .item .nota-novedad {
       display: none;
       font-size: 0.8rem;
       font-weight: 700;
-      color: #A6402B;
       margin-top: 4px;
     }
-    .item.novedad .nota-novedad { display: block; }
+    .item.parcial .nota-novedad { display: block; color: #8a6614; }
+    .item.nada .nota-novedad { display: block; color: #A6402B; }
     .item .detalle input.cant { width: 92px; font-size: 1rem; }
 
     .item input[type="checkbox"] {
@@ -339,6 +348,17 @@
       padding: 2px 10px;
       margin-left: 6px;
       vertical-align: middle;
+    }
+
+    .titulo-manual {
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--c-tierra);
+      border-top: 1px dashed rgba(74, 107, 58, 0.25);
+      padding-top: 8px;
+      margin: 10px 0 4px;
     }
 
     /* ── Tarjetas de faltantes (solapa Ajustes) ────────────── */
@@ -815,6 +835,15 @@
             title="Vuelve a leer los faltantes registrados en la planilla">↻ Buscar faltantes nuevos</button>
         </p>
 
+        <div id="zona-auto" style="display:none; margin:0 0 14px;">
+          <button type="button" class="btn btn--primary btn--small" id="btn-auto"
+            style="width:100%;">✂️ RECORTAR POR ORDEN DE LLEGADA</button>
+          <p class="muted" style="font-size:0.85rem; margin:6px 0 0;">
+            Reparte el faltante empezando por los pedidos más nuevos: quien pidió
+            primero se queda con lo suyo. Después podés retocar a mano.
+          </p>
+        </div>
+
         <div id="lista-ajustes"></div>
 
         <div class="campo">
@@ -822,7 +851,13 @@
           <input type="password" id="clave-ajustes" placeholder="La clave compartida del equipo">
         </div>
 
-        <button type="button" class="btn-conf" id="btn-ajustes" disabled>Aplicar ajustes</button>
+        <button type="button" class="btn-conf" id="btn-ajustes" disabled>
+          ENVIAR PEDIDOS ACTUALIZADOS
+        </button>
+        <p class="muted" style="font-size:0.85rem; margin-top:8px;">
+          Aplica los recortes en la planilla y le manda a cada consumidor
+          afectado el detalle nuevo de su pedido y el total actualizado.
+        </p>
 
         <div class="ok-box" id="ok-ajustes">
           ✅ Ajustes aplicados. Los pedidos quedaron actualizados.
@@ -1243,17 +1278,36 @@
         if (elegido) sel.value = elegido;
       }
 
+      // Una recepción por productor y edición: si ya está registrada, la
+      // pantalla la muestra en modo lectura y el botón queda apagado. No hay
+      // forma de duplicarla.
       function actualizarAvisoDup(idProd) {
         var caja = $('aviso-dup');
         var quien = recibidosVivo[idProd] || '';
         var ya = quien || registrados[idProd];
-        if (!ya) { caja.style.display = 'none'; return; }
+        var btn = $('btn-confirmar');
+
+        if (!ya) {
+          caja.style.display = 'none';
+          bloqueadoPorRegistro = false;
+          btn.textContent = 'Registrar recepción';
+          validar();
+          return;
+        }
+
+        bloqueadoPorRegistro = true;
         caja.style.display = 'block';
-        caja.innerHTML = '⚠️ Este productor <strong>ya fue registrado' +
-          (quien ? ' por ' + quien : ' desde esta pantalla') + '</strong>. ' +
-          'Si lo volvés a registrar, la recepción queda <strong>duplicada</strong> y ' +
-          'los faltantes se calculan mal. Registralo de nuevo sólo si están ' +
-          'corrigiendo algo y saben lo que hacen.';
+        caja.className = 'aviso';
+        caja.innerHTML = '✅ <strong>Recepción ya registrada' +
+          (quien ? ' por ' + quien : '') + '.</strong> ' +
+          'Queda a la vista para consultarla. Si hay que corregir algo, ' +
+          'se edita en la planilla (hoja Recepciones).';
+        btn.disabled = true;
+        btn.textContent = 'Ya registrada ✓';
+        // dejar los renglones en modo consulta
+        Array.prototype.forEach.call($('lista-items').querySelectorAll('input, select'), function (el) {
+          el.disabled = true;
+        });
       }
 
       // ↻ vuelve a leer la hoja Recepciones sin recargar la página
@@ -1340,21 +1394,32 @@
         var v = aNumero(inp.value);
         var nota = item.querySelector('.nota-novedad');
         var msg = '';
+        var estado = 'ok';   // 'ok' | 'parcial' (amarillo) | 'nada' (rojo)
 
         if (!chk.checked) {
-          msg = '⚠ No llegó: se registra como faltante completo.';
+          msg = '⚠ No llegó nada: se registra como faltante completo.';
+          estado = 'nada';
         } else if (cal === 'Rechazado') {
-          msg = '⚠ Rechazado: cuenta como faltante completo (' + numeroAmable(max) + ').';
+          msg = '⚠ Rechazado: no se recibe, cuenta como faltante completo (' +
+            numeroAmable(max) + ').';
+          estado = 'nada';
         } else if (v === null) {
           msg = '⚠ Falta indicar cuánto llegó.';
+          estado = 'parcial';
+        } else if (v <= 0) {
+          msg = '⚠ No llegó nada: faltante completo.';
+          estado = 'nada';
         } else if (!isNaN(max) && v < max - 0.0001) {
           msg = '⚠ Llegó de menos: falta ' + numeroAmable(Math.round((max - v) * 1000) / 1000) + '.';
+          estado = 'parcial';
         } else if (cal === 'Con observaciones') {
           msg = '⚠ Llegó completo, pero con observaciones.';
+          estado = 'parcial';
         }
 
         nota.textContent = msg;
-        item.classList.toggle('novedad', !!msg);
+        item.classList.toggle('parcial', estado === 'parcial');
+        item.classList.toggle('nada', estado === 'nada');
       }
 
       function marcarTodos() {
@@ -1423,8 +1488,11 @@
         validar();
       }
 
+      var bloqueadoPorRegistro = false;
+
       function validar() {
-        var ok = valorQuien('recibido-por') !== '' && $('clave').value.trim() !== '';
+        var ok = valorQuien('recibido-por') !== '' && $('clave').value.trim() !== '' &&
+                 !bloqueadoPorRegistro;
         $('btn-confirmar').disabled = !ok;
       }
       $('clave').addEventListener('input', validar);
@@ -2110,6 +2178,14 @@
         refrescarPropuestas(null);
       });
 
+      // Una "unidad vendible" del item: lo que representa 1 en el selector
+      // del formulario (1 unidad, 1 paquete de 1/2 kg, etc.).
+      function pasoDe(item) {
+        var p = (item.cantidad > 0) ? (item.efectiva / item.cantidad) : 1;
+        p = Math.round(p * 10000) / 10000;
+        return (p > 0) ? p : 1;
+      }
+
       function renderAjustes() {
         var cont = $('lista-ajustes');
         cont.innerHTML = '';
@@ -2118,8 +2194,10 @@
             'Si recién corriste la revisión de faltantes en la solapa Recepción, esperá unos ' +
             'segundos y tocá «↻ Buscar faltantes nuevos».</p>';
           $('btn-ajustes').disabled = true;
+          $('zona-auto').style.display = 'none';
           return;
         }
+        $('zona-auto').style.display = 'block';
         propuestas.forEach(function (pr, pi) {
           var af = afectadosDe(pr.id_producto);
           var html = '<div class="prop-card">';
@@ -2129,14 +2207,21 @@
           if (!af.length) {
             html += '<p class="muted">No encontramos pedidos con este producto.</p>';
           }
+          if (af.length) {
+            html += '<p class="titulo-manual">RECORTE MANUAL</p>';
+          }
           af.forEach(function (a) {
+            // el paso es una unidad de lo que se vende: si pidió 3 paquetes de
+            // 1/2 kg (efectiva 1,5) el paso es 0,5; si pidió 3 unidades, 1.
+            var paso = pasoDe(a.item);
             html += '<div class="prop-fila">' +
               '<span class="prop-quien">N° ' + a.ped.correlativo + ' · ' +
               (consumidores[a.ped.id_consumidor] || a.ped.id_consumidor) +
               ' — pidió <strong>' + a.item.efectiva + '</strong></span>' +
               '<label>recortar ' +
               '<input type="number" class="in-aj" data-pi="' + pi + '" data-idx="' + a.idx +
-              '" min="0" max="' + a.item.efectiva + '" step="0.25" value="0">' +
+              '" min="0" max="' + a.item.efectiva + '" step="' + paso +
+              '" data-paso="' + paso + '" value="0">' +
               '</label><span class="queda"></span></div>';
           });
           html += '<p class="restante" data-pi="' + pi + '"></p></div>';
@@ -2157,8 +2242,13 @@
           Array.prototype.forEach.call(cont.querySelectorAll('.in-aj[data-pi="' + pi + '"]'), function (inp) {
             var v = parseFloat(inp.value) || 0;
             var max = parseFloat(inp.max) || 0;
+            var paso = parseFloat(inp.dataset.paso) || 1;
             if (v < 0) { v = 0; inp.value = 0; }
             if (v > max) { v = max; inp.value = max; }
+            // solo múltiplos de una unidad vendible
+            var mult = Math.round(v / paso) * paso;
+            mult = Math.round(mult * 10000) / 10000;
+            if (Math.abs(mult - v) > 0.0001) { v = mult; inp.value = v; }
             suma += v;
             var it = itemsEd[parseInt(inp.getAttribute('data-idx'), 10)];
             var q = inp.parentNode.parentNode.querySelector('.queda');
@@ -2176,6 +2266,52 @@
         });
         $('btn-ajustes').disabled = !algo;
       }
+
+      // ── Recorte automático por orden de llegada ─────────────────
+      // El faltante lo absorben los pedidos más nuevos: quien pidió primero
+      // se queda con lo suyo. Se recorta de a una unidad vendible por vez.
+      $('btn-auto').addEventListener('click', function () {
+        var cont = $('lista-ajustes');
+        var resumen = [];
+
+        propuestas.forEach(function (pr, pi) {
+          var inputs = Array.prototype.slice.call(
+            cont.querySelectorAll('.in-aj[data-pi="' + pi + '"]'));
+          if (!inputs.length) return;
+
+          // del más nuevo al más viejo (afectadosDe los ordena por correlativo)
+          inputs.reverse();
+          inputs.forEach(function (inp) { inp.value = 0; });
+
+          var falta = pr.faltante;
+          inputs.forEach(function (inp) {
+            if (falta <= 0.0001) return;
+            var max = parseFloat(inp.max) || 0;
+            var paso = parseFloat(inp.dataset.paso) || 1;
+            // cuánto se le puede sacar a este pedido, en unidades enteras
+            var pasos = Math.min(Math.floor((falta + 0.0001) / paso), Math.round(max / paso));
+            var recorte = Math.round(pasos * paso * 10000) / 10000;
+            if (recorte > 0) {
+              inp.value = recorte;
+              falta = Math.round((falta - recorte) * 10000) / 10000;
+              var it = itemsEd[parseInt(inp.getAttribute('data-idx'), 10)];
+              resumen.push({ idx: parseInt(inp.getAttribute('data-idx'), 10), recorte: recorte, it: it });
+            }
+          });
+        });
+
+        recalcAjustes();
+        var caja = $('ok-ajustes');
+        caja.style.display = 'block';
+        caja.style.background = '';
+        caja.style.color = '';
+        caja.innerHTML = resumen.length
+          ? '✂️ <strong>Recorte propuesto por orden de llegada.</strong> Mirá abajo cómo ' +
+            'queda cada pedido: se puede retocar a mano antes de enviar. Cuando esté bien, ' +
+            'tocá <strong>ENVIAR PEDIDOS ACTUALIZADOS</strong>.'
+          : '⚠️ No se pudo repartir automáticamente: revisá los faltantes a mano.';
+        $('lista-ajustes').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
 
       $('btn-ajustes').addEventListener('click', function () {
         var caja = $('ok-ajustes');
@@ -2262,7 +2398,7 @@
 
         var btn = $('btn-ajustes');
         btn.disabled = true;
-        btn.textContent = 'Aplicando…';
+        btn.textContent = 'Enviando…';
 
         fetch(WEBHOOK_D3, {
           method: 'POST',
@@ -2280,11 +2416,14 @@
         }).then(finA).catch(finA);
 
         function finA() {
-          btn.textContent = 'Aplicar ajustes';
+          btn.textContent = 'Pedidos actualizados ✓';
           caja.style.display = 'block';
           caja.style.background = '';
           caja.style.color = '';
-          caja.innerHTML = '✅ Ajustes enviados. Recargá la página en un minuto para ver los pedidos actualizados.';
+          caja.innerHTML = '✅ <strong>Pedidos actualizados.</strong> Los recortes quedaron ' +
+            'aplicados y a cada consumidor afectado le llega por correo el detalle nuevo ' +
+            'de su pedido con el total actualizado.';
+          setTimeout(function () { refrescarPropuestas(null); }, 15000);
         }
       });
 

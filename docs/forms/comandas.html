@@ -135,9 +135,25 @@
       </div>
 
       <div class="campo">
-        <label for="entrega">Fecha y hora de entrega en el galpón *</label>
+        <label for="entrega">1º día de entrega en el galpón *</label>
         <input type="datetime-local" id="entrega">
-        <small>Los productores la ven en su comanda de WhatsApp.</small>
+        <small>Día y hora desde la que reciben. Los productores lo ven en su comanda.</small>
+      </div>
+
+      <div class="campo">
+        <label for="entrega-hasta">…hasta las (opcional)</label>
+        <input type="time" id="entrega-hasta">
+      </div>
+
+      <div class="campo">
+        <label for="entrega2">2º día de entrega (opcional)</label>
+        <input type="datetime-local" id="entrega2">
+        <small>Para productores que traen otro día. Se agrega al mensaje.</small>
+      </div>
+
+      <div class="campo">
+        <label for="entrega2-hasta">…hasta las (opcional)</label>
+        <input type="time" id="entrega2-hasta">
       </div>
 
       <div class="campo">
@@ -159,13 +175,6 @@
         Generar comandas de la edición
       </button>
 
-      <p id="zona-forzar" style="display:none; margin-top:10px; text-align:center;">
-        <button type="button" id="btn-forzar"
-          style="font-size:0.82rem; font-weight:700; padding:7px 14px; border-radius:999px;
-                 border:1.5px solid #A6402B; background:transparent; color:#A6402B; cursor:pointer;">
-          Generar igual (duplica las comandas)
-        </button>
-      </p>
 
       <div class="ok" id="resultado-com"></div>
     </div>
@@ -262,6 +271,34 @@
         return 'ED' + a + '-' + pad2(n);
       }
 
+      // "Miércoles 17/09 de 11 a 15 hs · Jueves 18/09 a las 11 hs"
+      function hhmm(t) {
+        if (!t) return '';
+        var p = String(t).split(':');
+        var h = parseInt(p[0], 10);
+        var m = p[1] || '00';
+        return m === '00' ? String(h) : h + ':' + m;
+      }
+
+      function unTramo(idFecha, idHasta) {
+        var v = $(idFecha).value;
+        if (!v) return '';
+        var d = new Date(v);
+        if (isNaN(d.getTime())) return '';
+        var dia = new Intl.DateTimeFormat('es-AR', { weekday: 'long' }).format(d);
+        dia = dia.charAt(0).toUpperCase() + dia.slice(1);
+        var base = dia + ' ' + pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1);
+        var hasta = $(idHasta) ? $(idHasta).value : '';
+        return hasta
+          ? base + ' de ' + hhmm(pad2(d.getHours()) + ':' + pad2(d.getMinutes())) + ' a ' + hhmm(hasta) + ' hs'
+          : base + ' a las ' + hhmm(pad2(d.getHours()) + ':' + pad2(d.getMinutes())) + ' hs';
+      }
+
+      function textoEntrega() {
+        return [unTramo('entrega', 'entrega-hasta'), unTramo('entrega2', 'entrega2-hasta')]
+          .filter(Boolean).join(' · ');
+      }
+
       function fechaHuman(d) {
         var f = new Intl.DateTimeFormat('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }).format(d);
         return f + ', ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ' hs';
@@ -276,7 +313,6 @@
       // Las comandas ya generadas se cuentan en la planilla. Mientras
       // existan, el botón queda bloqueado: generar de nuevo duplica todo.
       var yaGeneradas = -1;      // -1 = todavía no sabemos
-      var forzado = false;
 
       function contarComandas(cb) {
         var id = idEdicion();
@@ -304,26 +340,28 @@
         if (id && d) {
           $('preview-com').innerHTML =
             'Comandas de la edición <strong>' + id + '</strong><br>' +
-            'Entrega en el galpón: <strong>' + fechaHuman(d) + '</strong>';
+            'Entrega en el galpón:<br><strong>' +
+            textoEntrega().replace(/ · /g, '</strong><br><strong>') + '</strong>';
         } else {
           $('preview-com').textContent = 'Completá edición, fecha de entrega y clave…';
         }
 
-        var bloqueado = (yaGeneradas > 0 && !forzado);
+        var bloqueado = (yaGeneradas > 0);
         var caja = $('alerta-existentes');
         if (yaGeneradas > 0) {
           caja.style.display = 'block';
-          caja.innerHTML = '🚫 <strong>Esta edición ya tiene ' + yaGeneradas +
+          caja.innerHTML = '✅ <strong>Esta edición ya tiene ' + yaGeneradas +
             ' comanda' + (yaGeneradas === 1 ? '' : 's') + ' generada' +
             (yaGeneradas === 1 ? '' : 's') + '.</strong><br>' +
-            'No hace falta volver a generarlas: ya están en la planilla y el correo ' +
-            'al equipo ya salió. Volver a generar <strong>duplica</strong> las comandas ' +
-            'y desordena los totales.' +
-            (forzado ? '<br><br>⚠ Modo forzado activado: el botón va a generar de nuevo.' : '');
-          $('zona-forzar').style.display = forzado ? 'none' : 'block';
+            'Ya están en la planilla y el correo al equipo salió. El siguiente paso ' +
+            'es el <a href="../">galpón</a>.';
+          caja.style.background = 'rgba(110, 142, 85, 0.10)';
+          caja.style.borderLeftColor = 'var(--c-oliva, #4a6b3a)';
+          caja.style.color = 'var(--c-corteza, #4a4234)';
+
         } else {
           caja.style.display = 'none';
-          $('zona-forzar').style.display = 'none';
+
         }
 
         $('btn-comandas').disabled = !completos || bloqueado || yaGeneradas === -1;
@@ -332,14 +370,10 @@
           : 'Generar comandas de la edición';
       }
 
-      $('btn-forzar').addEventListener('click', function () {
-        if (!confirm('Las comandas de esta edición YA existen. Generarlas de nuevo ' +
-              'crea filas duplicadas en la planilla.\n\n¿Seguro que querés hacerlo?')) return;
-        forzado = true;
-        refrescar();
-      });
-
       campos.forEach(function (c) { $(c).addEventListener('input', refrescar); });
+      ['entrega-hasta', 'entrega2', 'entrega2-hasta'].forEach(function (c) {
+        $(c).addEventListener('input', refrescar);
+      });
 
       // ── Generar (C2) ─────────────────────────────────────────────
       $('btn-comandas').addEventListener('click', function () {
@@ -347,13 +381,13 @@
         var v = $('entrega').value;
         if (!id || !v) return;
         var d = new Date(v);
-        if (yaGeneradas > 0 && !forzado) return;   // doble protección
+        if (yaGeneradas > 0) return;   // nunca dos veces
 
         try { sessionStorage.setItem(CLAVE_KEY, $('clave').value.trim()); } catch (e) {}
 
         var params = new URLSearchParams({
           id_edicion: id,
-          fecha_entrega_human: fechaHuman(d),
+          fecha_entrega_human: textoEntrega(),
           fecha_entrega_iso: fechaIso(d),
           clave: $('clave').value.trim()
         });
@@ -397,13 +431,12 @@
             if (n > 0) {
               clearInterval(timer);
               yaGeneradas = n;
-              forzado = false;
               btn.textContent = 'Comandas generadas ✓';
-              $('zona-forzar').style.display = 'none';
+    
               caja.innerHTML = '✅ <strong>¡Comandas de ' + id + ' registradas!</strong> (' +
                 n + ' comanda' + (n === 1 ? '' : 's') + ')<br>' +
                 'En un momento llega el correo al equipo con el mensaje de WhatsApp ' +
-                'de cada productor, con la entrega ' + fechaHuman(d) + '. ' +
+                'de cada productor, con la entrega ' + textoEntrega() + '. ' +
                 'La guía pasa al paso 6 (galpón).<br><br>' +
                 '<a href="../" class="btn btn--ghost btn--small">← Volver a la guía</a>';
               // pasar la edición a "Recepción" para que la guía avance sola
