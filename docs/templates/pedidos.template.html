@@ -554,8 +554,13 @@
           if (p.distancia_km) meta += ' (a ' + escapeHtml(p.distancia_km) + ' km)';
           meta += ' · ';
         }
-        if (p.productor) meta += escapeHtml(p.productor) + ' · ';
         meta += formatMoney(p.precio) + ' por ' + escapeHtml(p.unidad);
+
+        // el productor va al lado del nombre, con punto grande de separador
+        var firma = p.productor
+          ? ' <span style="font-weight:400; color:var(--c-tierra, #7a6f58);">&bull; ' +
+            escapeHtml(p.productor) + '</span>'
+          : '';
 
         var control = '';
 
@@ -587,7 +592,7 @@
         return '' +
           '<div class="product" data-product-id="' + p.id_producto + '" data-precio="' + (p.precio || 0) + '">' +
           '  <div class="product__head">' +
-          '    <span class="product__name">' + escapeHtml(p.nombre) + ' ' + tags + '</span>' +
+          '    <span class="product__name">' + escapeHtml(p.nombre) + firma + ' ' + tags + '</span>' +
           '    <span class="product__meta">' +
           '      <span>' + meta + '</span>' +
           '    </span>' +
@@ -655,10 +660,12 @@
         var lower = u.toLowerCase();
         var yaPlural = lower.slice(-1) === 's';
         if (valor !== 1 && !yaPlural && abreviaturas.indexOf(lower) === -1) {
-          // Pluralizar en castellano: vocal + s · "z" -> "ces" · consonante + es
+          // Pluralizar en castellano: vocal + s · "z" -> "ces" · l/r/n/d/j + es
+          // · otras consonantes (pack, kit) + s
           if (/[aeiouáéíóú]$/.test(lower)) u = u + 's';
           else if (lower.slice(-1) === 'z') u = u.slice(0, -1) + 'ces';
-          else u = u + 'es';
+          else if (/[lrndj]$/.test(lower)) u = u + 'es';
+          else u = u + 's';
         }
         return etq + ' ' + escapeHtml(u);
       }
@@ -1003,7 +1010,7 @@
     (function () {
       'use strict';
       // Pegar acá la dirección del webhook A5 cuando esté armado en Make.
-      var WEBHOOK_A5 = 'https://hook.us2.make.com/qyqw5eh5f6gcbdd558o4t21krx4k72hy';
+      var WEBHOOK_A5 = '';
       var $ = function (id) { return document.getElementById(id); };
       var seccion = $('prueba-cierre');
       if (!seccion) return;
