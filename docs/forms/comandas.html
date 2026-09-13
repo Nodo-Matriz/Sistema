@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Comandas a productores · Nodo Matríz (equipo)</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+  <link rel="icon" type="image/png" href="../assets/favicon-nodo.png">
+  <style>
+    .wrap { max-width: 620px; }
+
+    .card-eq {
+      background: var(--c-leche);
+      border: 1px solid rgba(74, 107, 58, 0.14);
+      border-radius: var(--r-card);
+      padding: var(--s-5);
+      margin-top: var(--s-5);
+      box-shadow: var(--sh-suave);
+    }
+
+    .card-eq h2 {
+      font-size: 1.5rem;
+      font-variation-settings: 'opsz' 48, 'SOFT' 60;
+      margin-bottom: var(--s-2);
+    }
+
+    .campo { margin-bottom: var(--s-4, 16px); }
+    .campo label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 6px;
+      font-size: 0.92rem;
+      color: var(--c-suelo, #2e3a26);
+    }
+    .campo input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: var(--s-3) var(--s-4);
+      border: 1.5px solid var(--c-salvia);
+      border-radius: var(--r-input);
+      font-size: 1rem;
+      font-family: var(--f-body);
+      background: var(--c-leche);
+      color: var(--c-suelo);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .campo input:focus {
+      outline: none;
+      border-color: var(--c-oliva);
+      box-shadow: var(--sh-foco);
+    }
+    .campo small { color: var(--c-tierra, #7a6f58); }
+
+    .preview {
+      background: rgba(110, 142, 85, 0.10);
+      border-left: 4px solid var(--c-oliva, #4a6b3a);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: var(--s-4, 16px) 0;
+      font-size: 0.95rem;
+    }
+
+    .ok {
+      background: rgba(110, 142, 85, 0.10);
+      border-left: 4px solid var(--c-oliva, #4a6b3a);
+      padding: 12px 14px;
+      border-radius: 8px;
+      margin-top: var(--s-4, 16px);
+      display: none;
+      line-height: 1.5;
+    }
+    .ok a { color: var(--c-musgo, #3c5230); font-weight: 700; }
+
+    .alerta {
+      background: rgba(166, 64, 43, 0.08);
+      border-left: 4px solid #A6402B;
+      color: #7a2f20;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: var(--s-4, 16px) 0;
+      font-size: 0.92rem;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+
+    <header class="site-header fade-in">
+      <a class="site-mark" href="../">
+        <img src="../assets/logo-nodo-verde.png" alt="Nodo Matríz" style="width:48px; height:48px;">
+        <span>
+          <span class="site-mark__name">Nodo Matríz</span>
+          <span class="site-mark__sub">comandas a productores · equipo</span>
+        </span>
+      </a>
+    </header>
+
+    <section class="fade-in" data-delay="1">
+      <p><a href="../" class="btn btn--ghost btn--small">← Volver a la guía</a></p>
+      <h1>Comandas a productores</h1>
+      <p class="lead">
+        Para usar <strong>después del cierre del form de pedidos</strong>.
+        Genera las comandas de la edición (qué le pedimos a cada productor
+        según los pedidos), las registra en la planilla y manda al equipo un
+        correo con el mensaje de WhatsApp listo para reenviar a cada uno.
+      </p>
+    </section>
+
+    <div class="card-eq fade-in" data-delay="2">
+      <h2>Datos</h2>
+
+      <div class="campo">
+        <label for="numero">Número de edición *</label>
+        <input type="number" id="numero" inputmode="numeric" min="1" max="99" placeholder="Ej: 11">
+        <small id="pista-edicion">Leyendo la edición en curso…</small>
+      </div>
+
+      <div class="campo">
+        <label for="anio">Año *</label>
+        <input type="number" id="anio" inputmode="numeric" min="2026" max="2099">
+      </div>
+
+      <div class="campo">
+        <label for="entrega">Fecha y hora de entrega en el galpón *</label>
+        <input type="datetime-local" id="entrega">
+        <small>Los productores la ven en su comanda de WhatsApp.</small>
+      </div>
+
+      <div class="campo">
+        <label for="clave">Clave de equipo *</label>
+        <input type="password" id="clave" placeholder="La clave compartida del equipo">
+      </div>
+
+      <div class="alerta" id="alerta-abierta">
+        ⚠ Según la planilla, la toma de pedidos de esta edición
+        <strong>todavía no cerró</strong>. Si generás las comandas ahora, los
+        pedidos que entren después no van a estar incluidos.
+      </div>
+
+      <div class="preview" id="preview-com">Completá edición, fecha de entrega y clave…</div>
+
+      <button type="button" class="btn btn--primary" id="btn-comandas" disabled style="width:100%;">
+        Generar comandas de la edición
+      </button>
+
+      <div class="ok" id="resultado-com"></div>
+    </div>
+
+    <footer class="site-footer">
+      <p>Nodo Matríz Agroecológico · Unquillo, Sierras Chicas</p>
+    </footer>
+
+  </main>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var WEBHOOK_C2     = 'https://hook.us2.make.com/eexf11kq69s6e5dxsn7ef6urq5iqnrc8';
+      var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
+      var OFFSET         = '-03:00'; // Argentina
+      var CLAVE_KEY      = 'nm_clave_equipo';
+
+      var $ = function (id) { return document.getElementById(id); };
+      var campos = ['numero', 'anio', 'entrega', 'clave'];
+
+      $('anio').value = new Date().getFullYear();
+      try {
+        var cg = sessionStorage.getItem(CLAVE_KEY);
+        if (cg) $('clave').value = cg;
+      } catch (e) {}
+
+      function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+      function gviz(params) {
+        var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
+          '/gviz/tq?tqx=out:json&' + params + '&_=' + Date.now();
+        return fetch(url)
+          .then(function (r) { return r.text(); })
+          .then(function (t) {
+            var m = t.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+            if (!m) throw new Error('gviz');
+            return JSON.parse(m[1]);
+          });
+      }
+
+      // ── Precargar número y año desde la edición en curso ─────────
+      (function precargarEdicion() {
+        gviz('sheet=Ediciones&range=A1:N100&headers=1').then(function (res) {
+          var fila = null;
+          res.table.rows.forEach(function (r) {
+            var c = r.c[0];
+            var id = c && c.v ? String(c.v).trim() : '';
+            if (/^ED\d{4}-\d{2}$/.test(id)) fila = r;
+          });
+          var pista = $('pista-edicion');
+          if (!fila) {
+            if (pista) pista.textContent = 'No encontré ninguna edición en la planilla: completalo a mano.';
+            return;
+          }
+          var id = String(fila.c[0].v).trim();
+          var numero = fila.c[1] && fila.c[1].v ? String(fila.c[1].v).replace(/\.0$/, '') : id.slice(-2);
+          var anio = fila.c[2] && fila.c[2].v ? String(fila.c[2].v).replace(/\.0$/, '') : id.slice(2, 6);
+          var estado = fila.c[3] && fila.c[3].v ? String(fila.c[3].v).trim() : '';
+          // Pisar SIEMPRE: generar comandas de una edición equivocada es peor
+          // que re-tipear un caso raro.
+          $('numero').value = parseInt(numero, 10) || '';
+          if (anio) $('anio').value = parseInt(anio, 10) || $('anio').value;
+          if (pista) {
+            pista.textContent = 'Edición en curso: ' + id +
+              (estado ? ' (' + estado + ')' : '') + ' — datos precargados.';
+          }
+          // aviso si la toma de pedidos sigue abierta
+          var h = fila.c[7] && fila.c[7].v ? String(fila.c[7].v) : '';
+          var fm = h.match(/^Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+))?/);
+          var cierre = fm ? new Date(+fm[1], +fm[2], +fm[3], +(fm[4] || 0), +(fm[5] || 0)) : null;
+          var e = estado.toLowerCase();
+          var abierta = (e.indexOf('abierto') !== -1 || e.indexOf('pedidos') !== -1) &&
+            (!cierre || cierre.getTime() > Date.now());
+          if (abierta) $('alerta-abierta').style.display = 'block';
+          refrescar();
+        }).catch(function () {
+          var pista = $('pista-edicion');
+          if (pista) pista.textContent = 'No pude leer la planilla: completalo a mano.';
+        });
+      })();
+
+      // ── Datos ────────────────────────────────────────────────────
+      function idEdicion() {
+        var n = parseInt($('numero').value, 10);
+        var a = $('anio').value;
+        if (!n || !a) return null;
+        return 'ED' + a + '-' + pad2(n);
+      }
+
+      function fechaHuman(d) {
+        var f = new Intl.DateTimeFormat('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }).format(d);
+        return f + ', ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ' hs';
+      }
+
+      function fechaIso(d) {
+        return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) +
+          'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':00' + OFFSET;
+      }
+
+      function refrescar() {
+        var id = idEdicion();
+        var v = $('entrega').value;
+        var d = v ? new Date(v) : null;
+        var completos = campos.every(function (c) { return $(c).value.trim() !== ''; });
+
+        if (id && d) {
+          $('preview-com').innerHTML =
+            'Comandas de la edición <strong>' + id + '</strong><br>' +
+            'Entrega en el galpón: <strong>' + fechaHuman(d) + '</strong>';
+        } else {
+          $('preview-com').textContent = 'Completá edición, fecha de entrega y clave…';
+        }
+        $('btn-comandas').disabled = !completos;
+      }
+
+      campos.forEach(function (c) { $(c).addEventListener('input', refrescar); });
+
+      // ── Generar (C2) ─────────────────────────────────────────────
+      $('btn-comandas').addEventListener('click', function () {
+        var id = idEdicion();
+        var v = $('entrega').value;
+        if (!id || !v) return;
+        var d = new Date(v);
+
+        try { sessionStorage.setItem(CLAVE_KEY, $('clave').value.trim()); } catch (e) {}
+
+        var params = new URLSearchParams({
+          id_edicion: id,
+          fecha_entrega_human: fechaHuman(d),
+          fecha_entrega_iso: fechaIso(d),
+          clave: $('clave').value.trim()
+        });
+
+        // Disparo en segundo plano: nada de pestañas nuevas con "Accepted".
+        fetch(WEBHOOK_C2 + '?' + params.toString(), { mode: 'no-cors' })
+          .catch(function () {});
+
+        var btn = $('btn-comandas');
+        btn.disabled = true;
+        btn.textContent = 'Generando comandas…';
+
+        var caja = $('resultado-com');
+        caja.style.display = 'block';
+        caja.innerHTML = '⏳ <strong>Generando las comandas de ' + id + '…</strong><br>' +
+          'Esta página avisa sola cuando queden registradas en la planilla.';
+
+        // Verificación real: aparecen filas de esta edición en la hoja Comandas.
+        var intentos = 0;
+        var timer = setInterval(function () {
+          intentos++;
+          if (intentos > 18) {  // ~2,5 minutos
+            clearInterval(timer);
+            btn.disabled = false;
+            btn.textContent = 'Generar comandas de la edición';
+            caja.innerHTML = '⚠️ <strong>Todavía no aparecen comandas de ' + id +
+              ' en la planilla.</strong><br>Puede que la clave no sea la correcta, ' +
+              'que el escenario C2 esté apagado en Make, o que no haya pedidos ' +
+              'cargados en esta edición. Revisá la pestaña Comandas y el History ' +
+              'de C2 en Make.';
+            return;
+          }
+          gviz('sheet=Comandas&range=A1:C3000&headers=1').then(function (res) {
+            var n = 0;
+            res.table.rows.forEach(function (r) {
+              for (var i = 0; i < 3; i++) {
+                var vv = r.c[i] && r.c[i].v ? String(r.c[i].v) : '';
+                if (vv.indexOf(id) !== -1) { n++; break; }
+              }
+            });
+            if (n > 0) {
+              clearInterval(timer);
+              btn.textContent = 'Comandas generadas ✓';
+              caja.innerHTML = '✅ <strong>¡Comandas de ' + id + ' registradas!</strong> (' +
+                n + ' comanda' + (n === 1 ? '' : 's') + ')<br>' +
+                'En un momento llega el correo al equipo con el mensaje de WhatsApp ' +
+                'de cada productor, con la entrega ' + fechaHuman(d) + '.<br><br>' +
+                '<a href="../" class="btn btn--ghost btn--small">← Volver a la guía</a>';
+            }
+          }).catch(function () {});
+        }, 8000);
+      });
+
+      // ── Arrancar ─────────────────────────────────────────────────
+      refrescar();
+    })();
+  </script>
+</body>
+</html>

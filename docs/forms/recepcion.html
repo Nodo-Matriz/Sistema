@@ -643,6 +643,7 @@
     </header>
 
     <section class="fade-in" data-delay="1">
+      <p><a href="../" class="btn btn--ghost btn--small">← Volver a la guía</a></p>
       <h1>Galpón</h1>
       <p class="lead">
         Recepción de productores y armado de fracciones de la edición vigente.
@@ -1997,6 +1998,26 @@
       });
 
       cargar();
+    })();
+  </script>
+  <script>
+    // Clave de equipo compartida entre las páginas durante la sesión:
+    // precarga todos los campos de clave y guarda lo que se tipee.
+    (function () {
+      'use strict';
+      var K = 'nm_clave_equipo';
+      var inputs = document.querySelectorAll('input[type="password"][id^="clave"]');
+      var guardada = '';
+      try { guardada = sessionStorage.getItem(K) || ''; } catch (e) {}
+      inputs.forEach(function (inp) {
+        if (guardada && !inp.value) inp.value = guardada;
+        inp.addEventListener('change', function () {
+          var v = inp.value.trim();
+          if (!v) return;
+          try { sessionStorage.setItem(K, v); } catch (e) {}
+          inputs.forEach(function (otro) { if (!otro.value) otro.value = v; });
+        });
+      });
     })();
   </script>
 </body>

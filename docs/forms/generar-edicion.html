@@ -139,10 +139,13 @@
     </header>
 
     <section class="fade-in" data-delay="1">
+      <p><a href="../" class="btn btn--ghost btn--small">← Volver a la guía</a></p>
       <h1>Generar edición</h1>
       <p class="lead">
         Completá los datos de la edición, acomodá el orden de las categorías
         si hace falta, y generá el formulario público de pedidos.
+        Las comandas a productores tienen ahora
+        <a href="comandas.html">su propio formulario</a>.
       </p>
     </section>
 
@@ -205,39 +208,7 @@
         Generar formulario de la edición
       </button>
 
-      <div class="ok" id="resultado">
-        ✅ Disparado. En 1-2 minutos el formulario queda publicado en:<br>
-        <a id="link-form" href="#" target="_blank" rel="noopener"></a><br>
-        <small>Abrilo con Ctrl+Shift+R para saltear la caché y verificá productos, orden de categorías, fecha y edición.</small>
-      </div>
-    </div>
-
-    <!-- ── Generar comandas ── -->
-    <div class="card-eq fade-in" data-delay="5">
-      <h2>Generar comandas por productor</h2>
-      <p class="muted" style="font-size:0.9rem;">
-        Para usar <strong>después del cierre del formulario</strong>. Usa el número
-        de edición, el año y la clave cargados arriba. Genera las comandas, las
-        registra en la planilla y manda al equipo un correo con el mensaje de
-        WhatsApp listo para enviar a cada productor.
-      </p>
-
-      <div class="campo">
-        <label for="entrega">Fecha y hora de entrega en el galpón *</label>
-        <input type="datetime-local" id="entrega">
-        <small>Los productores la ven en su comanda de WhatsApp.</small>
-      </div>
-
-      <div class="preview" id="preview-com">Completá edición, fecha de entrega y clave…</div>
-
-      <button type="button" class="btn btn--primary" id="btn-comandas" disabled style="width:100%;">
-        Generar comandas de la edición
-      </button>
-
-      <div class="ok" id="resultado-com">
-        ✅ Disparado. En un minuto llega el correo al equipo con las comandas
-        y sus links de WhatsApp, y quedan registradas en la pestaña Comandas.
-      </div>
+      <div class="ok" id="resultado"></div>
     </div>
 
     <footer class="site-footer">
@@ -254,7 +225,6 @@
       // CONFIGURACIÓN — completar antes de publicar
       // ============================================================
       var WEBHOOK_A3     = 'https://hook.us2.make.com/qqx2z7g17eq2ihpq2euvr7gqmpm0uhq3';
-      var WEBHOOK_C2     = 'https://hook.us2.make.com/eexf11kq69s6e5dxsn7ef6urq5iqnrc8';
       var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
       var BASE_FORMS     = 'https://nodo-matriz.github.io/Sistema/forms/';
       var OFFSET         = '-03:00'; // Argentina
@@ -265,6 +235,13 @@
       var ordenCategorias = [];   // estado actual del orden
 
       $('anio').value = new Date().getFullYear();
+
+      // clave de equipo compartida entre las páginas durante la sesión
+      var CLAVE_KEY = 'nm_clave_equipo';
+      try {
+        var cg = sessionStorage.getItem(CLAVE_KEY);
+        if (cg && !$('clave').value) $('clave').value = cg;
+      } catch (e) {}
 
       function pad2(n) { return (n < 10 ? '0' : '') + n; }
 
@@ -495,54 +472,68 @@
           clave: $('clave').value.trim()
         });
 
-        window.open(WEBHOOK_A3 + '?' + params.toString(), '_blank');
+        try { sessionStorage.setItem(CLAVE_KEY, $('clave').value.trim()); } catch (e) {}
 
-        $('link-form').textContent = BASE_FORMS + 'pedidos-' + id + '.html';
-        $('link-form').href = BASE_FORMS + 'pedidos-' + id + '.html';
-        $('resultado').style.display = 'block';
-      });
+        // Disparo en segundo plano: nada de pestañas nuevas con "Accepted".
+        fetch(WEBHOOK_A3 + '?' + params.toString(), { mode: 'no-cors' })
+          .catch(function () {});
 
-      // ── Comandas (C2) ────────────────────────────────────────────
-      var camposCom = ['numero', 'anio', 'entrega', 'clave'];
+        var urlForm = BASE_FORMS + 'pedidos-' + id + '.html';
+        var btn = $('btn-generar');
+        btn.disabled = true;
+        btn.textContent = 'Generando…';
 
-      function refrescarComandas() {
-        var id = idEdicion();
-        var v = $('entrega').value;
-        var d = v ? new Date(v) : null;
-        var completos = camposCom.every(function (c) { return $(c).value.trim() !== ''; });
+        var caja = $('resultado');
+        caja.style.display = 'block';
+        caja.innerHTML = '⏳ <strong>Generando la edición ' + id + '…</strong><br>' +
+          'Estamos armando y publicando el formulario (tarda 1-2 minutos). ' +
+          'Esta página avisa sola cuando esté listo: no cierres ni toques nada.';
 
-        if (id && d) {
-          $('preview-com').innerHTML =
-            'Comandas de la edición <strong>' + id + '</strong><br>' +
-            'Entrega en el galpón: <strong>' + fechaHuman(d) + '</strong>';
-        } else {
-          $('preview-com').textContent = 'Completá edición, fecha de entrega y clave…';
-        }
-        $('btn-comandas').disabled = !completos;
-      }
-
-      camposCom.forEach(function (c) { $(c).addEventListener('input', refrescarComandas); });
-
-      $('btn-comandas').addEventListener('click', function () {
-        var id = idEdicion();
-        var v = $('entrega').value;
-        if (!id || !v) return;
-        var d = new Date(v);
-
-        var params = new URLSearchParams({
-          id_edicion: id,
-          fecha_entrega_human: fechaHuman(d),
-          fecha_entrega_iso: fechaIso(d),
-          clave: $('clave').value.trim()
-        });
-
-        window.open(WEBHOOK_C2 + '?' + params.toString(), '_blank');
-        $('resultado-com').style.display = 'block';
+        // Verificación real: la planilla registra el link del form (Ediciones,
+        // columna github_form_url) cuando el escenario terminó de publicarlo.
+        var intentos = 0;
+        var timer = setInterval(function () {
+          intentos++;
+          if (intentos > 24) {  // ~3 minutos
+            clearInterval(timer);
+            btn.disabled = false;
+            btn.textContent = 'Generar formulario de la edición';
+            caja.innerHTML = '⚠️ <strong>Todavía no aparece confirmado en la planilla.</strong><br>' +
+              'Puede que siga en camino, que la clave no sea la correcta, o que el ' +
+              'escenario A3 esté apagado en Make. Probá el link en unos minutos: ' +
+              '<a href="' + urlForm + '">' + urlForm + '</a>';
+            return;
+          }
+          var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
+            '/gviz/tq?tqx=out:json&sheet=Ediciones&range=A1:L100&headers=1&_=' + Date.now();
+          fetch(url)
+            .then(function (r) { return r.text(); })
+            .then(function (text) {
+              var m = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+              if (!m) return;
+              var res = JSON.parse(m[1]);
+              var listo = res.table.rows.some(function (r) {
+                var cid = r.c[0] && r.c[0].v ? String(r.c[0].v).trim() : '';
+                var link = r.c[11] && r.c[11].v ? String(r.c[11].v) : '';
+                return cid === id && link.indexOf('pedidos-' + id) !== -1;
+              });
+              if (listo) {
+                clearInterval(timer);
+                btn.textContent = 'Formulario generado ✓';
+                caja.innerHTML = '✅ <strong>¡Formulario de ' + id + ' publicado!</strong><br>' +
+                  '<a id="link-form" href="' + urlForm + '">' + urlForm + '</a><br>' +
+                  '<small>Dale 1 minuto más a la publicación si recién aparece, y abrilo ' +
+                  'con Ctrl+Shift+R para saltear la caché. Verificá productos, orden de ' +
+                  'categorías, fecha y edición.</small><br><br>' +
+                  '<a href="../" class="btn btn--ghost btn--small">← Volver a la guía</a>';
+              }
+            })
+            .catch(function () {});
+        }, 8000);
       });
 
       // ── Arrancar ─────────────────────────────────────────────────
       refrescar();
-      refrescarComandas();
       cargarCategorias();
     })();
   </script>
