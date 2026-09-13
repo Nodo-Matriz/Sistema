@@ -205,6 +205,54 @@
       line-height: 1.5;
       margin-top: var(--s-3);
     }
+
+    /* botones deshabilitados hasta que el proceso llegue a su paso */
+    .btn--off {
+      opacity: 0.4;
+      pointer-events: none;
+      filter: saturate(0.4);
+    }
+
+    .porque {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--c-tierra);
+      font-style: italic;
+      margin-top: 4px;
+    }
+
+    /* bloque de controles solo-prueba */
+    .solo-prueba {
+      border: 1.5px dashed rgba(166, 64, 43, 0.45);
+      border-radius: 12px;
+      padding: var(--s-3) var(--s-4);
+      margin-top: var(--s-3);
+      background: rgba(166, 64, 43, 0.04);
+    }
+
+    .solo-prueba .etiqueta {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #A6402B;
+      margin-bottom: 6px;
+    }
+
+    .btn-prueba {
+      font-family: var(--f-body);
+      font-size: 0.88rem;
+      font-weight: 700;
+      padding: 9px 18px;
+      border-radius: var(--r-pill);
+      border: 2px solid #A6402B;
+      background: transparent;
+      color: #A6402B;
+      cursor: pointer;
+    }
+
+    .btn-prueba:hover { background: rgba(166, 64, 43, 0.08); }
+    .btn-prueba:disabled { opacity: 0.4; cursor: default; }
   </style>
 </head>
 <body>
@@ -274,9 +322,10 @@
           WhatsApp, o cargar en su nombre si no puede hacerlo solo.
         </p>
         <p>
-          <a href="forms/carga-productos.html" class="btn btn--ghost btn--small">
+          <a href="forms/carga-productos.html" class="btn btn--ghost btn--small" id="btn-paso2">
             Abrir carga de productos
           </a>
+          <span class="porque" id="porque-paso2"></span>
         </p>
       </div>
 
@@ -295,12 +344,13 @@
           categorías.
         </p>
         <p>
-          <a href="forms/vista-previa.html" class="btn btn--ghost btn--small">
+          <a href="forms/vista-previa.html" class="btn btn--ghost btn--small" id="btn-paso3a">
             1° Revisar el catálogo
           </a>
-          <a href="forms/generar-edicion.html" class="btn btn--ghost btn--small">
+          <a href="forms/generar-edicion.html" class="btn btn--ghost btn--small" id="btn-paso3b">
             2° Generar la edición
           </a>
+          <span class="porque" id="porque-paso3"></span>
         </p>
       </div>
 
@@ -331,9 +381,10 @@
           fecha y hora de entrega en el galpón.
         </p>
         <p>
-          <a href="forms/generar-edicion.html" class="btn btn--ghost btn--small">
-            Generar comandas (misma herramienta)
+          <a href="forms/comandas.html" class="btn btn--ghost btn--small" id="btn-paso5">
+            Abrir comandas a productores
           </a>
+          <span class="porque" id="porque-paso5"></span>
         </p>
       </div>
 
@@ -351,9 +402,10 @@
           del equipo y registra quién la hizo.
         </p>
         <p>
-          <a href="forms/recepcion.html" class="btn btn--ghost btn--small">
+          <a href="forms/recepcion.html" class="btn btn--ghost btn--small" id="btn-paso6">
             Abrir la app del galpón
           </a>
+          <span class="porque" id="porque-paso6"></span>
         </p>
       </div>
 
@@ -368,6 +420,22 @@
           ahora se lleva en la planilla; las herramientas de esta etapa
           vienen en las próximas fases.
         </p>
+        <div class="solo-prueba">
+          <div class="etiqueta">⚠ Solo para pruebas</div>
+          <p class="nota" style="margin-bottom:8px;">
+            Pasa la edición a estado «Cerrada» sin pasar por la planilla,
+            para poder encadenar ediciones de prueba. En una edición real,
+            el cierre se hace desde la planilla al terminar la liquidación.
+          </p>
+          <div class="campo-a1">
+            <input type="password" id="clave-cerrar" placeholder="Clave de equipo">
+            <button type="button" class="btn-prueba" id="btn-cerrar-edicion">
+              Cerrar edición (solo pruebas)
+            </button>
+          </div>
+          <span class="porque" id="porque-paso7"></span>
+          <div class="ok-mini" id="ok-cerrar"></div>
+        </div>
       </div>
 
     </div>
@@ -394,8 +462,39 @@
       // Escenario A1 (avisar a productores que abre la carga).
       // Pegar acá la dirección del webhook cuando esté armado en Make.
       var WEBHOOK_A1 = 'https://hook.us2.make.com/cwy19mjkoqqyuexr1xv4lm6ddsowk563';
+      // Escenario A5 (finalizar pedidos / cerrar edición — controles de prueba).
+      // Pegar acá la dirección del webhook cuando esté armado en Make.
+      var WEBHOOK_A5 = 'https://hook.us2.make.com/qyqw5eh5f6gcbdd558o4t21krx4k72hy';
 
       var $ = function (id) { return document.getElementById(id); };
+
+      // clave de equipo compartida entre las páginas durante la sesión
+      var CLAVE_KEY = 'nm_clave_equipo';
+      function claveGuardada() {
+        try { return sessionStorage.getItem(CLAVE_KEY) || ''; } catch (e) { return ''; }
+      }
+      function guardarClave(v) {
+        try { sessionStorage.setItem(CLAVE_KEY, v); } catch (e) {}
+      }
+      if (claveGuardada()) {
+        $('clave-a1').value = claveGuardada();
+        $('clave-cerrar').value = claveGuardada();
+      }
+
+      // habilita/deshabilita un botón de la guía con su motivo
+      function gate(idBtn, idPorque, habilitado, motivo) {
+        var btn = $(idBtn);
+        if (!btn) return;
+        if (habilitado) {
+          btn.classList.remove('btn--off');
+          btn.removeAttribute('aria-disabled');
+          if (idPorque && $(idPorque)) $(idPorque).textContent = '';
+        } else {
+          btn.classList.add('btn--off');
+          btn.setAttribute('aria-disabled', 'true');
+          if (idPorque && $(idPorque)) $(idPorque).textContent = motivo || '';
+        }
+      }
 
       function gviz(params) {
         var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
@@ -460,6 +559,7 @@
 
         var clave = $('clave-a1').value.trim();
         if (!clave) { aviso('Falta la clave de equipo.', true); return; }
+        guardarClave(clave);
 
         if (WEBHOOK_A1.indexOf('https://hook.') !== 0) {
           aviso('🚫 Este botón todavía no está conectado: falta armar el ' +
@@ -485,6 +585,50 @@
           aviso('✅ Edición iniciada: estado y fecha de apertura registrados. ' +
             'En un momento esta guía pasa al paso 2. (Los avisos automáticos ' +
             'a productores se suman cuando esté conectado WhatsApp.)', false);
+          setTimeout(function () { location.reload(); }, 6000);
+        }
+      });
+
+      // ── Botón "Cerrar edición (solo pruebas)" (escenario A5) ───
+      $('btn-cerrar-edicion').addEventListener('click', function () {
+        var caja = $('ok-cerrar');
+        function aviso(msg, esError) {
+          caja.style.display = 'block';
+          caja.style.background = esError ? 'rgba(166, 64, 43, 0.10)' : '';
+          caja.style.borderLeftColor = esError ? '#A6402B' : '';
+          caja.style.color = esError ? '#A6402B' : '';
+          caja.textContent = msg;
+        }
+
+        var clave = $('clave-cerrar').value.trim();
+        if (!clave) { aviso('Falta la clave de equipo.', true); return; }
+        guardarClave(clave);
+
+        if (WEBHOOK_A5.indexOf('https://hook.') !== 0) {
+          aviso('🚫 Este botón todavía no está conectado: falta armar el ' +
+            'escenario A5 en Make y cargar su dirección en este archivo. ' +
+            'No se envió nada.', true);
+          return;
+        }
+
+        if (!confirm('¿Cerrar la edición en curso? (control de prueba)')) return;
+
+        var btn = $('btn-cerrar-edicion');
+        btn.disabled = true;
+        btn.textContent = 'Cerrando…';
+
+        fetch(WEBHOOK_A5, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ tipo: 'cerrar_edicion', clave: clave })
+        }).then(fin).catch(fin);
+
+        function fin() {
+          btn.disabled = false;
+          btn.textContent = 'Cerrar edición (solo pruebas)';
+          aviso('✅ Edición cerrada (estado «Cerrada»). En un momento la guía ' +
+            'vuelve al paso 1, lista para abrir la siguiente.', false);
           setTimeout(function () { location.reload(); }, 6000);
         }
       });
@@ -545,6 +689,45 @@
               el.className = 'paso futuro';
             }
           }
+        }
+
+        // ── Habilitar los botones a medida que avanza el proceso ──
+        var ahora = new Date();
+        var cierrePaso = cerrada || (cierreForm && cierreForm.getTime() < ahora.getTime());
+
+        // Paso 1: abrir edición solo cuando no hay una en curso
+        var btnA1 = $('btn-abrir-edicion');
+        if (paso !== 1) {
+          btnA1.disabled = true;
+          btnA1.style.opacity = '0.45';
+          btnA1.title = 'Ya hay una edición en curso (' + id + ').';
+        }
+
+        // Paso 2 y 3: desde que la edición está abierta a carga
+        gate('btn-paso2', 'porque-paso2', paso >= 2,
+          'Se habilita al iniciar la edición (paso 1).');
+        gate('btn-paso3a', 'porque-paso3', paso >= 2, '');
+        gate('btn-paso3b', 'porque-paso3', paso >= 2,
+          'Se habilitan al iniciar la edición (paso 1).');
+
+        // Paso 5: comandas recién cuando cerró la toma de pedidos
+        var comandasOk = !cerrada && (paso >= 5 || (paso >= 4 && cierrePaso));
+        gate('btn-paso5', 'porque-paso5', comandasOk,
+          paso < 4 ? 'Se habilita cuando la edición tenga su form de pedidos.' :
+            'Se habilita cuando cierre la toma de pedidos' +
+            (cierreForm ? ' (' + fechaHuman(cierreForm) + ')' : '') + '.');
+
+        // Paso 6: galpón después de comandas / cierre
+        gate('btn-paso6', 'porque-paso6', !cerrada && paso >= 5,
+          'Se habilita después del cierre y las comandas.');
+
+        // Paso 7: cierre de prueba, desde el cierre de pedidos en adelante
+        var btnCerrar = $('btn-cerrar-edicion');
+        if (cerrada || paso < 4) {
+          btnCerrar.disabled = true;
+          $('porque-paso7').textContent = cerrada ?
+            'La edición ya está cerrada.' :
+            'Se habilita cuando la edición tenga su form de pedidos.';
         }
       }).catch(function () {
         $('ed-titulo').textContent = 'No pudimos leer la planilla.';
