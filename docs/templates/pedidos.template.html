@@ -577,13 +577,16 @@
         var control = '';
 
         // UNA sola selección por producto.
-        if (p.fraccionable && p.fracciones && p.fracciones.length) {
+        var opsFr = (p.fraccionable && p.fracciones && p.fracciones.length)
+          ? opcionesFraccion(p) : [];
+
+        if (opsFr.length) {
           // Fraccionable: exactamente las fracciones cargadas en la planilla,
           // cada una con lo que se paga por ella.
           control += '<label class="product__ctl-label">Cantidad ';
           control += '<select class="select" data-product="' + p.id_producto + '" data-field="total" style="width:auto;">';
           control += '<option value="">' + conUnidad('0', 0, p.unidad) + '</option>';
-          opcionesFraccion(p).forEach(function (o) {
+          opsFr.forEach(function (o) {
             var texto = o.etiquetaFija ? o.etiqueta : conUnidad(o.etiqueta, o.valor, p.unidad);
             control += '<option value="' + o.cantidad + '@' + o.fraccion + '">' +
               texto + ' · ' +
@@ -627,8 +630,24 @@
       // (1, 2, 3…) se piden como unidades enteras: no generan trabajo de
       // fraccionamiento. Los valores menores a 1, como un paquete de esa
       // fracción.
+      // Una fracción escrita en gramos/ml solo tiene sentido si la unidad de
+      // venta es kg o litro ("1/2 kg", "100g de 1 kg"). Si el producto se
+      // vende por bandeja/unidad/atado, "50g" NO es media bandeja ni 50
+      // bandejas: es otra presentación, que va cargada como producto aparte.
+      // Esas fracciones se descartan (mejor vender la unidad entera que
+      // publicar un precio inventado).
+      function fraccionIncompatible(f, unidad) {
+        var tienePeso = /^\s*\d+(?:[.,]\d+)?\s*(g|gr|grs|gramos?|ml|cc|kg|kilos?|kilogramos?|l|lt|litros?)\s*\.?\s*$/i.test(String(f || ''));
+        if (!tienePeso) return false;
+        var u = String(unidad || '').trim().toLowerCase();
+        var esPeso = /^(kg|kilo|kilos|kilogramos?|l|lt|litro|litros)$/.test(u);
+        return !esPeso;
+      }
+
       function opcionesFraccion(p) {
-        return p.fracciones.map(function (f) {
+        return p.fracciones.filter(function (f) {
+          return !fraccionIncompatible(f, p.unidad);
+        }).map(function (f) {
           var esp = parseFraccionEspecial(f, p.unidad);
           return {
             fraccion: f,
