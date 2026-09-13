@@ -25,7 +25,7 @@
          {{fecha_cierre_iso}}        ej: 2026-05-14T12:00:00-03:00
          {{webhook_url}}             ej: https://hook.eu2.make.com/abc123
          {{aporte_default_porcent}}  ej: 10
-         {{alias_pago_nodo}}         ej: nodomatriz.mp
+         {{retiro_human}}            ej: Miércoles 17/09 de 11 a 15 hs
          categorias_json            JSON con todas las categorías y
                                      productos de la edición (ver
                                      formato esperado al pie del archivo).
@@ -238,7 +238,9 @@
               <input type="radio" name="entrega" value="galpon" checked>
               <span class="option__label">
                 <strong>Retiro en el galpón</strong>
-                <small style="display:block;color:var(--c-tierra);">Viernes de 13:00 a 15:00 hs</small>
+                <small style="display:block;color:var(--c-tierra);" id="horarios-retiro">
+                  {{retiro_human}}
+                </small>
               </span>
             </label>
             <label class="option">
@@ -719,6 +721,10 @@
 
       // Al abrir, la página queda arriba (se ve el encabezado). El scroll
       // automático a la categoría recién actúa al navegar entre categorías.
+      // que el navegador no restaure el scroll de una visita anterior:
+      // al entrar siempre se ve el encabezado
+      try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (e) {}
+
       var primerPaso = true;
       var wizard = NM.initWizard(wizardEl, {
         onStepChange: function (idx, stepEl) {
@@ -726,7 +732,10 @@
             p.classList.add('is-active');
           });
           if (primerPaso) { primerPaso = false; return; }
-          var y = stepEl.getBoundingClientRect().top + window.pageYOffset - 90;
+          // el encabezado de la página se ve solo al entrar; al cambiar de
+          // categoría el tope pasa a ser el carrusel de categorías
+          var ancla = wizardEl.querySelector('.wizard__progress') || stepEl;
+          var y = ancla.getBoundingClientRect().top + window.pageYOffset - 12;
           window.scrollTo({ top: y, behavior: 'smooth' });
         }
       });
@@ -775,6 +784,107 @@
       }
       stepsContainer.addEventListener('input', onControlChange);
       stepsContainer.addEventListener('change', onControlChange);
+
+      // ----------------------------------------------------------------
+      // 4bis. El pedido no se pierde si se recarga la página
+      // ----------------------------------------------------------------
+      // En el celular es facilísimo recargar sin querer (el gesto de tirar
+      // hacia abajo). Todo lo elegido queda guardado en este teléfono y se
+      // restaura solo al volver a entrar. Se borra al enviar el pedido.
+      // Horarios de retiro de la edición (los carga el equipo al generarla).
+      // Si A3 todavía no reemplaza este dato, se muestra un texto neutro en
+      // lugar del placeholder.
+      function textoRetiro() {
+        var t = '{{retiro_human}}';
+        if (!t || t.indexOf('{{') !== -1) return 'Te avisamos los días y horarios de retiro';
+        return t;
+      }
+      (function pintarRetiro() {
+        var el = document.getElementById('horarios-retiro');
+        if (el) el.textContent = textoRetiro();
+      })();
+
+      var CLAVE_BORRADOR = 'nm_pedido_{{id_edicion}}';
+      var CAMPOS_GUARDADOS = ['nombre', 'email', 'telefono', 'direccion',
+        'comentarios', 'aporte-input-custom'];
+
+      function guardarBorrador() {
+        try {
+          var datos = {};
+          CAMPOS_GUARDADOS.forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) datos[id] = el.value;
+          });
+          var radios = {};
+          ['primera_vez', 'en_grupo', 'entrega', 'pago', 'aporte_porcent'].forEach(function (n) {
+            var r = document.querySelector('[name="' + n + '"]:checked');
+            if (r) radios[n] = r.value;
+          });
+          localStorage.setItem(CLAVE_BORRADOR, JSON.stringify({
+            productos: stateProductos,
+            datos: datos,
+            radios: radios,
+            ts: Date.now()
+          }));
+        } catch (e) {}
+      }
+
+      function borrarBorrador() {
+        try { localStorage.removeItem(CLAVE_BORRADOR); } catch (e) {}
+      }
+
+      function restaurarBorrador() {
+        var guardado = null;
+        try { guardado = JSON.parse(localStorage.getItem(CLAVE_BORRADOR) || 'null'); } catch (e) {}
+        if (!guardado || !guardado.productos) return;
+
+        var algo = false;
+        Object.keys(guardado.productos).forEach(function (id) {
+          var s = guardado.productos[id];
+          if (!s || !s.cantidad) return;
+          stateProductos[id] = s;
+          // volver a marcar el desplegable del producto
+          var selTotal = document.querySelector('[data-product="' + id + '"][data-field="total"]');
+          var selCant = document.querySelector('[data-product="' + id + '"][data-field="cantidad"]');
+          if (selTotal) {
+            selTotal.value = s.cantidad + '@' + (s.fraccion || '');
+            if (!selTotal.value || selTotal.selectedIndex < 0) {
+              // la opción pudo cambiar: buscarla por cantidad
+              Array.prototype.forEach.call(selTotal.options, function (o) {
+                if (o.value.indexOf(s.cantidad + '@' + (s.fraccion || '')) === 0) selTotal.value = o.value;
+              });
+            }
+            algo = true;
+          } else if (selCant) {
+            selCant.value = String(s.cantidad);
+            algo = true;
+          }
+        });
+
+        if (guardado.datos) {
+          Object.keys(guardado.datos).forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el && guardado.datos[id]) { el.value = guardado.datos[id]; algo = true; }
+          });
+        }
+        if (guardado.radios) {
+          Object.keys(guardado.radios).forEach(function (n) {
+            var r = document.querySelector('[name="' + n + '"][value="' + guardado.radios[n] + '"]');
+            if (r) r.checked = true;
+          });
+        }
+
+        // Sin avisos: el pedido vuelve tal cual estaba, como si nunca se
+        // hubiera cerrado la página.
+      }
+
+      // guardar ante cualquier cambio y antes de que la página se cierre
+      document.addEventListener('input', guardarBorrador);
+      document.addEventListener('change', guardarBorrador);
+      window.addEventListener('beforeunload', guardarBorrador);
+      window.addEventListener('pagehide', guardarBorrador);
+
+      restaurarBorrador();
 
       // ----------------------------------------------------------------
       // 5. Cálculo del resumen
@@ -1018,16 +1128,40 @@
         };
       }, {
         onSuccess: function () {
-          // Mostrar la confirmación ARRIBA de la página, no al pie
+          // Pedido enviado: el borrador guardado ya no hace falta
+          borrarBorrador();
+
+          // Pantalla de confirmación limpia: sin el encabezado ni la
+          // presentación (que ya se leyeron al entrar), con el aviso arriba
+          // de todo y los horarios de retiro destacados.
           finalSection.classList.add('hidden');
+          var main = document.querySelector('main.wrap') || document.body;
+          var header = main.querySelector('header');
+          if (header) header.style.display = 'none';
+          var intro = main.querySelector('section.fade-in');
+          if (intro) intro.style.display = 'none';
+          var avisoPrevio = main.querySelector('.note--info');
+          if (avisoPrevio) avisoPrevio.style.display = 'none';
+          var pruebaCierre = document.getElementById('prueba-cierre');
+          if (pruebaCierre) pruebaCierre.style.display = 'none';
+
           var ok = document.createElement('div');
           ok.className = 'note note--success';
           ok.innerHTML = '<strong>¡Listo! Recibimos tu pedido.</strong> ' +
-            'En breve te llegará el detalle por email y por WhatsApp, con los ' +
+            'En breve te llega el detalle por email y por WhatsApp, con los ' +
             'datos para abonar. Gracias por sostener esta red.';
-          var main = document.querySelector('main.wrap') || document.body;
-          var header = main.querySelector('header');
-          main.insertBefore(ok, header ? header.nextSibling : main.firstChild);
+
+          var retiro = document.createElement('div');
+          retiro.className = 'card mt-4';
+          retiro.style.textAlign = 'center';
+          retiro.innerHTML = '<h2 style="margin-bottom:var(--s-2);">🗓️ Cuándo retirar</h2>' +
+            '<p style="font-size:1.15rem; font-weight:700; color:var(--c-suelo); ' +
+            'line-height:1.6; margin:0;">' + textoRetiro().replace(/ · /g, '<br>') + '</p>' +
+            '<p class="muted" style="margin-top:var(--s-3);">En el galpón del Nodo. ' +
+            'Si elegiste envío a domicilio, te escribimos para coordinar.</p>';
+
+          main.insertBefore(ok, main.firstChild);
+          ok.parentNode.insertBefore(retiro, ok.nextSibling);
           window.scrollTo({ top: 0, behavior: 'auto' });
         },
       });
