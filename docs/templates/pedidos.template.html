@@ -36,11 +36,10 @@
   <main class="wrap">
 
     <header class="nodo-header fade-in">
-      <a href="../" style="display:block;">
-        <img src="../assets/cabecera.png"
-             alt="Nodo Matriz Agroecológico · Sierras Chicas"
-             style="width:100%; max-width:100%; height:auto; display:block; border-radius: 16px 20px 14px 18px;">
-      </a>
+      <!-- Sin enlace: el sistema es del equipo del Nodo, no de quien pide -->
+      <img src="../assets/cabecera.png"
+           alt="Nodo Matriz Agroecológico · Sierras Chicas"
+           style="width:100%; max-width:100%; height:auto; display:block; border-radius: 16px 20px 14px 18px;">
       <p style="text-align:center; margin: var(--s-3) 0 0; font-size: 0.88rem; color: var(--c-tierra); font-style: italic;">
         edición {{numero_edicion}} · {{anio_edicion}}
       </p>
@@ -548,7 +547,17 @@
         }
 
         var meta = '';
-        if (p.descripcion) meta += escapeHtml(p.descripcion) + ' · ';
+        // Si la descripción arranca repitiendo el origen ("Cabana - Sandra
+        // Siviero" con origen "Cabana"), se muestra una sola vez.
+        var desc = p.descripcion || '';
+        if (desc && p.origen) {
+          var reOrigen = new RegExp('^\\s*' +
+            String(p.origen).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+            '\\s*[-–·/,]\\s*', 'i');
+          desc = desc.replace(reOrigen, '');
+          if (desc.trim().toLowerCase() === String(p.origen).trim().toLowerCase()) desc = '';
+        }
+        if (desc) meta += escapeHtml(desc) + ' · ';
         if (p.origen) {
           meta += escapeHtml(p.origen);
           if (p.distancia_km) meta += ' (a ' + escapeHtml(p.distancia_km) + ' km)';
