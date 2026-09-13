@@ -266,11 +266,20 @@
     <div class="fila-clave">
       <label for="clave">Clave de equipo</label>
       <input class="input" type="password" id="clave" placeholder="para guardar cambios">
+      <span style="font-size:0.8rem; color:var(--c-tierra); font-style:italic;">
+        se pide una vez y vale para todos los cambios de esta sesión
+      </span>
+    </div>
+
+    <div id="panel-problemas"></div>
+
+    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+                justify-content:space-between; border-top:1px solid rgba(74,107,58,0.14);
+                padding-top:12px; margin-top:12px;">
+      <p class="resumen" id="resumen" style="margin:0;"></p>
       <button type="button" class="btn btn--ghost btn--small" id="btn-refrescar"
         title="Vuelve a leer el catálogo desde la planilla">↻ Recargar catálogo</button>
     </div>
-
-    <p class="resumen" id="resumen"></p>
 
     <div id="curaduria"></div>
     <div id="catalogo"></div>
@@ -662,8 +671,88 @@
           '</div>';
       }
 
+      // ── Control de coherencia del catálogo ──────────────────────
+      // Revisa los productos que van a publicarse y avisa de los datos que
+      // el formulario no puede interpretar bien (la causa de precios y
+      // cantidades disparatadas).
+      function problemasDe(p) {
+        var lista = [];
+        var unidad = String(p.unidad || '').trim().toLowerCase();
+        var esPeso = /^(kg|kilo|kilos|kilogramos?|l|lt|litro|litros)$/.test(unidad);
+        var fr = String(p.fracciones_raw || '').split(',')
+          .map(function (x) { return x.trim(); }).filter(Boolean);
+
+        if (!p.unidad) lista.push('sin unidad de venta');
+        if (!p.precio) lista.push('sin precio');
+        if (!p.categoria) lista.push('sin categoría');
+
+        if (p.fraccionable && !fr.length) {
+          lista.push('marcado fraccionable pero sin fracciones cargadas');
+        }
+        if (!p.fraccionable && fr.length) {
+          lista.push('tiene fracciones cargadas pero no está marcado como fraccionable');
+        }
+        fr.forEach(function (f) {
+          var conPeso = /^\s*\d+(?:[.,]\d+)?\s*(g|gr|grs|gramos?|ml|cc|kg|kilos?|l|lt|litros?)\s*\.?\s*$/i.test(f);
+          if (conPeso && !esPeso) {
+            lista.push('la fracción «' + f + '» no se entiende vendiendo por ' +
+              (p.unidad || '—') + ': va como producto aparte con su precio');
+          }
+          if (!conPeso && !/^\s*\d+(\s*\/\s*\d+)?\s*$/.test(f)) {
+            lista.push('la fracción «' + f + '» no es un número ni una fracción (1/2, 0,25)');
+          }
+        });
+        if (p.fraccionable && fr.length && !p.quien_fracciona) {
+          lista.push('falta indicar quién fracciona (Productor o Galpón)');
+        }
+        return lista;
+      }
+
+      function renderProblemas(publicables) {
+        var cont = $('panel-problemas');
+        cont.innerHTML = '';
+        var conProblema = [];
+        publicables.forEach(function (p) {
+          var l = problemasDe(p);
+          if (l.length) conProblema.push({ p: p, motivos: l });
+        });
+        if (!conProblema.length) return;
+
+        var h = '<div class="card" style="border:2px solid #A6402B; background:rgba(166,64,43,0.05); margin-top:var(--s-4);">' +
+          '<h2 style="color:#7a2f20;">⚠️ Revisar antes de publicar <span style="font-size:0.8rem; font-weight:800; background:rgba(166,64,43,0.18); color:#7a2f20; border-radius:999px; padding:3px 10px; vertical-align:middle;">' +
+          conProblema.length + '</span></h2>' +
+          '<p class="resumen" style="margin-top:var(--s-2);">Estos productos tienen datos que el ' +
+          'formulario no puede interpretar: así publicados salen con cantidades o precios raros. ' +
+          'Se corrigen con ✏️ Editar en el catálogo de abajo.</p>';
+        conProblema.forEach(function (x) {
+          h += '<div style="border-bottom:1px solid rgba(166,64,43,0.18); padding:8px 0;">' +
+            '<strong>' + escapeHtml(x.p.nombre) + '</strong> ' +
+            '<span class="muted" style="font-size:0.85rem;">· ' +
+            escapeHtml(x.p.productor || x.p.id_productor) + ' · ' + escapeHtml(x.p.id_producto) + '</span>' +
+            '<ul style="margin:4px 0 0; padding-left:18px; font-size:0.88rem; color:#7a2f20;">';
+          x.motivos.forEach(function (m) { h += '<li>' + escapeHtml(m) + '</li>'; });
+          h += '</ul>' +
+            '<button type="button" class="btn-editar" data-ir="' + x.p.id_producto + '" ' +
+            'style="margin-top:6px;">Ir al producto ↓</button></div>';
+        });
+        h += '</div>';
+        cont.innerHTML = h;
+
+        cont.addEventListener('click', function (e) {
+          var b = e.target.closest('[data-ir]');
+          if (!b) return;
+          var fila = document.getElementById('fila-' + b.dataset.ir);
+          if (fila) {
+            fila.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            var btn = fila.querySelector('[data-editar]');
+            if (btn) btn.click();
+          }
+        });
+      }
+
       function render(disponibles, pendientes, fuera) {
         renderPendientes(pendientes);
+        renderProblemas((disponibles || []).concat(pendientes || []));
 
         var cont = $('catalogo');
         cont.innerHTML = '';

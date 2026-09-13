@@ -1114,8 +1114,23 @@
           });
 
           if (!idEdicion || !lineas.length) {
+            // Sin comandas no hay nada que recibir: la app se cierra entera
+            // para que nadie cargue recepciones "al aire".
             $('estado-edicion').className = 'aviso rojo';
-            $('estado-edicion').textContent = 'No hay comandas generadas. Primero generá las comandas de la edición desde la herramienta del equipo.';
+            $('estado-edicion').innerHTML = '🚫 <strong>Todavía no hay comandas generadas' +
+              (idEdicion ? ' para ' + idEdicion : '') + '.</strong><br>' +
+              'La app del galpón se usa después de generar las comandas: es lo que ' +
+              'define qué tiene que traer cada productor.<br><br>' +
+              '<a href="comandas.html" class="btn btn--ghost btn--small">Ir a comandas a productores</a> ' +
+              '<a href="../" class="btn btn--ghost btn--small">← Volver a la guía</a>';
+            var tabs = document.querySelector('.tabs');
+            if (tabs) tabs.style.display = 'none';
+            VISTAS.forEach(function (v) {
+              var el = $('vista-' + v);
+              if (el) el.style.display = 'none';
+            });
+            var barra = $('btn-refrescar-todo');
+            if (barra && barra.parentNode) barra.parentNode.style.display = 'none';
             return;
           }
 
