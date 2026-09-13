@@ -300,6 +300,37 @@
       </form>
     </section>
 
+    <!-- ── Control de prueba del equipo (no es para consumidores) ── -->
+    <section id="prueba-cierre"
+      style="border:1.5px dashed rgba(166,64,43,0.45); border-radius:12px;
+             padding:14px 16px; margin-top:40px; background:rgba(166,64,43,0.04);">
+      <div style="font-size:0.72rem; font-weight:700; letter-spacing:0.06em;
+                  text-transform:uppercase; color:#A6402B; margin-bottom:6px;">
+        ⚠ Solo para pruebas del equipo
+      </div>
+      <p style="font-size:0.85rem; color:#7a6f58; margin:0 0 10px;">
+        Este botón finaliza la toma de pedidos <strong>ahora mismo</strong>
+        (registra el cierre en la planilla y habilita las comandas), sin
+        esperar la fecha de cierre. Existe solo con propósitos de prueba:
+        en una edición real el formulario se cierra solo en la fecha
+        anunciada.
+      </p>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        <input type="password" id="clave-finalizar" placeholder="Clave de equipo"
+          style="flex:1 1 160px; font-size:0.9rem; padding:8px 12px;
+                 border:1.5px solid rgba(166,64,43,0.45); border-radius:10px;">
+        <button type="button" id="btn-finalizar"
+          style="font-size:0.85rem; font-weight:700; padding:8px 16px;
+                 border-radius:999px; border:2px solid #A6402B;
+                 background:transparent; color:#A6402B; cursor:pointer;">
+          Finalizar edición manualmente
+        </button>
+      </div>
+      <div id="msg-finalizar" style="display:none; margin-top:10px;
+        font-size:0.88rem; padding:10px 12px; border-radius:10px;
+        border-left:4px solid #A6402B; background:rgba(166,64,43,0.08);"></div>
+    </section>
+
     <footer class="site-footer">
       <p>Edición {{numero_edicion}} · {{anio_edicion}} · Nodo Matriz Agroecológico</p>
     </footer>
@@ -963,6 +994,84 @@
         },
       });
 
+    })();
+  </script>
+  <script>
+    // ── Control de prueba: finalizar la toma de pedidos ahora ──────
+    // Va en un script propio para funcionar aunque el form ya esté
+    // bloqueado por fecha. Llama al escenario A5 de Make.
+    (function () {
+      'use strict';
+      // Pegar acá la dirección del webhook A5 cuando esté armado en Make.
+      var WEBHOOK_A5 = 'https://hook.us2.make.com/qyqw5eh5f6gcbdd558o4t21krx4k72hy';
+      var $ = function (id) { return document.getElementById(id); };
+      var seccion = $('prueba-cierre');
+      if (!seccion) return;
+
+      // si la edición ya cerró por fecha, el control no tiene sentido
+      var CIERRE_ISO = '{{fecha_cierre_iso}}';
+      if (CIERRE_ISO && CIERRE_ISO.indexOf('{{') === -1) {
+        var fc = new Date(CIERRE_ISO);
+        if (!isNaN(fc.getTime()) && new Date() >= fc) {
+          seccion.style.display = 'none';
+          return;
+        }
+      }
+
+      try {
+        var cg = sessionStorage.getItem('nm_clave_equipo');
+        if (cg) $('clave-finalizar').value = cg;
+      } catch (e) {}
+
+      function aviso(html, esOk) {
+        var m = $('msg-finalizar');
+        m.style.display = 'block';
+        m.style.borderLeftColor = esOk ? '#4a6b3a' : '#A6402B';
+        m.style.background = esOk ? 'rgba(110,142,85,0.10)' : 'rgba(166,64,43,0.08)';
+        m.innerHTML = html;
+      }
+
+      $('btn-finalizar').addEventListener('click', function () {
+        var clave = $('clave-finalizar').value.trim();
+        if (!clave) { aviso('Falta la clave de equipo.', false); return; }
+        try { sessionStorage.setItem('nm_clave_equipo', clave); } catch (e) {}
+
+        if (WEBHOOK_A5.indexOf('https://hook.') !== 0) {
+          aviso('🚫 Este botón todavía no está conectado: falta armar el ' +
+            'escenario A5 en Make y cargar su dirección en el template. ' +
+            'No se envió nada.', false);
+          return;
+        }
+
+        if (!confirm('¿Finalizar la toma de pedidos de {{id_edicion}} ahora mismo?')) return;
+
+        var btn = $('btn-finalizar');
+        btn.disabled = true;
+        btn.textContent = 'Finalizando…';
+
+        fetch(WEBHOOK_A5, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            tipo: 'finalizar_pedidos',
+            clave: clave,
+            id_edicion: '{{id_edicion}}'
+          })
+        }).then(fin).catch(fin);
+
+        function fin() {
+          btn.textContent = 'Edición finalizada ✓';
+          aviso('✅ <strong>Toma de pedidos finalizada.</strong> El cierre quedó ' +
+            'registrado en la planilla y los pedidos nuevos serán rechazados. ' +
+            'Siguiente paso: <a href="comandas.html">generar las comandas</a> ' +
+            'o <a href="../">volver a la guía</a>.', true);
+          // bloquear el form también acá, sin esperar recarga
+          var w = $('wizard'), f = $('final-section');
+          if (w) w.classList.add('hidden');
+          if (f) f.classList.add('hidden');
+        }
+      });
     })();
   </script>
 </body>
