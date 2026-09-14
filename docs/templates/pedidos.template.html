@@ -34,6 +34,19 @@
   <title>Pedido edición {{numero_edicion}} · Nodo Matriz</title>
   <link rel="stylesheet" href="../assets/styles.css">
   <link rel="icon" type="image/png" href="../assets/favicon-nodo.png">
+  <style>
+    /* Tarjeta de producto en 3 líneas:
+       1) nombre · productor  2) precio (mismo tamaño)  3) descripción · origen (chico) */
+    .product__name { display: block; }
+    .product__name .product__firma { font-weight: 400; color: var(--c-tierra, #7a6f58); }
+    .product__price {
+      display: block;
+      margin-top: 2px;
+      font-weight: 600;
+      color: var(--c-corteza, #4a4234);
+    }
+    .product__meta { display: block; margin-top: 3px; }
+  </style>
 </head>
 <body>
   <main class="wrap">
@@ -562,18 +575,22 @@
           desc = desc.replace(reOrigen, '');
           if (desc.trim().toLowerCase() === String(p.origen).trim().toLowerCase()) desc = '';
         }
-        if (desc) meta += escapeHtml(desc) + ' · ';
+        // 3ra línea: "descripción · Origen: Ciudad - a X km"
+        var partes = [];
+        if (desc) partes.push(escapeHtml(desc));
         if (p.origen) {
-          meta += escapeHtml(p.origen);
-          if (p.distancia_km) meta += ' (a ' + escapeHtml(p.distancia_km) + ' km)';
-          meta += ' · ';
+          var origen = 'Origen: ' + escapeHtml(p.origen);
+          if (p.distancia_km) origen += ' - a ' + escapeHtml(p.distancia_km) + ' km';
+          partes.push(origen);
         }
-        meta += formatMoney(p.precio) + ' por ' + escapeHtml(p.unidad);
+        meta = partes.join(' · ');
+
+        // 2da línea: precio por unidad, mismo tamaño que el nombre
+        var precioLinea = formatMoney(p.precio) + ' por ' + escapeHtml(p.unidad);
 
         // el productor va al lado del nombre, con punto grande de separador
         var firma = p.productor
-          ? ' <span style="font-weight:400; color:var(--c-tierra, #7a6f58);">&bull; ' +
-            escapeHtml(p.productor) + '</span>'
+          ? ' <span class="product__firma">&bull; ' + escapeHtml(p.productor) + '</span>'
           : '';
 
         var control = '';
@@ -610,9 +627,8 @@
           '<div class="product" data-product-id="' + p.id_producto + '" data-precio="' + (p.precio || 0) + '">' +
           '  <div class="product__head">' +
           '    <span class="product__name">' + escapeHtml(p.nombre) + firma + ' ' + tags + '</span>' +
-          '    <span class="product__meta">' +
-          '      <span>' + meta + '</span>' +
-          '    </span>' +
+          '    <span class="product__name product__price">' + precioLinea + '</span>' +
+          (meta ? '    <span class="product__meta"><span>' + meta + '</span></span>' : '') +
           '  </div>' +
           '  <div class="product__control">' +
           control +
