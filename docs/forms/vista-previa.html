@@ -435,9 +435,15 @@
         return fr || String(T);
       }
 
+      function unidadMostrada(u) {
+        u = String(u || '').trim();
+        return /^(pack|packs|paq\.?|paquetes?)$/i.test(u) ? 'paq.' : u;
+      }
+
       function conUnidad(etq, valor, unidad) {
         var u = String(unidad || '').trim();
         if (!u) return etq;
+        if (/^(pack|packs|paq\.?|paquetes?)$/i.test(u)) return etq + ' paq.';
         var abreviaturas = ['kg', 'g', 'gr', 'grs', 'lt', 'l', 'ml', 'cc', 'mt', 'm', 'cm'];
         var lower = u.toLowerCase();
         var yaPlural = lower.slice(-1) === 's';
@@ -745,7 +751,7 @@
         var firma = p.productor
           ? ' <span class="product__firma">&bull; ' + escapeHtml(p.productor) + '</span>'
           : '';
-        var precioLinea = formatMoney(p.precio) + ' por ' + escapeHtml(p.unidad || '—');
+        var precioLinea = formatMoney(p.precio) + ' por ' + escapeHtml(unidadMostrada(p.unidad) || '—');
         var partes = [];
         if (p.descripcion) partes.push(escapeHtml(p.descripcion));
         if (p.origen) partes.push('Origen: ' + escapeHtml(p.origen));

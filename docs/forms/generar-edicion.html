@@ -672,17 +672,59 @@
               if (listo) {
                 clearInterval(timer);
                 btn.textContent = 'Formulario generado ✓';
-                caja.innerHTML = '✅ <strong>¡Formulario de ' + id + ' publicado!</strong><br>' +
+                caja.innerHTML = '✅ <strong>Formulario de ' + id + ' registrado en la planilla.</strong><br>' +
                   '<a id="link-form" href="' + urlForm + '">' + urlForm + '</a><br>' +
-                  '<small>Dale 1 minuto más a la publicación si recién aparece, y abrilo ' +
-                  'con Ctrl+Shift+R para saltear la caché. Verificá productos, orden de ' +
-                  'categorías, fecha y edición.</small><br><br>' +
+                  '<div id="estado-publicacion" style="margin-top:10px; padding:8px 12px; ' +
+                  'border-radius:10px; background:rgba(196,149,67,0.18); color:#7a5a1c; ' +
+                  'font-weight:700;">⏳ Esperando que GitHub publique la página… ' +
+                  '(suele tardar 1-2 minutos; esta pantalla avisa sola)</div>' +
+                  '<small id="nota-publicacion" style="display:none;">Verificá productos, orden de ' +
+                  'categorías, fecha, retiro y edición.</small><br><br>' +
                   '<a href="../" class="btn btn--ghost btn--small">← Volver a la guía</a>';
+                esperarPublicacion(id, urlForm);
               }
             })
             .catch(function () {});
         }, 8000);
       });
+
+      // ── ¿El formulario ya está realmente en línea? ─────────────
+      // GitHub Pages tarda en publicar. Pedimos la página sin caché hasta
+      // que responda 200 y contenga el id de la edición (así no confundimos
+      // con una versión vieja o con un 404 de GitHub).
+      function esperarPublicacion(id, urlForm) {
+        var estado = $('estado-publicacion');
+        var nota = $('nota-publicacion');
+        var intentos = 0;
+        var t = setInterval(function () {
+          intentos++;
+          if (intentos > 40) {   // ~5 minutos
+            clearInterval(t);
+            if (estado) {
+              estado.style.background = 'rgba(166,64,43,0.12)';
+              estado.style.color = '#A6402B';
+              estado.innerHTML = '⚠️ Pasaron 5 minutos y la página todavía no responde. ' +
+                'Puede que GitHub esté demorado: probá el link en un rato. Si sigue sin ' +
+                'aparecer, revisá el History de A3 en Make (el módulo que sube el archivo).';
+            }
+            return;
+          }
+          fetch(urlForm + '?_=' + Date.now(), { cache: 'no-store' })
+            .then(function (r) { return r.ok ? r.text() : ''; })
+            .then(function (html) {
+              if (!html || html.indexOf(id) === -1) return;   // todavía no
+              clearInterval(t);
+              if (estado) {
+                estado.style.background = 'rgba(76,145,65,0.16)';
+                estado.style.color = '#2f5d2a';
+                estado.innerHTML = '🟢 <strong>Formulario en línea y accesible.</strong> ' +
+                  'Ya se puede compartir el link.';
+              }
+              if (nota) nota.style.display = 'inline';
+            })
+            .catch(function () {});
+        }, 8000);
+      }
 
       // ── Arrancar ─────────────────────────────────────────────────
       refrescarRetiro();

@@ -1031,12 +1031,16 @@
 
       // "2 paquetes de 200 g" · "1 paquete de 1/2 kg" · "2 kg"
       // (si la fracción ya trae su propia unidad —200g, 500cc— no se repite)
+      function unidadMostrada(u) {
+        u = String(u || '').trim();
+        return /^(pack|packs|paq\.?|paquetes?)$/i.test(u) ? 'paq.' : u;
+      }
+
       function etiquetaUnidad(l, cant) {
-        if (!l.fraccion) return l.unidad;
+        if (!l.fraccion) return unidadMostrada(l.unidad);
         var fr = String(l.fraccion).trim();
         var traeUnidad = /(g|gr|grs|gramos?|ml|cc|kg|l|lt|litros?)\s*$/i.test(fr);
-        var plural = Math.abs(cant) === 1 ? 'paquete' : 'paquetes';
-        return plural + ' de ' + fr + (traeUnidad ? '' : ' ' + l.unidad);
+        return 'paq. de ' + fr + (traeUnidad ? '' : ' ' + unidadMostrada(l.unidad));
       }
 
       // 0.25 -> "0,25" (coma, como se escribe acá) y al revés
@@ -1125,8 +1129,32 @@
         pedidos.sort(function (a, b) { return a.correlativo - b.correlativo; });
       }
 
+      // Detalle de lo registrado, por id_recepcion: lo que se muestra al
+      // volver a elegir un productor ya recibido (tal cual quedó guardado).
+      var recepDetalle = {};
+      var CALIDADES = ['OK', 'Con observaciones', 'Rechazado', 'No llegó'];
+
+      function parseItems(res) {
+        itemsEd = [];
+        if (!res) return;
+        res.table.rows.forEach(function (r) {
+          var idPed = String(celda(r, 1)).trim();
+          if (idPed.indexOf(idEdicion) === -1) return;
+          itemsEd.push({
+            id_item: String(celda(r, 0)).trim(),
+            id_pedido: idPed,
+            id_producto: String(celda(r, 2)).trim(),
+            cantidad: parseFloat(celda(r, 4)) || 0,
+            fraccion: String(celda(r, 5)).trim(),
+            precio: parseFloat(celda(r, 6)) || 0,
+            efectiva: parseFloat(celda(r, 10)) || 0
+          });
+        });
+      }
+
       function parseRecepciones(res) {
         recibidosVivo = {};
+        recepDetalle = {};
         if (!res) return;
         try {
           res.table.rows.forEach(function (r) {
@@ -1135,8 +1163,28 @@
             if (idP && !recibidosVivo[idP]) {
               recibidosVivo[idP] = String(celda(r, 4)).trim();
             }
+            var idRec = String(celda(r, 0)).trim();
+            if (!idRec) return;
+            // calidad y observaciones: se buscan por valor entre las columnas
+            // I..L para no depender del orden exacto de la hoja
+            var calidad = '', obs = '';
+            for (var c = 8; c <= 11; c++) {
+              var v = String(celda(r, c) || '').trim();
+              if (!v) continue;
+              if (!calidad && CALIDADES.indexOf(v) !== -1) { calidad = v; continue; }
+              if (calidad && !obs && isNaN(parseFloat(v))) obs = v;
+            }
+            recepDetalle[idRec] = {
+              recibida: parseFloat(celda(r, 7)) || 0,   // cantidad efectiva
+              calidad: calidad,
+              obs: obs
+            };
           });
-        } catch (e) { recibidosVivo = {}; }
+        } catch (e) { recibidosVivo = {}; recepDetalle = {}; }
+      }
+
+      function idRecepcionDe(idProd, l) {
+        return 'REC' + idEdicion + '-' + idProd + '-' + l.id_producto + (l.fraccion ? '-' + l.fraccion : '');
       }
 
       // ── carga inicial ────────────────────────────────────────────
@@ -1203,6 +1251,7 @@
           planFracc = [];
           res[3].table.rows.forEach(function (r) {
             if (String(celda(r, 1)).trim() !== idEdicion) return;
+            if (!String(celda(r, 2)).trim() && !String(celda(r, 5) || '').trim()) return;   // fila vacía
             planFracc.push({
               id_plan: String(celda(r, 0)).trim(),
               id_producto: String(celda(r, 2)).trim(),
@@ -1245,20 +1294,7 @@
           });
 
           // Ítems de los pedidos de esta edición
-          itemsEd = [];
-          res[7].table.rows.forEach(function (r) {
-            var idPed = String(celda(r, 1)).trim();
-            if (idPed.indexOf(idEdicion) === -1) return;
-            itemsEd.push({
-              id_item: String(celda(r, 0)).trim(),
-              id_pedido: idPed,
-              id_producto: String(celda(r, 2)).trim(),
-              cantidad: parseFloat(celda(r, 4)) || 0,
-              fraccion: String(celda(r, 5)).trim(),
-              precio: parseFloat(celda(r, 6)) || 0,
-              efectiva: parseFloat(celda(r, 10)) || 0
-            });
-          });
+          parseItems(res[7]);
 
           parseEquipo(res[8]);
           parseRecepciones(res[9]);
@@ -1329,9 +1365,7 @@
         caja.style.display = 'block';
         caja.className = 'aviso';
         caja.innerHTML = '✅ <strong>Recepción ya registrada' +
-          (quien ? ' por ' + quien : '') + '.</strong> ' +
-          'Queda a la vista para consultarla. Si hay que corregir algo, ' +
-          'se edita en la planilla (hoja Recepciones).';
+          (quien ? ' por ' + quien : '') + '.</strong>';
         btn.disabled = true;
         btn.textContent = 'Ya registrada ✓';
         // dejar los renglones en modo consulta
@@ -1408,6 +1442,28 @@
           inp.dataset.paso = '1';                // − / + suman de a una unidad vendible
           div.querySelector('.detalle .muted').textContent = etiquetaUnidad(l, 0);
 
+          // Ya registrada: se muestra exactamente como quedó en la planilla
+          var det = recepDetalle[idRecepcionDe(idProd, l)];
+          if ((recibidosVivo[idProd] || registrados[idProd]) && det) {
+            var factor = l.fraccion ? (factorFraccion(l.fraccion) || 1) : 1;
+            var mostrada = Math.round((det.recibida / factor) * 1000) / 1000;
+            var llego = det.calidad !== 'No llegó' && !(det.calidad === '' && det.recibida <= 0);
+            var chk = div.querySelector('.chk');
+            chk.checked = llego;
+            if (llego) {
+              div.classList.add('tildado'); div.classList.remove('no-llego');
+              div.querySelector('.detalle').style.display = 'flex';
+              inp.value = numeroAmable(mostrada);
+              var selCal = div.querySelector('.calidad');
+              if (det.calidad && CALIDADES.indexOf(det.calidad) !== -1 && det.calidad !== 'No llegó') {
+                selCal.value = det.calidad;
+              }
+              var obsTxt = det.obs.replace(/ · Rechazado: no se recibe$/, '')
+                                  .replace(/ · [\d.,]+ × .*$/, '');
+              div.querySelector('.obs').value = obsTxt;
+            }
+          }
+
           cont.appendChild(div);
         });
 
@@ -1461,9 +1517,17 @@
         Array.prototype.forEach.call($('lista-items').querySelectorAll('.item'), marcarNovedad);
       }
 
+      // Un producto marcado "Rechazado" al que le suben la cantidad vuelve a
+      // "Calidad OK": así un toque equivocado en Rechazado se deshace solo.
+      function desRechazarSiSube(item, v) {
+        var sel = item.querySelector('.calidad');
+        if (sel && sel.value === 'Rechazado' && v > 0) sel.value = 'OK';
+      }
+
       // Tope y formato del campo "Recibido" (acepta coma: 0,25)
       $('lista-items').addEventListener('input', function (e) {
         if (!e.target.classList.contains('cant')) return;
+        desRechazarSiSube(e.target.closest('.item'), aNumero(e.target.value) || 0);
         var max = parseFloat(e.target.dataset.max);
         var v = aNumero(e.target.value);
         if (!isNaN(max) && v !== null && v > max) {
@@ -1497,6 +1561,7 @@
         if (v < 0) v = 0;
         if (!isNaN(max) && v > max) v = max;
         inp.value = numeroAmable(v);
+        desRechazarSiSube(item, v);
         marcarNovedad(item);
       });
 
@@ -1508,12 +1573,12 @@
         if (e.target.classList.contains('calidad')) {
           var inp = item.querySelector('.cant');
           if (e.target.value === 'Rechazado') {
-            // lo rechazado no se recibe: cuenta entero como faltante
-            inp.dataset.previo = inp.value;
+            // lo rechazado no se recibe: cuenta entero como faltante. La
+            // cantidad NO se bloquea: si fue un toque por error, con − / +
+            // o escribiendo se vuelve a aceptar.
+            if ((aNumero(inp.value) || 0) > 0) inp.dataset.previo = inp.value;
             inp.value = '0';
-            inp.disabled = true;
-          } else if (inp.disabled) {
-            inp.disabled = false;
+          } else if ((aNumero(inp.value) || 0) <= 0) {
             inp.value = inp.dataset.previo || numeroAmable(inp.dataset.max);
           }
           marcarNovedad(item);
@@ -2125,6 +2190,7 @@
             planFracc = [];
             res[3].table.rows.forEach(function (r) {
               if (String(celda(r, 1)).trim() !== idEdicion) return;
+              if (!String(celda(r, 2)).trim() && !String(celda(r, 5) || '').trim()) return;   // fila vacía
               planFracc.push({
                 id_plan: String(celda(r, 0)).trim(),
                 id_producto: String(celda(r, 2)).trim(),
@@ -2491,15 +2557,51 @@
           })
         }).then(finA).catch(finA);
 
+        // Verificación real: D3 tiene que marcar cada propuesta como
+        // "Aplicada" en Propuestas_Ajuste (columna K). Hasta que eso no se
+        // vea en la planilla, no damos el recorte por hecho.
+        var idsEnviadas = propuestasOut.map(function (p) { return p.id_propuesta; });
         function finA() {
-          btn.textContent = 'Pedidos actualizados ✓';
           caja.style.display = 'block';
           caja.style.background = '';
           caja.style.color = '';
-          caja.innerHTML = '✅ <strong>Pedidos actualizados.</strong> Los recortes quedaron ' +
-            'aplicados y a cada consumidor afectado le llega por correo el detalle nuevo ' +
-            'de su pedido con el total actualizado.';
-          setTimeout(function () { refrescarPropuestas(null); }, 15000);
+          caja.innerHTML = '⏳ <strong>Aplicando los recortes en la planilla…</strong> ' +
+            'Esta pantalla avisa sola cuando queden confirmados.';
+          var intentos = 0;
+          var timer = setInterval(function () {
+            intentos++;
+            if (intentos > 20) {   // ~2,5 minutos
+              clearInterval(timer);
+              btn.disabled = false;
+              btn.textContent = 'ENVIAR PEDIDOS ACTUALIZADOS';
+              errorA('⚠️ Los recortes NO quedaron aplicados: en la planilla las propuestas ' +
+                'siguen como "Pendiente". El escenario D3 de Make no las procesó (revisá ' +
+                'que esté encendido, que la clave sea la correcta y el History de D3). ' +
+                'Lo cargado acá sigue en pantalla: cuando D3 esté bien, volvé a tocar ENVIAR.');
+              return;
+            }
+            gviz('sheet=Propuestas_Ajuste&range=A1:N500&headers=1&_=' + Date.now())
+              .then(function (res) {
+                var pendientes = 0;
+                res.table.rows.forEach(function (r) {
+                  var id = String(celda(r, 0)).trim();
+                  if (idsEnviadas.indexOf(id) === -1) return;
+                  if (String(celda(r, 10)).trim() === 'Pendiente') pendientes++;
+                });
+                if (pendientes > 0) return;   // D3 todavía trabajando
+                clearInterval(timer);
+                btn.textContent = 'Pedidos actualizados ✓';
+                caja.innerHTML = '✅ <strong>Recortes aplicados y confirmados en la planilla.</strong> ' +
+                  'A cada consumidor afectado le llega por correo el detalle nuevo de su ' +
+                  'pedido con el total actualizado.';
+                // releer ítems (cantidades ya recortadas) y propuestas
+                gviz('sheet=Items&range=A1:M3000&headers=1&_=' + Date.now())
+                  .then(function (ri) { parseItems(ri); })
+                  .catch(function () {})
+                  .then(function () { refrescarPropuestas(null); });
+              })
+              .catch(function () {});
+          }, 8000);
         }
       });
 
