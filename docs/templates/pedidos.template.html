@@ -586,7 +586,7 @@
         meta = partes.join(' · ');
 
         // 2da línea: precio por unidad, mismo tamaño que el nombre
-        var precioLinea = formatMoney(p.precio) + ' por ' + escapeHtml(p.unidad);
+        var precioLinea = formatMoney(p.precio) + ' por ' + escapeHtml(unidadMostrada(p.unidad));
 
         // el productor va al lado del nombre, con punto grande de separador
         var firma = p.productor
@@ -702,9 +702,18 @@
       }
 
       // "2" + kg -> "2 kg" · "3" + unidad -> "3 unidades" · "½" + kg -> "½ kg"
+      // Cómo se muestra una unidad de venta: "pack" -> "paq." (el valor en la
+      // planilla no cambia; acepta también "paq." o "paquete" por si lo cambian).
+      function unidadMostrada(u) {
+        u = String(u || '').trim();
+        return /^(pack|packs|paq\.?|paquetes?)$/i.test(u) ? 'paq.' : u;
+      }
+
       function conUnidad(etq, valor, unidad) {
         var u = String(unidad || '').trim();
         if (!u) return etq;
+        // "pack"/"packs"/"paquete" se muestran como "paq." (sin plural)
+        if (/^(pack|packs|paq\.?|paquetes?)$/i.test(u)) return etq + ' paq.';
         var abreviaturas = ['kg', 'g', 'gr', 'grs', 'lt', 'l', 'ml', 'cc', 'mt', 'm', 'cm'];
         var lower = u.toLowerCase();
         var yaPlural = lower.slice(-1) === 's';
@@ -824,7 +833,10 @@
       var CAMPOS_GUARDADOS = ['nombre', 'email', 'telefono', 'direccion',
         'comentarios', 'aporte-input-custom'];
 
+      var pedidoEnviado = false;   // después de enviar, no se guarda más nada
+
       function guardarBorrador() {
+        if (pedidoEnviado) return;
         try {
           var datos = {};
           CAMPOS_GUARDADOS.forEach(function (id) {
@@ -1144,7 +1156,10 @@
         };
       }, {
         onSuccess: function () {
-          // Pedido enviado: el borrador guardado ya no hace falta
+          // Pedido enviado: el borrador guardado ya no hace falta, y no se
+          // vuelve a guardar aunque se cierre la pestaña (si no, el próximo
+          // pedido desde el mismo celular arrancaba con estas selecciones).
+          pedidoEnviado = true;
           borrarBorrador();
 
           // Pantalla de confirmación limpia: sin el encabezado ni la
@@ -1176,8 +1191,22 @@
             '<p class="muted" style="margin-top:var(--s-3);">En el galpón del Nodo. ' +
             'Si elegiste envío a domicilio, te escribimos para coordinar.</p>';
 
+          // Para hacer otro pedido desde el mismo teléfono: arranca en blanco.
+          var otro = document.createElement('div');
+          otro.className = 'card mt-4';
+          otro.style.textAlign = 'center';
+          otro.innerHTML = '<p class="muted" style="margin:0 0 var(--s-3);">¿Vas a cargar un ' +
+            'pedido para otra persona desde este mismo teléfono?</p>' +
+            '<button type="button" class="btn btn--primary" id="btn-otro-pedido">' +
+            'Realizar otro pedido</button>';
+          otro.querySelector('#btn-otro-pedido').addEventListener('click', function () {
+            borrarBorrador();
+            window.location.reload();
+          });
+
           main.insertBefore(ok, main.firstChild);
           ok.parentNode.insertBefore(retiro, ok.nextSibling);
+          retiro.parentNode.insertBefore(otro, retiro.nextSibling);
           window.scrollTo({ top: 0, behavior: 'auto' });
         },
       });
