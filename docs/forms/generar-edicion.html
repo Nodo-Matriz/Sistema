@@ -318,12 +318,22 @@
             // una edición equivocada es peor que re-tipear un caso raro.
             $('numero').value = parseInt(numero, 10) || '';
             if (anio) $('anio').value = parseInt(anio, 10) || $('anio').value;
-            // fecha_cierre_form (H, índice 7): precargar si está y el campo está vacío
+            // fecha_cierre_form (H, índice 7): precargar SOLO si todavía está en el
+            // futuro. Antes se precargaba la de la edición anterior (ya vencida) y
+            // el formulario nacía cerrado. Si no hay una fecha útil, se propone el
+            // próximo domingo a las 14:00 para que se vea claro que hay que revisarla.
             var h = fila.c[7] && fila.c[7].v ? String(fila.c[7].v) : '';
             var fm = h.match(/^Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+))?/);
-            if (fm && !$('cierre').value) {
-              $('cierre').value = fm[1] + '-' + pad2(+fm[2] + 1) + '-' + pad2(+fm[3]) +
-                'T' + pad2(+(fm[4] || 12)) + ':' + pad2(+(fm[5] || 0));
+            if (!$('cierre').value) {
+              var propuesta = null;
+              if (fm) {
+                var dh = new Date(+fm[1], +fm[2], +fm[3], +(fm[4] || 12), +(fm[5] || 0));
+                if (dh.getTime() > Date.now() + 60 * 60 * 1000) propuesta = dh;
+              }
+              if (!propuesta) propuesta = proximoDomingo14();
+              $('cierre').value = propuesta.getFullYear() + '-' + pad2(propuesta.getMonth() + 1) +
+                '-' + pad2(propuesta.getDate()) + 'T' + pad2(propuesta.getHours()) + ':' +
+                pad2(propuesta.getMinutes());
             }
             if (pista) {
               pista.textContent = 'Edición en curso: ' + id +
@@ -477,6 +487,51 @@
         return v ? new Date(v) : null;
       }
 
+      // Próximo domingo a las 14:00 (si hoy es domingo, el siguiente)
+      function proximoDomingo14() {
+        var d = new Date();
+        d.setHours(14, 0, 0, 0);
+        var faltan = (7 - d.getDay()) % 7;
+        if (faltan === 0) faltan = 7;
+        d.setDate(d.getDate() + faltan);
+        return d;
+      }
+
+      function soloFecha(d) {
+        return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      }
+
+      // ── Reglas de fechas ────────────────────────────────────────
+      // Devuelve el texto del problema, o '' si está todo bien.
+      // 1) El cierre tiene que ser, como mínimo, mañana: una edición no
+      //    puede cerrar el mismo día que se genera (nacería cerrada).
+      // 2) Los días de retiro tienen que ser posteriores al cierre.
+      function problemaFechas() {
+        var d = leerCierre();
+        if (!d || isNaN(d.getTime())) return '';
+        var hoy = soloFecha(new Date());
+        var diaCierre = soloFecha(d);
+        if (d.getTime() <= Date.now()) {
+          return 'La fecha de cierre ya pasó (' + fechaHuman(d) + '): el formulario nacería cerrado.';
+        }
+        if (diaCierre.getTime() <= hoy.getTime()) {
+          return 'El cierre no puede ser hoy mismo: tiene que ser mañana o después, para que la ' +
+            'gente tenga tiempo de pedir.';
+        }
+        var retiros = [$('retiro1-fecha').value, $('retiro2-fecha').value];
+        for (var i = 0; i < retiros.length; i++) {
+          if (!retiros[i]) continue;
+          var p = retiros[i].split('-');
+          var r = new Date(+p[0], +p[1] - 1, +p[2]);
+          if (r.getTime() <= diaCierre.getTime()) {
+            return 'El ' + (i + 1) + 'º día de retiro (' + pad2(r.getDate()) + '/' + pad2(r.getMonth() + 1) +
+              ') tiene que ser posterior al cierre del formulario (' +
+              pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + ').';
+          }
+        }
+        return '';
+      }
+
       // ── Días y horarios de retiro ────────────────────────────────
       // Devuelve, por ejemplo:
       // "Miércoles 17/09 de 11 a 15 hs · Jueves 18/09 de 11 a 13:30 hs"
@@ -522,16 +577,26 @@
         var d = leerCierre();
         var completos = campos.every(function (c) { return $(c).value.trim() !== ''; });
 
+        var problema = problemaFechas();
+
         if (id && d) {
           $('preview').innerHTML =
             'Se va a generar la edición <strong>' + id + '</strong><br>' +
             'Cierre del formulario: <strong>' + fechaHuman(d) + '</strong><br>' +
             'Aporte por defecto: <strong>' + $('aporte').value + '%</strong><br>' +
-            'Retiro: <strong>' + (textoRetiro() || '—') + '</strong>';
+            'Retiro: <strong>' + (textoRetiro() || '—') + '</strong>' +
+            (problema
+              ? '<br><span style="display:block; margin-top:8px; color:#A6402B; font-weight:700;">⛔ ' +
+                problema + '</span>'
+              : '');
         } else {
           $('preview').textContent = 'Completá los campos para ver el resumen…';
         }
-        $('btn-generar').disabled = !completos;
+        var btnG = $('btn-generar');
+        if (!btnG.dataset.enCurso) {   // no pisar "Generando…" / "generado ✓"
+          btnG.disabled = !completos || !!problema;
+          btnG.textContent = problema ? 'Revisá las fechas' : 'Generar formulario de la edición';
+        }
       }
 
       campos.forEach(function (c) { $(c).addEventListener('input', refrescar); });
@@ -541,6 +606,7 @@
         var id = idEdicion();
         var d = leerCierre();
         if (!id || !d) return;
+        if (problemaFechas()) { refrescar(); return; }   // doble seguro
 
         guardarOrden();
 
@@ -564,6 +630,7 @@
 
         var urlForm = BASE_FORMS + 'pedidos-' + id + '.html';
         var btn = $('btn-generar');
+        btn.dataset.enCurso = '1';
         btn.disabled = true;
         btn.textContent = 'Generando…';
 
@@ -580,6 +647,7 @@
           intentos++;
           if (intentos > 24) {  // ~3 minutos
             clearInterval(timer);
+            delete btn.dataset.enCurso;
             btn.disabled = false;
             btn.textContent = 'Generar formulario de la edición';
             caja.innerHTML = '⚠️ <strong>Todavía no aparece confirmado en la planilla.</strong><br>' +
