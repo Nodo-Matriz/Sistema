@@ -405,12 +405,17 @@
         caja.innerHTML = '⏳ <strong>Generando las comandas de ' + id + '…</strong><br>' +
           'Esta página avisa sola cuando queden registradas en la planilla.';
 
-        // Verificación real: aparecen filas de esta edición en la hoja Comandas.
-        var intentos = 0;
+        // Verificación real: C2 escribe UNA fila por productor. Si mostramos el
+        // número apenas aparece la primera fila, contamos de menos (por eso
+        // antes decía "2" y la guía después mostraba "3"). Mostramos el éxito
+        // en cuanto aparecen, pero seguimos leyendo y actualizamos el número
+        // hasta que deje de crecer: así el conteo final coincide siempre.
+        var intentos = 0, ultimo = 0, estables = 0, a5Enviado = false;
         var timer = setInterval(function () {
           intentos++;
-          if (intentos > 18) {  // ~2,5 minutos
+          if (intentos > 22) {  // ~3 minutos
             clearInterval(timer);
+            if (ultimo > 0) return;   // ya se mostró el éxito con el conteo real
             btn.disabled = false;
             btn.textContent = 'Generar comandas de la edición';
             caja.innerHTML = '⚠️ <strong>Todavía no aparecen comandas de ' + id +
@@ -428,32 +433,44 @@
                 if (vv.indexOf(id) !== -1) { n++; break; }
               }
             });
-            if (n > 0) {
-              clearInterval(timer);
-              yaGeneradas = n;
-              btn.textContent = 'Comandas generadas ✓';
-    
-              caja.innerHTML = '✅ <strong>¡Comandas de ' + id + ' registradas!</strong> (' +
-                n + ' comanda' + (n === 1 ? '' : 's') + ')<br>' +
-                'En un momento llega el correo al equipo con el mensaje de WhatsApp ' +
-                'de cada productor, con la entrega ' + textoEntrega() + '. ' +
-                'La guía pasa al paso 6 (galpón).<br><br>' +
-                '<a href="../" class="btn btn--ghost btn--small">← Volver a la guía</a>';
-              // pasar la edición a "Recepción" para que la guía avance sola
-              if (WEBHOOK_A5.indexOf('https://hook.') === 0) {
-                fetch(WEBHOOK_A5, {
-                  method: 'POST',
-                  mode: 'no-cors',
-                  headers: { 'Content-Type': 'text/plain' },
-                  body: JSON.stringify({
-                    tipo: 'iniciar_recepcion',
-                    clave: $('clave').value.trim()
-                  })
-                }).catch(function () {});
-              }
+            if (n <= 0) return;               // todavía no aparece ninguna
+            if (n > ultimo) {                 // siguen entrando comandas: actualizo
+              ultimo = n; estables = 0;
+              mostrarExito(n);
+              enviarA5();
+            } else if (n === ultimo) {        // dos lecturas iguales = C2 terminó
+              estables++;
+              if (estables >= 2) clearInterval(timer);
             }
           }).catch(function () {});
         }, 8000);
+
+        function mostrarExito(n) {
+          yaGeneradas = n;
+          btn.textContent = 'Comandas generadas ✓';
+          caja.innerHTML = '✅ <strong>¡Comandas de ' + id + ' registradas!</strong> (' +
+            n + ' comanda' + (n === 1 ? '' : 's') + ')<br>' +
+            'En un momento llega el correo al equipo con el mensaje de WhatsApp ' +
+            'de cada productor, con la entrega ' + textoEntrega() + '. ' +
+            'La guía pasa al paso 6 (galpón).<br><br>' +
+            '<a href="../" class="btn btn--ghost btn--small">← Volver a la guía</a>';
+        }
+        function enviarA5() {
+          if (a5Enviado) return;
+          a5Enviado = true;
+          // pasar la edición a "Recepción" para que la guía avance sola
+          if (WEBHOOK_A5.indexOf('https://hook.') === 0) {
+            fetch(WEBHOOK_A5, {
+              method: 'POST',
+              mode: 'no-cors',
+              headers: { 'Content-Type': 'text/plain' },
+              body: JSON.stringify({
+                tipo: 'iniciar_recepcion',
+                clave: $('clave').value.trim()
+              })
+            }).catch(function () {});
+          }
+        }
       });
 
       // ── Arrancar ─────────────────────────────────────────────────

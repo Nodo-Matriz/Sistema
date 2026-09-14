@@ -38,6 +38,12 @@
 
     .cat-card { margin-top: var(--s-5); }
 
+    /* ── Tarjeta de producto en 3 líneas (igual que el form) ── */
+    .product__name { display: block; }
+    .product__name .product__firma { font-weight: 400; color: var(--c-tierra, #7a6f58); }
+    .product__price { display: block; margin-top: 2px; font-weight: 600; color: var(--c-corteza, #4a4234); }
+    .product__meta { display: block; margin-top: 3px; }
+
     /* ── Bloque de curaduría pendiente (tabla) ─────────────── */
     .card.curaduria {
       border: 2px solid var(--c-mostaza, #C49543);
@@ -60,6 +66,51 @@
       border-radius: var(--r-pill);
       padding: 3px 10px;
       vertical-align: middle;
+    }
+
+    /* ── Bloque "A corregir": productos YA publicados con datos que
+          el formulario no puede interpretar. Otro color para que no se
+          confundan con las altas nuevas. ─────────────────────────── */
+    .card.curaduria.corregir {
+      border-color: #A6402B;
+      background: rgba(166, 64, 43, 0.06);
+    }
+
+    .card.curaduria.corregir h2 { color: #7a2f20; }
+
+    .badge-corregir {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #fff;
+      background: #A6402B;
+      border-radius: var(--r-pill);
+      padding: 3px 10px;
+      vertical-align: middle;
+    }
+
+    tr.fila-corregir td { background: rgba(166, 64, 43, 0.11); }
+    tr.fila-nuevo td { background: rgba(196, 149, 67, 0.16); }
+
+    /* leyenda de colores del cuadro de curaduría */
+    .leyenda-cur { line-height: 1.55; }
+    .leyenda-cur .swatch {
+      display: inline-block; width: 14px; height: 14px; border-radius: 3px;
+      vertical-align: -2px; margin-right: 3px; border: 1px solid rgba(0,0,0,0.18);
+    }
+    .leyenda-cur .sw-corregir { background: rgba(166, 64, 43, 0.35); }
+    .leyenda-cur .sw-nuevo { background: rgba(196, 149, 67, 0.55); }
+
+    .motivos-corregir {
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: #A6402B;
+      margin-top: 4px;
+      line-height: 1.35;
+      max-width: 230px;
+      white-space: normal;
     }
 
     .tabla-scroll {
@@ -271,8 +322,6 @@
       </span>
     </div>
 
-    <div id="panel-problemas"></div>
-
     <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;
                 justify-content:space-between; border-top:1px solid rgba(74,107,58,0.14);
                 padding-top:12px; margin-top:12px;">
@@ -428,6 +477,7 @@
             var disponibles = [];
             var pendientes = [];
             var fuera = [];
+            var aCorregir = [];
             var sets = { unidad: {}, origen: {}, categoria: {}, fracciones: {} };
 
             res.table.rows.forEach(function (r) {
@@ -460,9 +510,13 @@
               if (p.fracciones_raw) sets.fracciones[p.fracciones_raw] = true;
 
               if (!p.categoria) {
-                pendientes.push(p);          // curaduría pendiente
+                pendientes.push(p);          // curaduría pendiente (productos nuevos)
               } else if (p.disponible) {
-                disponibles.push(p);         // catálogo publicado
+                // publicado, pero si sus datos no se entienden va a la tabla
+                // de corrección (arriba) además de aparecer en el catálogo
+                var probs = problemasDe(p);
+                if (probs.length) { p._problemas = probs; aCorregir.push(p); }
+                disponibles.push(p);
               } else {
                 fuera.push(p);               // con categoría pero fuera de la edición
               }
@@ -473,7 +527,7 @@
                 .sort(function (a, b) { return a.localeCompare(b, 'es'); });
             });
 
-            render(disponibles, pendientes, fuera);
+            render(disponibles, pendientes, fuera, aCorregir);
           })
           .catch(function () {
             $('estado').className = 'aviso rojo';
@@ -530,23 +584,33 @@
       }
 
       // ── Tabla de curaduría pendiente ────────────────────────────
-      function filaPendiente(p) {
+      // modo 'nuevo'    = producto que cargó un productor y espera decisión
+      // modo 'corregir' = producto YA publicado cuyos datos el formulario no
+      //                   puede interpretar: se edita acá, no es un alta.
+      function filaPendiente(p, modo) {
         var i = p.id_producto;
+        var corregir = (modo === 'corregir');
         // Dos estados: No (rojo, valor por defecto — nada entra al catálogo
         // sin una decisión explícita) · Sí = se publica (verde; al completar
         // categoría pasa al catálogo de abajo y sale de esta tabla).
         var esSi = p.disponible_raw === 'Sí';
-        var clase = esSi ? 'estado-si' : 'estado-no';
+        var clase = corregir ? 'fila-corregir' : 'fila-nuevo';
         var sel = '<select class="select" id="disponible-' + i + '">' +
           '<option value="No"' + (!esSi ? ' selected' : '') + '>No</option>' +
           '<option value="Sí"' + (esSi ? ' selected' : '') + '>Sí</option>' +
           '</select>';
+        var motivos = '';
+        if (corregir && p._problemas && p._problemas.length) {
+          motivos = '<div class="motivos-corregir">⚠ ' +
+            p._problemas.map(escapeHtml).join('<br>⚠ ') + '</div>';
+        }
         return '<tr id="fila-' + i + '" class="' + clase + '">' +
           '<td class="col-disponible">' + sel + '</td>' +
           '<td class="col-nombre">' +
           '  <input class="input" id="nombre-' + i + '" value="' + escapeHtml(p.nombre) + '">' +
           '  <div class="quien-carga">' + escapeHtml(p.productor || p.id_productor) +
           '     · ' + formatMoney(p.precio) + '</div>' +
+          motivos +
           '  <span class="hint-fila" id="hint-' + i + '"></span>' +
           '</td>' +
           '<td class="col-precio"><input class="input" type="number" min="0" step="any" id="precio-' + i + '" value="' + (p.precio || '') + '"></td>' +
@@ -567,26 +631,50 @@
           '</tr>';
       }
 
-      function renderPendientes(pendientes) {
-        var contP = $('curaduria');
-        contP.innerHTML = '';
-        if (!pendientes.length) return;
-
-        var card = document.createElement('div');
-        card.className = 'card cat-card curaduria';
-        var h = '<h2>🧐 Curaduría pendiente <span class="badge-curaduria">' +
-          pendientes.length + '</span></h2>';
-        h += '<p class="resumen" style="margin-top:var(--s-2);">Productos nuevos cargados por ' +
-          'productores. La decisión principal es la primera columna: <strong>¿entra a esta ' +
-          'edición?</strong> Sí = se publica (pide categoría) · No = queda rechazado para esta edición.</p>';
-        h += '<div class="tabla-scroll"><table class="curaduria-tabla">';
-        h += '<thead><tr>' +
+      function encabezadosTabla() {
+        return '<thead><tr>' +
           '<th>Disponible</th><th>Producto</th><th>Precio $</th><th>Unidad</th>' +
           '<th>Origen</th><th>Categoría</th><th>Fracciona</th><th>Fracciones</th>' +
           '<th>Quién</th><th>Oferta</th><th>Stock</th><th>Descripción</th><th></th>' +
           '</tr></thead><tbody>';
-        pendientes.forEach(function (p) { h += filaPendiente(p); });
+      }
+
+      function renderPendientes(pendientes, aCorregir) {
+        var contP = $('curaduria');
+        contP.innerHTML = '';
+        aCorregir = aCorregir || [];
+
+        if (!pendientes.length && !aCorregir.length) return;
+
+        // Un solo cuadro: adentro, las filas se distinguen por color según el
+        // tipo (a corregir = rojo · alta nueva = mostaza).
+        var total = aCorregir.length + pendientes.length;
+        var card = document.createElement('div');
+        card.className = 'card cat-card curaduria';
+
+        var h = '<h2>🧐 Curaduría pendiente <span class="badge-curaduria">' +
+          total + '</span></h2>';
+
+        h += '<p class="resumen leyenda-cur" style="margin-top:var(--s-2);">' +
+          'Las filas se distinguen por color:<br>' +
+          '<span class="swatch sw-corregir"></span> <strong>A corregir</strong> — ' +
+          'productos que <strong>ya están en el catálogo</strong> pero con datos que el ' +
+          'formulario no puede interpretar (por eso salen con precios o cantidades raros). ' +
+          'No son nuevos: se arreglan acá mismo. Recordá el criterio: las <strong>fracciones</strong> ' +
+          'son para kg y litro (1/4, 1/2, 1); una presentación con su propio peso (50 g, 200 gr, ' +
+          '½ pieza) va como <strong>producto aparte con su precio</strong>.<br>' +
+          '<span class="swatch sw-nuevo"></span> <strong>Alta nueva</strong> — productos ' +
+          '<strong>nuevos</strong> cargados por productores. La decisión principal es la primera ' +
+          'columna: <strong>¿entra a esta edición?</strong> Sí = se publica (pide categoría) · ' +
+          'No = queda rechazado para esta edición.</p>';
+
+        h += '<div class="tabla-scroll"><table class="curaduria-tabla">';
+        h += encabezadosTabla();
+        // primero lo que hay que corregir (más urgente), después las altas nuevas
+        aCorregir.forEach(function (p) { h += filaPendiente(p, 'corregir'); });
+        pendientes.forEach(function (p) { h += filaPendiente(p, 'nuevo'); });
         h += '</tbody></table></div>';
+
         card.innerHTML = h;
         contP.appendChild(card);
       }
@@ -652,17 +740,24 @@
         var tags = '';
         if (p.es_oferta) tags += ' <span class="product__tag product__tag--oferta">Oferta</span>';
 
-        var meta = '';
-        if (p.origen) meta += escapeHtml(p.origen) + ' · ';
-        if (p.productor) meta += escapeHtml(p.productor) + ' · ';
-        meta += formatMoney(p.precio) + ' por ' + escapeHtml(p.unidad || '—');
-        if (sinControl) meta += ' · ' + escapeHtml(p.categoria);
+        // Misma tarjeta en 3 líneas que el formulario de pedidos:
+        // 1) nombre · productor  2) precio  3) descripción · Origen: ciudad
+        var firma = p.productor
+          ? ' <span class="product__firma">&bull; ' + escapeHtml(p.productor) + '</span>'
+          : '';
+        var precioLinea = formatMoney(p.precio) + ' por ' + escapeHtml(p.unidad || '—');
+        var partes = [];
+        if (p.descripcion) partes.push(escapeHtml(p.descripcion));
+        if (p.origen) partes.push('Origen: ' + escapeHtml(p.origen));
+        if (sinControl) partes.push(escapeHtml(p.categoria));
+        var meta = partes.join(' · ');
 
         return '' +
           '<div class="product" id="fila-' + p.id_producto + '">' +
           '  <div class="product__head">' +
-          '    <span class="product__name">' + escapeHtml(p.nombre) + tags + '</span>' +
-          '    <span class="product__meta"><span>' + meta + '</span></span>' +
+          '    <span class="product__name">' + escapeHtml(p.nombre) + firma + tags + '</span>' +
+          '    <span class="product__name product__price">' + precioLinea + '</span>' +
+          (meta ? '    <span class="product__meta"><span>' + meta + '</span></span>' : '') +
           '  </div>' +
           '  <div class="fila-acciones">' +
           '    <button type="button" class="btn-editar" data-editar="' + p.id_producto + '">✏️ Editar</button>' +
@@ -708,51 +803,9 @@
         return lista;
       }
 
-      function renderProblemas(publicables) {
-        var cont = $('panel-problemas');
-        cont.innerHTML = '';
-        var conProblema = [];
-        publicables.forEach(function (p) {
-          var l = problemasDe(p);
-          if (l.length) conProblema.push({ p: p, motivos: l });
-        });
-        if (!conProblema.length) return;
 
-        var h = '<div class="card" style="border:2px solid #A6402B; background:rgba(166,64,43,0.05); margin-top:var(--s-4);">' +
-          '<h2 style="color:#7a2f20;">⚠️ Revisar antes de publicar <span style="font-size:0.8rem; font-weight:800; background:rgba(166,64,43,0.18); color:#7a2f20; border-radius:999px; padding:3px 10px; vertical-align:middle;">' +
-          conProblema.length + '</span></h2>' +
-          '<p class="resumen" style="margin-top:var(--s-2);">Estos productos tienen datos que el ' +
-          'formulario no puede interpretar: así publicados salen con cantidades o precios raros. ' +
-          'Se corrigen con ✏️ Editar en el catálogo de abajo.</p>';
-        conProblema.forEach(function (x) {
-          h += '<div style="border-bottom:1px solid rgba(166,64,43,0.18); padding:8px 0;">' +
-            '<strong>' + escapeHtml(x.p.nombre) + '</strong> ' +
-            '<span class="muted" style="font-size:0.85rem;">· ' +
-            escapeHtml(x.p.productor || x.p.id_productor) + ' · ' + escapeHtml(x.p.id_producto) + '</span>' +
-            '<ul style="margin:4px 0 0; padding-left:18px; font-size:0.88rem; color:#7a2f20;">';
-          x.motivos.forEach(function (m) { h += '<li>' + escapeHtml(m) + '</li>'; });
-          h += '</ul>' +
-            '<button type="button" class="btn-editar" data-ir="' + x.p.id_producto + '" ' +
-            'style="margin-top:6px;">Ir al producto ↓</button></div>';
-        });
-        h += '</div>';
-        cont.innerHTML = h;
-
-        cont.addEventListener('click', function (e) {
-          var b = e.target.closest('[data-ir]');
-          if (!b) return;
-          var fila = document.getElementById('fila-' + b.dataset.ir);
-          if (fila) {
-            fila.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            var btn = fila.querySelector('[data-editar]');
-            if (btn) btn.click();
-          }
-        });
-      }
-
-      function render(disponibles, pendientes, fuera) {
-        renderPendientes(pendientes);
-        renderProblemas((disponibles || []).concat(pendientes || []));
+      function render(disponibles, pendientes, fuera, aCorregir) {
+        renderPendientes(pendientes, aCorregir || []);
 
         var cont = $('catalogo');
         cont.innerHTML = '';

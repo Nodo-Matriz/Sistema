@@ -208,7 +208,39 @@
     }
     .item.parcial .nota-novedad { display: block; color: #8a6614; }
     .item.nada .nota-novedad { display: block; color: #A6402B; }
-    .item .detalle input.cant { width: 92px; font-size: 1rem; }
+    .item .detalle input.cant { width: 62px; font-size: 1.05rem; text-align: center; }
+
+    /* − / + para cargar la cantidad con el dedo */
+    .stepper {
+      display: inline-flex;
+      align-items: stretch;
+      border: 1px solid var(--c-musgo, #3c5230);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .stepper input.cant {
+      border: none !important;
+      border-radius: 0 !important;
+      border-left: 1px solid rgba(60,82,48,0.25) !important;
+      border-right: 1px solid rgba(60,82,48,0.25) !important;
+      margin: 0 !important;
+    }
+    .step-btn {
+      border: none;
+      background: rgba(60,82,48,0.08);
+      color: var(--c-musgo, #3c5230);
+      font-size: 1.35rem;
+      font-weight: 700;
+      line-height: 1;
+      width: 46px;
+      min-height: 46px;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .step-btn:active { background: rgba(60,82,48,0.22); }
 
     .item input[type="checkbox"] {
       width: 26px;
@@ -683,7 +715,6 @@
     </header>
 
     <section class="fade-in" data-delay="1">
-      <p><a href="../" class="btn btn--ghost btn--small">← Volver a la guía</a></p>
       <h1>Galpón</h1>
       <p class="lead">
         Recepción de productores y armado de fracciones de la edición vigente.
@@ -1156,8 +1187,7 @@
               (idEdicion ? ' para ' + idEdicion : '') + '.</strong><br>' +
               'La app del galpón se usa después de generar las comandas: es lo que ' +
               'define qué tiene que traer cada productor.<br><br>' +
-              '<a href="comandas.html" class="btn btn--ghost btn--small">Ir a comandas a productores</a> ' +
-              '<a href="../" class="btn btn--ghost btn--small">← Volver a la guía</a>';
+              '<a href="comandas.html" class="btn btn--ghost btn--small">Ir a comandas a productores</a>';
             var tabs = document.querySelector('.tabs');
             if (tabs) tabs.style.display = 'none';
             VISTAS.forEach(function (v) {
@@ -1354,7 +1384,11 @@
               '<div class="linea-nombre"></div>' +
               '<div class="detalle" style="display:none;">' +
                 '<label>Recibido:</label>' +
-                '<input type="text" class="cant" inputmode="decimal">' +
+                '<span class="stepper">' +
+                  '<button type="button" class="step-btn step-menos" tabindex="-1" aria-label="restar uno">−</button>' +
+                  '<input type="text" class="cant" inputmode="decimal">' +
+                  '<button type="button" class="step-btn step-mas" tabindex="-1" aria-label="sumar uno">+</button>' +
+                '</span>' +
                 '<span class="muted" style="font-size:0.8rem;"></span>' +
                 '<select class="calidad">' +
                   '<option value="OK">Calidad OK</option>' +
@@ -1371,6 +1405,7 @@
           var inp = div.querySelector('.cant');
           inp.value = numeroAmable(esperado);
           inp.dataset.max = String(esperado);   // tope: lo solicitado
+          inp.dataset.paso = '1';                // − / + suman de a una unidad vendible
           div.querySelector('.detalle .muted').textContent = etiquetaUnidad(l, 0);
 
           cont.appendChild(div);
@@ -1444,6 +1479,25 @@
           }, 2500);
         }
         marcarNovedad(e.target.closest('.item'));
+      });
+
+      // − / + para cargar lo recibido con el dedo, sin tipear (celular)
+      $('lista-items').addEventListener('click', function (e) {
+        var btn = e.target.closest ? e.target.closest('.step-btn') : null;
+        if (!btn) return;
+        var item = btn.closest('.item');
+        var inp = item.querySelector('.cant');
+        if (!inp || inp.disabled) return;
+        var max = parseFloat(inp.dataset.max);
+        var paso = parseFloat(inp.dataset.paso) || 1;
+        var v = aNumero(inp.value);
+        if (v === null) v = 0;
+        v += btn.classList.contains('step-mas') ? paso : -paso;
+        v = Math.round(v * 10000) / 10000;
+        if (v < 0) v = 0;
+        if (!isNaN(max) && v > max) v = max;
+        inp.value = numeroAmable(v);
+        marcarNovedad(item);
       });
 
       // Tildar / destildar · cambio de calidad
@@ -2239,10 +2293,12 @@
         var algo = false;
         propuestas.forEach(function (pr, pi) {
           var suma = 0;
+          var pasoMax = 1;   // la unidad vendible más grande entre los pedidos afectados
           Array.prototype.forEach.call(cont.querySelectorAll('.in-aj[data-pi="' + pi + '"]'), function (inp) {
             var v = parseFloat(inp.value) || 0;
             var max = parseFloat(inp.max) || 0;
             var paso = parseFloat(inp.dataset.paso) || 1;
+            if (paso > pasoMax) pasoMax = paso;
             if (v < 0) { v = 0; inp.value = 0; }
             if (v > max) { v = max; inp.value = max; }
             // solo múltiplos de una unidad vendible
@@ -2260,9 +2316,24 @@
           if (suma > 0) algo = true;
           var p = cont.querySelector('.restante[data-pi="' + pi + '"]');
           var resto = Math.round((pr.faltante - suma) * 10000) / 10000;
-          if (resto > 0) { p.className = 'restante pendiente'; p.textContent = 'Falta repartir ' + resto + ' de ' + pr.faltante; }
-          else if (resto < 0) { p.className = 'restante pendiente'; p.textContent = 'Estás recortando ' + (-resto) + ' de más'; }
-          else { p.className = 'restante completo'; p.textContent = '✓ Repartido completo'; }
+          if (resto > 0.0001) {
+            // todavía falta cubrir: hay que recortar más
+            p.className = 'restante pendiente';
+            p.textContent = 'Falta repartir ' + numeroAmable(resto) + ' de ' + numeroAmable(pr.faltante);
+          } else if (resto < -0.0001 && (-resto) >= pasoMax - 0.0001) {
+            // recorte excesivo de verdad (más de una unidad vendible de más)
+            p.className = 'restante pendiente';
+            p.textContent = 'Estás recortando ' + numeroAmable(-resto) + ' de más';
+          } else if (resto < -0.0001) {
+            // sobra menos de una unidad vendible: es inevitable, no se puede
+            // partir el envase. El faltante queda cubierto.
+            p.className = 'restante completo';
+            p.textContent = '✓ Repartido (sobra ' + numeroAmable(-resto) +
+              ': no se puede partir la unidad, queda en el Nodo)';
+          } else {
+            p.className = 'restante completo';
+            p.textContent = '✓ Repartido completo';
+          }
         });
         $('btn-ajustes').disabled = !algo;
       }
@@ -2288,8 +2359,13 @@
             if (falta <= 0.0001) return;
             var max = parseFloat(inp.max) || 0;
             var paso = parseFloat(inp.dataset.paso) || 1;
-            // cuánto se le puede sacar a este pedido, en unidades enteras
-            var pasos = Math.min(Math.floor((falta + 0.0001) / paso), Math.round(max / paso));
+            // Se recorta en unidades enteras vendibles. Como no se puede
+            // entregar media unidad que no llegó, este pedido absorbe las
+            // unidades enteras necesarias para cubrir lo que falta
+            // (redondeando hacia arriba), hasta el tope de lo que pidió.
+            var pasosNec = Math.ceil((falta - 0.0001) / paso);   // enteras para cubrir el faltante
+            var pasosMax = Math.round(max / paso);               // lo máximo que tiene este pedido
+            var pasos = Math.min(pasosNec, pasosMax);
             var recorte = Math.round(pasos * paso * 10000) / 10000;
             if (recorte > 0) {
               inp.value = recorte;
@@ -2562,11 +2638,5 @@
       });
     })();
   </script>
-  <a href="../" title="Volver a la guía de la edición"
-     style="position:fixed; right:18px; bottom:18px; z-index:9999;
-            background:var(--c-musgo, #3c5230); color:var(--c-crema, #f6f1e7);
-            font-weight:700; font-size:0.9rem; padding:10px 18px;
-            border-radius:999px; text-decoration:none;
-            box-shadow:0 4px 14px rgba(0,0,0,0.25);">🏠 Guía</a>
 </body>
 </html>
