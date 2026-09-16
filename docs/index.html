@@ -416,24 +416,35 @@
         <div class="num">7</div>
         <div class="aca">⬤ estamos acá</div>
         <div class="quien">Equipo · fin del ciclo</div>
-        <h3>Cerrar edición</h3>
-        <p class="nota">
-          Cobros de consumidores, pagos a productores, sobrantes y métricas,
-          y el cierre de la edición en la planilla (estado «Cerrada»). Por
-          ahora se lleva en la planilla; las herramientas de esta etapa
-          vienen en las próximas fases.
+        <h3>Liquidación y cierre</h3>
+        <p>
+          Con la entrega terminada, el sistema calcula <strong>cuánto le
+          corresponde a cada productor</strong> (lo pedido menos los faltantes
+          ya descontados), lo registra en la planilla y manda al equipo la
+          tabla con el alias/CBU de cada uno para hacer las transferencias.
+          Las transferencias las hace siempre una persona.
         </p>
-        <div class="solo-prueba">
-          <div class="etiqueta">⚠ Solo para pruebas</div>
+        <div class="campo-a1">
+          <input type="password" id="clave-liq" placeholder="Clave de equipo">
+          <button type="button" class="btn btn--primary btn--small" id="btn-liquidacion">
+            Generar liquidación a productores
+          </button>
+        </div>
+        <span class="porque" id="porque-liq"></span>
+        <div class="ok-mini" id="ok-liq"></div>
+        <div id="tabla-liq" style="margin-top:10px;"></div>
+
+        <div class="solo-prueba" style="margin-top:14px;">
+          <div class="etiqueta">Cierre de la edición</div>
           <p class="nota" style="margin-bottom:8px;">
-            Pasa la edición a estado «Cerrada» sin pasar por la planilla,
-            para poder encadenar ediciones de prueba. En una edición real,
-            el cierre se hace desde la planilla al terminar la liquidación.
+            Cuando las transferencias estén hechas, cerrá la edición: pasa a
+            estado «Cerrada» y la guía queda lista para abrir la siguiente.
+            (En pruebas se puede usar en cualquier momento.)
           </p>
           <div class="campo-a1">
             <input type="password" id="clave-cerrar" placeholder="Clave de equipo">
             <button type="button" class="btn-prueba" id="btn-cerrar-edicion">
-              Cerrar edición (solo pruebas)
+              Cerrar edición
             </button>
           </div>
           <span class="porque" id="porque-paso7"></span>
@@ -468,6 +479,9 @@
       // Escenario A5 (finalizar pedidos / cerrar edición — controles de prueba).
       // Pegar acá la dirección del webhook cuando esté armado en Make.
       var WEBHOOK_A5 = 'https://hook.us2.make.com/qyqw5eh5f6gcbdd558o4t21krx4k72hy';
+      // Escenario E3 (liquidación a productores).
+      // Pegar acá la dirección del webhook cuando esté armado en Make.
+      var WEBHOOK_E3 = 'PEGAR_AQUI_WEBHOOK_E3';
 
       var $ = function (id) { return document.getElementById(id); };
 
@@ -482,6 +496,7 @@
       if (claveGuardada()) {
         $('clave-a1').value = claveGuardada();
         $('clave-cerrar').value = claveGuardada();
+        $('clave-liq').value = claveGuardada();
       }
 
       // habilita/deshabilita un botón de la guía con su motivo
@@ -629,11 +644,135 @@
 
         function fin() {
           btn.disabled = false;
-          btn.textContent = 'Cerrar edición (solo pruebas)';
+          btn.textContent = 'Cerrar edición';
           aviso('✅ Edición cerrada (estado «Cerrada»). En un momento la guía ' +
             'vuelve al paso 1, lista para abrir la siguiente.', false);
           setTimeout(function () { location.reload(); }, 6000);
         }
+      });
+
+      // ── Paso 7 · Liquidación a productores (escenario E3) ───────
+      var edicionVigente = '';
+      var productoresInfo = {};   // id -> { nombre, alias }
+
+      function pesos(n) {
+        return '$ ' + Math.round(n || 0).toLocaleString('es-AR');
+      }
+
+      // Lee Pagos_productor de la edición y, si hay filas, muestra la tabla.
+      // Devuelve la cantidad de filas encontradas.
+      function leerLiquidacion(id) {
+        return Promise.all([
+          gviz('sheet=Pagos_productor&range=A1:J2000&headers=1'),
+          gviz('sheet=Productores&range=A1:F300&headers=1').catch(function () { return null; })
+        ]).then(function (res) {
+          if (res[1]) {
+            res[1].table.rows.forEach(function (r) {
+              var pid = String(celda(r, 0)).trim();
+              if (pid) productoresInfo[pid] = {
+                nombre: String(celda(r, 1)).trim(),
+                alias: String(celda(r, 5)).trim()
+              };
+            });
+          }
+          var filas = [];
+          res[0].table.rows.forEach(function (r) {
+            if (String(celda(r, 1)).trim() !== id) return;
+            filas.push({
+              id_productor: String(celda(r, 2)).trim(),
+              monto: parseFloat(celda(r, 4)) || 0,
+              estado: String(celda(r, 9)).trim()
+            });
+          });
+          pintarLiquidacion(filas);
+          return filas.length;
+        });
+      }
+
+      function pintarLiquidacion(filas) {
+        var cont = $('tabla-liq');
+        if (!filas.length) { cont.innerHTML = ''; return; }
+        filas.sort(function (a, b) {
+          var na = (productoresInfo[a.id_productor] || {}).nombre || a.id_productor;
+          var nb = (productoresInfo[b.id_productor] || {}).nombre || b.id_productor;
+          return na.localeCompare(nb, 'es');
+        });
+        var total = 0;
+        var h = '<table style="width:100%; border-collapse:collapse; font-size:0.9rem;">' +
+          '<thead><tr style="text-align:left; border-bottom:2px solid rgba(74,107,58,0.3);">' +
+          '<th style="padding:6px 4px;">Productor</th><th style="padding:6px 4px;">Alias / CBU</th>' +
+          '<th style="padding:6px 4px; text-align:right;">Monto</th><th style="padding:6px 4px;">Estado</th>' +
+          '</tr></thead><tbody>';
+        filas.forEach(function (f) {
+          var info = productoresInfo[f.id_productor] || {};
+          total += f.monto;
+          h += '<tr style="border-bottom:1px solid rgba(74,107,58,0.15);">' +
+            '<td style="padding:6px 4px;">' + (info.nombre || f.id_productor) + '</td>' +
+            '<td style="padding:6px 4px; font-family:monospace;">' + (info.alias || '—') + '</td>' +
+            '<td style="padding:6px 4px; text-align:right; font-weight:700;">' + pesos(f.monto) + '</td>' +
+            '<td style="padding:6px 4px;">' + (f.estado || 'Pendiente') + '</td></tr>';
+        });
+        h += '</tbody><tfoot><tr><td colspan="2" style="padding:8px 4px; font-weight:700;">Total a transferir</td>' +
+          '<td style="padding:8px 4px; text-align:right; font-weight:800;">' + pesos(total) + '</td><td></td></tr></tfoot></table>';
+        cont.innerHTML = h;
+      }
+
+      $('btn-liquidacion').addEventListener('click', function () {
+        var caja = $('ok-liq');
+        function aviso(msg, esError) {
+          caja.style.display = 'block';
+          caja.style.background = esError ? 'rgba(166, 64, 43, 0.10)' : '';
+          caja.style.borderLeftColor = esError ? '#A6402B' : '';
+          caja.style.color = esError ? '#A6402B' : '';
+          caja.innerHTML = msg;
+        }
+        var btn = $('btn-liquidacion');
+        if (btn.classList.contains('btn--off')) return;
+        var clave = $('clave-liq').value.trim();
+        if (!clave) { aviso('Falta la clave de equipo.', true); return; }
+        guardarClave(clave);
+        if (WEBHOOK_E3.indexOf('https://hook.') !== 0) {
+          aviso('🚫 Este botón todavía no está conectado: falta armar el escenario E3 ' +
+            'en Make y cargar su dirección en este archivo. No se envió nada.', true);
+          return;
+        }
+        if (!edicionVigente) { aviso('No encuentro la edición en curso.', true); return; }
+
+        btn.disabled = true;
+        btn.textContent = 'Calculando…';
+        fetch(WEBHOOK_E3, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ tipo: 'liquidacion', id_edicion: edicionVigente, clave: clave })
+        }).catch(function () {});
+
+        aviso('⏳ <strong>Generando la liquidación de ' + edicionVigente + '…</strong> ' +
+          'Esta pantalla avisa sola cuando quede registrada en la planilla.', false);
+
+        // verificación real: aparecen filas en Pagos_productor para la edición
+        var intentos = 0, ultimo = 0, estables = 0;
+        var timer = setInterval(function () {
+          intentos++;
+          if (intentos > 20) {
+            clearInterval(timer);
+            if (ultimo > 0) return;
+            btn.disabled = false;
+            btn.textContent = 'Generar liquidación a productores';
+            aviso('⚠️ Todavía no aparece la liquidación en la planilla. Revisá que E3 ' +
+              'esté encendido en Make, que la clave sea la correcta y su History.', true);
+            return;
+          }
+          leerLiquidacion(edicionVigente).then(function (n) {
+            if (n <= 0) return;
+            if (n > ultimo) { ultimo = n; estables = 0; }
+            else if (n === ultimo) { estables++; if (estables >= 2) clearInterval(timer); }
+            btn.textContent = 'Liquidación generada ✓';
+            aviso('✅ <strong>Liquidación registrada</strong> (' + n + ' productor' +
+              (n === 1 ? '' : 'es') + '). El equipo recibe por correo la misma tabla ' +
+              'para hacer las transferencias.', false);
+          }).catch(function () {});
+        }, 8000);
       });
 
       gviz('sheet=Ediciones&range=A1:L100&headers=1').then(function (res) {
@@ -651,6 +790,7 @@
         }
 
         var id = String(celda(vigente, 0)).trim();
+        edicionVigente = id;
         var estado = String(celda(vigente, 3)).trim();
         var cierreForm = parseFecha(celda(vigente, 7));
         var entrega = parseFecha(celda(vigente, 9));
@@ -712,6 +852,20 @@
         gate('btn-paso3a', 'porque-paso3', paso >= 2, '');
         gate('btn-paso3b', 'porque-paso3', paso >= 2,
           'Se habilitan al iniciar la edición (paso 1).');
+
+        // Paso 7: liquidación solo con la edición en "Liquidación" (entrega
+        // terminada) y una sola vez por edición
+        gate('btn-liquidacion', 'porque-liq', !cerrada && paso >= 7,
+          'Se habilita cuando termina la entrega (la edición pasa a «Liquidación»).');
+        if (!cerrada && paso >= 7) {
+          leerLiquidacion(id).then(function (n) {
+            if (n > 0) {
+              gate('btn-liquidacion', 'porque-liq', false,
+                'La liquidación de ' + id + ' ya está generada (' + n + ' productores).');
+              $('btn-liquidacion').textContent = 'Liquidación generada ✓';
+            }
+          }).catch(function () {});
+        }
 
         // Paso 5: comandas recién cuando cerró la toma de pedidos
         var comandasOk = !cerrada && (paso >= 5 || (paso >= 4 && cierrePaso));
