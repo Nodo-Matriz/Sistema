@@ -498,6 +498,13 @@
       padding-top: var(--s-3);
     }
 
+    .tag-productor {
+      display: inline-block; margin-left: 8px; padding: 1px 8px;
+      font-size: 0.74rem; font-weight: 700; letter-spacing: 0.02em;
+      color: var(--c-musgo, #3c5230); background: rgba(60,82,48,0.10);
+      border-radius: 999px; vertical-align: middle; white-space: nowrap;
+    }
+    .item-ped.no-va .tag-productor { opacity: 0.5; }
     .item-ped {
       display: flex;
       align-items: center;
@@ -1144,6 +1151,7 @@
             id_item: String(celda(r, 0)).trim(),
             id_pedido: idPed,
             id_producto: String(celda(r, 2)).trim(),
+            id_productor: String(celda(r, 3) || '').trim(),
             cantidad: parseFloat(celda(r, 4)) || 0,
             fraccion: String(celda(r, 5)).trim(),
             precio: parseFloat(celda(r, 6)) || 0,
@@ -1910,6 +1918,14 @@
                 ((noVa || est !== 'Pendiente') ? ' disabled' : '') +
                 (marcado ? ' checked' : '') + '><span class="txt"></span>';
               fila.querySelector('.txt').textContent = textoItem(it);
+              // de qué cajón sale: el productor, al lado de cada ítem
+              var idProdIt = it.id_productor || productorDeProducto(it.id_producto);
+              if (idProdIt) {
+                var tag = document.createElement('span');
+                tag.className = 'tag-productor';
+                tag.textContent = productores[idProdIt] || idProdIt;
+                fila.querySelector('.txt').appendChild(tag);
+              }
               cuerpo.appendChild(fila);
             });
             var prog = document.createElement('div');
@@ -2236,6 +2252,14 @@
 
       // ── Vista Ajustes (D3) ───────────────────────────────────────
       function pesos(n) { return '$' + Math.round(n).toLocaleString('es-AR'); }
+
+      // productor de un producto según las comandas (por si el ítem no lo trae)
+      function productorDeProducto(id) {
+        for (var i = 0; i < lineas.length; i++) {
+          if (lineas[i].id_producto === id) return lineas[i].id_productor;
+        }
+        return '';
+      }
 
       function nombreProducto(id) {
         for (var i = 0; i < lineas.length; i++) {
