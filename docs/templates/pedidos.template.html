@@ -879,7 +879,13 @@
           ? opcionesFraccion(p) : [];
         var hayEntera = ops.some(function (o) { return Math.abs(o.valor - 1) < 0.000001; });
         if (!hayEntera) ops.push({ cantidad: 1, fraccion: '', valor: 1, etiqueta: '1', etiquetaFija: false });
-        return ops.sort(function (a, b) { return a.valor - b.valor; }).map(function (o) {
+        // La unidad entera va primera (y queda seleccionada por defecto);
+        // las fracciones después, de menor a mayor, como alternativa.
+        var esEntera = function (o) { return Math.abs(o.valor - 1) < 0.000001; };
+        return ops.sort(function (a, b) {
+          if (esEntera(a) !== esEntera(b)) return esEntera(a) ? -1 : 1;
+          return a.valor - b.valor;
+        }).map(function (o) {
           // la presentación se identifica por su fracción; los enteros, por su número
           return {
             fraccion: o.fraccion || (o.cantidad > 1 ? String(o.cantidad) : ''),
