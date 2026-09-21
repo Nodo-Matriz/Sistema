@@ -47,6 +47,27 @@
     }
     .product__meta { display: block; margin-top: 3px; }
 
+    /* "Otra cantidad": presentación + cantidad, solo si se pide */
+    .product__otro {
+      margin-top: 8px; padding: 10px 12px;
+      border: 1px dashed var(--c-salvia, #b7c4a8); border-radius: 10px;
+      background: var(--c-leche, #fbfaf6);
+      display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center;
+    }
+    .product__otro[hidden] { display: none; }
+    .product__otro label { display: inline-flex; align-items: center; gap: 6px; margin: 0; }
+    .product__otro-total { flex-basis: 100%; font-weight: 600; color: var(--c-corteza, #4a4234); }
+    .stepper { display: inline-flex; align-items: center; gap: 4px; }
+    .stepper input {
+      width: 3.2em; text-align: center; padding: 6px 4px;
+      border: 1.5px solid var(--c-salvia, #b7c4a8); border-radius: 8px; font-size: 1rem;
+    }
+    .step-btn {
+      width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--c-salvia, #b7c4a8);
+      background: #fff; font-size: 1.25rem; line-height: 1; cursor: pointer; color: var(--c-corteza, #4a4234);
+    }
+    .step-btn:active { background: var(--c-salvia, #b7c4a8); }
+
     /* Aporte solidario: opciones compactas en grilla */
     .aporte-grid {
       display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px;
@@ -652,6 +673,25 @@
       var stepsContainer = document.getElementById('wizard-steps');
       var stateProductos = {};  // id_producto → { cantidad, fraccion }
 
+      // El desplegable ofrece las fracciones de la planilla + los enteros
+      // hasta ENTEROS_DESPLEGABLE. Para más, "Otra cantidad…", con un tope
+      // fijo sobre el TOTAL del producto (en su unidad): 10 kg, 10 litros,
+      // 10 unidades. 5 × 2 kg llega al tope; 20 × ½ kg también.
+      // (Van acá, antes de dibujar las tarjetas, porque renderProductCard
+      // los usa.)
+      var ENTEROS_DESPLEGABLE = 2;
+      var MAX_TOTAL_PRODUCTO = 10;
+
+      // Cuántas presentaciones de valor `v` entran en el tope
+      function maxCantidadPara(v) {
+        return Math.max(1, Math.floor(MAX_TOTAL_PRODUCTO / (v || 1) + 0.000001));
+      }
+
+      var productoPorId = {};   // id_producto → ficha del catálogo
+      categorias.forEach(function (cat) {
+        cat.productos.forEach(function (p) { productoPorId[p.id_producto] = p; });
+      });
+
       categorias.forEach(function (cat, idx) {
         var step = document.createElement('div');
         step.className = 'wizard__step card';
@@ -712,34 +752,43 @@
           : '';
 
         var control = '';
+        var id = p.id_producto;
 
-        // UNA sola selección por producto.
-        var opsFr = (p.fraccionable && p.fracciones && p.fracciones.length)
-          ? opcionesFraccion(p) : [];
+        // UNA sola selección por producto: las fracciones cargadas en la
+        // planilla + los enteros de 1 a 5, sin repetir, y al final
+        // "Otra cantidad…", que abre presentación + cantidad (tope fijo).
+        control += '<label class="product__ctl-label">Cantidad ';
+        control += '<select class="select" data-product="' + id + '" data-field="total" style="width:auto;">';
+        control += '<option value="">' + conUnidad('0', 0, p.unidad) + '</option>';
+        opcionesDesplegable(p).forEach(function (o) {
+          control += '<option value="' + o.cantidad + '@' + o.fraccion + '">' +
+            etiquetaOpcion(o, p) + ' · ' + formatMoney(o.valor * (p.precio || 0)) + '</option>';
+        });
+        control += '<option value="otro">Otra cantidad…</option>';
+        control += '</select></label>';
 
-        if (opsFr.length) {
-          // Fraccionable: exactamente las fracciones cargadas en la planilla,
-          // cada una con lo que se paga por ella.
-          control += '<label class="product__ctl-label">Cantidad ';
-          control += '<select class="select" data-product="' + p.id_producto + '" data-field="total" style="width:auto;">';
-          control += '<option value="">' + conUnidad('0', 0, p.unidad) + '</option>';
-          opsFr.forEach(function (o) {
-            var texto = o.etiquetaFija ? o.etiqueta : conUnidad(o.etiqueta, o.valor, p.unidad);
-            control += '<option value="' + o.cantidad + '@' + o.fraccion + '">' +
-              texto + ' · ' +
-              formatMoney(o.valor * (p.precio || 0)) + '</option>';
+        // Panel "Otra cantidad": oculto hasta que se elige esa opción.
+        var pres = presentaciones(p);
+        control += '<div class="product__otro" data-otro="' + id + '" hidden>';
+        if (pres.length > 1) {
+          control += '<label>Presentación <select class="select" data-product="' + id + '" data-field="otro-pres" style="width:auto;">';
+          pres.forEach(function (o) {
+            control += '<option value="' + escapeHtml(o.fraccion) + '">' + etiquetaOpcion(o, p) + '</option>';
           });
           control += '</select></label>';
         } else {
-          // No fraccionable: cantidad de unidades, de 0 a 5, con su unidad.
-          control += '<label class="product__ctl-label">Cantidad ';
-          control += '<select class="select" data-product="' + p.id_producto + '" data-field="cantidad" style="width:auto;">';
-          control += '<option value="0">' + conUnidad('0', 0, p.unidad) + '</option>';
-          for (var i = 1; i <= 5; i++) {
-            control += '<option value="' + i + '">' + conUnidad(String(i), i, p.unidad) + '</option>';
-          }
-          control += '</select></label>';
+          // una sola presentación (la unidad entera): no hace falta elegirla
+          control += '<input type="hidden" data-product="' + id + '" data-field="otro-pres" value="">';
         }
+        control += '<label>Cantidad <span class="stepper">' +
+          '<button type="button" class="step-btn" data-paso="-1" aria-label="menos">−</button>' +
+          '<input type="number" inputmode="numeric" min="1" max="' + MAX_TOTAL_PRODUCTO + '" value="1" ' +
+            'data-product="' + id + '" data-field="otro-cant">' +
+          '<button type="button" class="step-btn" data-paso="1" aria-label="más">+</button>' +
+          '</span></label>';
+        control += '<small class="muted">hasta ' + conUnidad(String(MAX_TOTAL_PRODUCTO), MAX_TOTAL_PRODUCTO, p.unidad) + ' por producto</small>';
+        control += '<div class="product__otro-total" data-otro-total="' + id + '"></div>';
+        control += '</div>';
 
         return '' +
           '<div class="product" data-product-id="' + p.id_producto + '" data-precio="' + (p.precio || 0) + '">' +
@@ -802,6 +851,56 @@
               etiquetaFija: !!o.etiquetaFija
             };
           });
+      }
+
+      // Las fracciones de la planilla (si las hay) + los enteros de 1 a 5,
+      // ordenado por cantidad y sin repetidos. La planilla solo necesita
+      // listar las fracciones menores a la unidad ("1/2", "100grs"); si
+      // además trae "1" o "2", no se duplican.
+      function opcionesDesplegable(p) {
+        var ops = (p.fraccionable && p.fracciones && p.fracciones.length)
+          ? opcionesFraccion(p) : [];
+        for (var i = 1; i <= ENTEROS_DESPLEGABLE; i++) {
+          ops.push({ cantidad: i, fraccion: '', valor: i, etiqueta: String(i), etiquetaFija: false });
+        }
+        var vistos = {}, salida = [];
+        ops.sort(function (a, b) { return a.valor - b.valor; }).forEach(function (o) {
+          var clave = String(Math.round(o.valor * 10000));
+          if (vistos[clave]) return;
+          vistos[clave] = true;
+          salida.push(o);
+        });
+        return salida;
+      }
+
+      // Presentaciones para "Otra cantidad": las fracciones de la planilla
+      // + la unidad entera. Cada una se multiplica por la cantidad elegida.
+      function presentaciones(p) {
+        var ops = (p.fraccionable && p.fracciones && p.fracciones.length)
+          ? opcionesFraccion(p) : [];
+        var hayEntera = ops.some(function (o) { return Math.abs(o.valor - 1) < 0.000001; });
+        if (!hayEntera) ops.push({ cantidad: 1, fraccion: '', valor: 1, etiqueta: '1', etiquetaFija: false });
+        return ops.sort(function (a, b) { return a.valor - b.valor; }).map(function (o) {
+          // la presentación se identifica por su fracción; los enteros, por su número
+          return {
+            fraccion: o.fraccion || (o.cantidad > 1 ? String(o.cantidad) : ''),
+            valor: o.valor,
+            etiqueta: o.etiqueta,
+            etiquetaFija: o.etiquetaFija
+          };
+        });
+      }
+
+      function etiquetaOpcion(o, p) {
+        return o.etiquetaFija ? o.etiqueta : conUnidad(o.etiqueta, o.valor, p.unidad);
+      }
+
+      // Valor (en unidades del producto) de una presentación elegida en
+      // "Otra cantidad": "" -> 1 · "1/2" -> 0,5 · "100grs" -> 0,1 · "2" -> 2
+      function valorPresentacion(f, p) {
+        if (!f) return 1;
+        var esp = parseFraccionEspecial(f, p.unidad);
+        return esp ? esp.valor : parseFraction(f);
       }
 
       // Reconoce fracciones expresadas en gramos o mililitros respecto de
@@ -941,31 +1040,98 @@
       // ----------------------------------------------------------------
       // 4. Captura de cantidades y fracciones
       // ----------------------------------------------------------------
+      // Lee el panel "Otra cantidad" de un producto y devuelve el estado
+      // {cantidad, fraccion} con la misma forma que una opción del
+      // desplegable: presentación fraccionaria -> cantidad n + fracción;
+      // presentación entera (1 o "2") -> cantidad n × entero, sin fracción.
+      function estadoDesdeOtro(id) {
+        var p = productoPorId[id];
+        var pres = document.querySelector('[data-product="' + id + '"][data-field="otro-pres"]');
+        var cant = document.querySelector('[data-product="' + id + '"][data-field="otro-cant"]');
+        var f = pres ? String(pres.value || '') : '';
+        var v = valorPresentacion(f, p);
+        var tope = maxCantidadPara(v);
+        var n = parseInt(cant && cant.value, 10) || 0;
+        if (n > tope) { n = tope; if (cant) cant.value = String(n); }
+        if (n < 0) n = 0;
+        if (cant) cant.max = String(tope);   // el tope cambia con la presentación
+        var entero = !f || /^\d+$/.test(f);
+        return {
+          cantidad: entero ? n * (parseInt(f, 10) || 1) : n,
+          fraccion: entero ? null : f,
+          _valor: n * valorPresentacion(f, p)
+        };
+      }
+
+      function pintarTotalOtro(id, s) {
+        var p = productoPorId[id];
+        var caja = document.querySelector('[data-otro-total="' + id + '"]');
+        if (!caja || !p) return;
+        if (!s.cantidad) { caja.textContent = ''; return; }
+        // 7 × 100 g se lee mejor como "700 g" que como "0,7 kg"
+        var pres = document.querySelector('[data-product="' + id + '"][data-field="otro-pres"]');
+        var esp = pres ? parseFraccionEspecial(pres.value, p.unidad) : null;
+        var etq = (esp && s._valor < 1)
+          ? Math.round(s._valor * 1000) + ' ' + esp.etiqueta.replace(/^[\d.,\s]+/, '')
+          : conUnidad(etiquetaTotal(s._valor), s._valor, p.unidad);
+        caja.textContent = 'Total: ' + etq + ' · ' + formatMoney(s._valor * (p.precio || 0));
+      }
+
+      function mostrarOtro(id, visible) {
+        var panel = document.querySelector('[data-otro="' + id + '"]');
+        if (panel) panel.hidden = !visible;
+      }
+
       function onControlChange(e) {
         var t = e.target;
         if (!t.dataset || !t.dataset.product) return;
         var id = t.dataset.product;
+        var campo = t.dataset.field;
 
         if (!stateProductos[id]) {
           stateProductos[id] = { cantidad: 0, fraccion: null };
         }
-        if (t.dataset.field === 'total') {
-          if (!t.value) {
-            stateProductos[id] = { cantidad: 0, fraccion: null };
+        if (campo === 'total') {
+          if (t.value === 'otro') {
+            mostrarOtro(id, true);
+            var so = estadoDesdeOtro(id);
+            stateProductos[id] = { cantidad: so.cantidad, fraccion: so.fraccion };
+            pintarTotalOtro(id, so);
           } else {
-            var partes = t.value.split('@');
-            stateProductos[id] = {
-              cantidad: parseInt(partes[0], 10) || 0,
-              fraccion: partes[1] || null
-            };
+            mostrarOtro(id, false);
+            if (!t.value) {
+              stateProductos[id] = { cantidad: 0, fraccion: null };
+            } else {
+              var partes = t.value.split('@');
+              stateProductos[id] = {
+                cantidad: parseInt(partes[0], 10) || 0,
+                fraccion: partes[1] || null
+              };
+            }
           }
-        } else if (t.dataset.field === 'cantidad') {
+        } else if (campo === 'otro-pres' || campo === 'otro-cant') {
+          var s2 = estadoDesdeOtro(id);
+          stateProductos[id] = { cantidad: s2.cantidad, fraccion: s2.fraccion };
+          pintarTotalOtro(id, s2);
+        } else if (campo === 'cantidad') {
           stateProductos[id].cantidad = parseInt(t.value, 10) || 0;
           stateProductos[id].fraccion = null;
         }
       }
       stepsContainer.addEventListener('input', onControlChange);
       stepsContainer.addEventListener('change', onControlChange);
+
+      // Botones − / + del panel "Otra cantidad"
+      stepsContainer.addEventListener('click', function (e) {
+        var btn = e.target.closest && e.target.closest('.step-btn');
+        if (!btn) return;
+        var inp = btn.parentNode.querySelector('input[data-field="otro-cant"]');
+        if (!inp) return;
+        var n = (parseInt(inp.value, 10) || 0) + (parseInt(btn.dataset.paso, 10) || 0);
+        n = Math.max(1, Math.min(parseInt(inp.max, 10) || MAX_TOTAL_PRODUCTO, n));
+        inp.value = String(n);
+        inp.dispatchEvent(new Event('input', { bubbles: true }));
+      });
 
       // ----------------------------------------------------------------
       // 4bis. El pedido no se pierde si se recarga la página
@@ -1032,12 +1198,29 @@
           var selTotal = document.querySelector('[data-product="' + id + '"][data-field="total"]');
           var selCant = document.querySelector('[data-product="' + id + '"][data-field="cantidad"]');
           if (selTotal) {
-            selTotal.value = s.cantidad + '@' + (s.fraccion || '');
-            if (!selTotal.value || selTotal.selectedIndex < 0) {
-              // la opción pudo cambiar: buscarla por cantidad
-              Array.prototype.forEach.call(selTotal.options, function (o) {
-                if (o.value.indexOf(s.cantidad + '@' + (s.fraccion || '')) === 0) selTotal.value = o.value;
-              });
+            var buscado = s.cantidad + '@' + (s.fraccion || '');
+            var hay = Array.prototype.some.call(selTotal.options, function (o) { return o.value === buscado; });
+            if (hay) {
+              selTotal.value = buscado;
+              mostrarOtro(id, false);
+            } else {
+              // no está entre las opciones fijas: fue por "Otra cantidad"
+              selTotal.value = 'otro';
+              mostrarOtro(id, true);
+              var pres = document.querySelector('[data-product="' + id + '"][data-field="otro-pres"]');
+              var cant = document.querySelector('[data-product="' + id + '"][data-field="otro-cant"]');
+              var n = s.cantidad, f = s.fraccion || '';
+              if (!f && pres) {
+                // p.ej. 6 kg guardado: si hay presentación entera "2" que lo
+                // divida, restaurar como 3 × 2 kg (misma cantidad, menos toques)
+                Array.prototype.forEach.call(pres.options, function (o) {
+                  var k = parseInt(o.value, 10);
+                  if (k > 1 && s.cantidad % k === 0) { f = o.value; n = s.cantidad / k; }
+                });
+              }
+              if (pres) pres.value = f;
+              if (cant) cant.value = String(n);
+              pintarTotalOtro(id, estadoDesdeOtro(id));
             }
             algo = true;
           } else if (selCant) {
@@ -1117,13 +1300,17 @@
         return d ? (n / d) : 1;
       }
 
+      // Cómo se describe lo elegido en el resumen y en el mail: con las
+      // mismas etiquetas del desplegable ("½ kg", "100 g", "3 kg") y, si se
+      // pidió más de una fracción, "3 × ½ kg".
       function detalleItem(p, s) {
         var partes = [];
-        if (p.fraccionable && s.fraccion) {
+        if (s.fraccion) {
           var esp = parseFraccionEspecial(s.fraccion, p.unidad);
-          partes.push(s.cantidad + ' × ' + (esp ? esp.etiqueta : s.fraccion + ' ' + p.unidad));
+          var etq = esp ? esp.etiqueta : conUnidad(etiquetaTotal(parseFraction(s.fraccion)), parseFraction(s.fraccion), p.unidad);
+          partes.push((s.cantidad > 1 ? s.cantidad + ' × ' : '') + etq);
         } else {
-          partes.push(s.cantidad + ' ' + p.unidad + (s.cantidad > 1 ? 's' : ''));
+          partes.push(conUnidad(String(s.cantidad), s.cantidad, p.unidad));
         }
         partes.push(formatMoney(p.precio) + ' c/u');
         return partes.join(' · ');
