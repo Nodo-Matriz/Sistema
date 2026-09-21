@@ -786,7 +786,6 @@
             'data-product="' + id + '" data-field="otro-cant">' +
           '<button type="button" class="step-btn" data-paso="1" aria-label="más">+</button>' +
           '</span></label>';
-        control += '<small class="muted">hasta ' + conUnidad(String(MAX_TOTAL_PRODUCTO), MAX_TOTAL_PRODUCTO, p.unidad) + ' por producto</small>';
         control += '<div class="product__otro-total" data-otro-total="' + id + '"></div>';
         control += '</div>';
 
@@ -988,10 +987,23 @@
         });
       }
 
-      // Tope del carrusel de categorías (se calcula recién al momento de
-      // scrollear, porque la categoría nueva ya cambió el alto de la página).
-      function topeCarrusel() {
-        var ancla = wizardEl.querySelector('.wizard__progress') || wizardEl;
+      // Adónde ir al avanzar de categoría: el carrusel arriba y la categoría
+      // nueva empezando justo debajo. Se calcula recién al momento de
+      // scrollear, porque la categoría nueva ya cambió el alto de la página.
+      //
+      // Si el carrusel es pegajoso (position: sticky/fixed) no sirve de ancla:
+      // estando abajo ya está pegado arriba y "ir hasta él" es no moverse
+      // (por eso la página quedaba abajo). En ese caso el ancla es el inicio
+      // de la categoría, descontando la altura del carrusel que la tapa.
+      function topeCarrusel(stepEl) {
+        var prog = wizardEl.querySelector('.wizard__progress');
+        var pos = prog ? getComputedStyle(prog).position : '';
+        var pegado = pos === 'sticky' || pos === 'fixed';
+        if (pegado && stepEl) {
+          var topProg = parseFloat(getComputedStyle(prog).top) || 0;   // "auto" -> 0
+          return stepEl.getBoundingClientRect().top + window.pageYOffset - prog.offsetHeight - topProg - 12;
+        }
+        var ancla = prog || wizardEl;
         return ancla.getBoundingClientRect().top + window.pageYOffset - 12;
       }
 
@@ -1015,8 +1027,8 @@
             // Volver atrás: la página vuelve a donde estaba en esa categoría.
             scrollSeguro(scrollGuardado[idx]);
           } else {
-            // Avanzar: el carrusel de categorías queda arriba de todo.
-            scrollSeguro(topeCarrusel);
+            // Avanzar: el carrusel arriba y la categoría nueva desde el principio.
+            scrollSeguro(function () { return topeCarrusel(stepEl); });
           }
         }
       });
