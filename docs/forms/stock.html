@@ -336,9 +336,8 @@
           </a>
           <span id="sin-cambios" class="muted">sin ajustes todavía</span>
         </span>
-        <button id="btn-enviar" class="btn btn--primary" disabled>
-          Enviar actualización
-        </button>
+        <!-- El botón de enviar va solo al final de la lista: primero se
+             revisan todos los productos, después se confirma. -->
       </div>
 
       <!-- Log en vivo: resumen repasable de lo que va en esta edición -->
@@ -704,7 +703,6 @@
     });
 
     function habilitarEnvio(on) {
-      document.getElementById('btn-enviar').disabled = !on;
       document.getElementById('btn-enviar-bottom').disabled = !on;
     }
 
@@ -836,7 +834,7 @@
       var payload = buildPayload();
       if (!payload) return;
 
-      var btns = document.querySelectorAll('#btn-enviar, #btn-enviar-bottom');
+      var btns = document.querySelectorAll('#btn-enviar-bottom');
       btns.forEach(function (b) {
         b.disabled = true;
         b.innerHTML = '<span class="spinner"></span><span>Enviando…</span>';
@@ -859,13 +857,12 @@
       .catch(function () {
         btns.forEach(function (b) {
           b.disabled = false;
-          b.textContent = 'Enviar actualización';
+          b.textContent = 'Enviar actualización de productos';
         });
         alert('No pudimos enviar. Verificá tu conexión y probá de nuevo, o avisanos al Nodo.');
       });
     }
 
-    document.getElementById('btn-enviar').addEventListener('click', enviar);
     document.getElementById('btn-enviar-bottom').addEventListener('click', enviar);
 
     // ── Helpers ───────────────────────────────────────────────────
