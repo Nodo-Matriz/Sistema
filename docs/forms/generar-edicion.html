@@ -157,9 +157,14 @@
       <h2>Datos de la edición</h2>
 
       <div class="campo">
-        <label for="numero">Número de edición *</label>
-        <input type="number" id="numero" inputmode="numeric" min="1" max="99" placeholder="Ej: 11">
+        <label for="numero">Número de edición</label>
+        <input type="number" id="numero" inputmode="numeric" min="1" max="999" readonly
+               style="background:#f3f0e8; cursor:not-allowed;">
         <small id="pista-edicion">Leyendo la edición en curso…</small>
+        <label id="regenerar-wrap" style="display:none; margin-top:8px; font-weight:400;">
+          <input type="checkbox" id="regenerar">
+          Sí, quiero <strong>volver a generar</strong> el formulario de esta edición (ya existe uno publicado).
+        </label>
       </div>
 
       <div class="campo">
@@ -302,22 +307,42 @@
             res.table.rows.forEach(function (r) {
               var c = r.c[0];
               var id = c && c.v ? String(c.v).trim() : '';
-              if (/^ED\d{4}-\d{2}$/.test(id)) fila = r;
+              if (/^ED\d{4}-\d{2,3}$/.test(id)) fila = r;
             });
             var pista = $('pista-edicion');
             if (!fila) {
-              if (pista) pista.textContent = 'No encontré ninguna edición en la planilla: completalo a mano.';
+              edicionBloqueada = 'No encontré ninguna edición en la planilla. Primero iniciá la ' +
+                'edición desde la guía (paso 1).';
+              if (pista) pista.textContent = edicionBloqueada;
+              refrescar();
               return;
             }
             var id = String(fila.c[0].v).trim();
-            var numero = fila.c[1] && fila.c[1].v ? String(fila.c[1].v).replace(/\.0$/, '') : id.slice(-2);
+            var numero = fila.c[1] && fila.c[1].v ? String(fila.c[1].v).replace(/\.0$/, '') : id.split('-')[1];
             var anio = fila.c[2] && fila.c[2].v ? String(fila.c[2].v).replace(/\.0$/, '') : id.slice(2, 6);
             var estado = fila.c[3] && fila.c[3].v ? String(fila.c[3].v).trim() : '';
-            // Pisar SIEMPRE número y año con la edición en curso: el navegador
-            // suele restaurar valores viejos tipeados antes, y generar para
-            // una edición equivocada es peor que re-tipear un caso raro.
+            // El número NO se tipea: es siempre el de la edición en curso (la
+            // última fila de Ediciones, que crea A1). Se generó una ED2026-111
+            // por un número tipeado a mano cuando correspondía la 89.
             $('numero').value = parseInt(numero, 10) || '';
             if (anio) $('anio').value = parseInt(anio, 10) || $('anio').value;
+
+            // Según el estado de esa edición, se puede generar o no:
+            //  - todavía sin formulario (Planificación, Captura stocks, Revisión…): sí
+            //  - Form abierto: sí, pero confirmando que se va a regenerar
+            //  - Form cerrado / Recepción / Liquidación / Cerrada: no; hay que
+            //    iniciar la edición siguiente desde la guía
+            var cerrados = ['Form cerrado', 'Recepción', 'Liquidación', 'Cerrada'];
+            edicionBloqueada = '';
+            $('regenerar-wrap').style.display = 'none';
+            $('regenerar').checked = false;
+            if (cerrados.indexOf(estado) !== -1) {
+              edicionBloqueada = 'La edición ' + id + ' está en "' + estado + '": su formulario ya ' +
+                'cerró. Para abrir una edición nueva, iniciala desde la guía (paso 1) y volvé acá.';
+            } else if (estado === 'Form abierto') {
+              $('regenerar-wrap').style.display = 'block';
+            }
+            $('regenerar').addEventListener('change', refrescar);
             // fecha_cierre_form (H, índice 7): precargar SOLO si todavía está en el
             // futuro. Antes se precargaba la de la edición anterior (ya vencida) y
             // el formulario nacía cerrado. Si no hay una fecha útil, se propone el
@@ -336,13 +361,18 @@
                 pad2(propuesta.getMinutes());
             }
             if (pista) {
-              pista.textContent = 'Edición en curso: ' + id +
-                (estado ? ' (' + estado + ')' : '') + ' — datos precargados, revisalos.';
+              pista.textContent = edicionBloqueada ||
+                ('Edición en curso: ' + id + (estado ? ' (' + estado + ')' : '') +
+                 ' — el número lo toma de la planilla; revisá las fechas.');
             }
+            refrescar();
           })
           .catch(function () {
+            edicionBloqueada = 'No pude leer la planilla, así que no sé cuál es la edición en curso. ' +
+              'Recargá la página; si sigue igual, avisale a Juan.';
             var pista = $('pista-edicion');
-            if (pista) pista.textContent = 'No pude leer la planilla: completalo a mano.';
+            if (pista) pista.textContent = edicionBloqueada;
+            refrescar();
           });
       })();
 
@@ -572,12 +602,21 @@
         $(c).addEventListener('input', function () { refrescarRetiro(); refrescar(); });
       });
 
+      // Motivo por el que no se puede generar según la planilla ('' = se puede).
+      // Lo fija precargarEdicion(); hasta que la planilla responda, bloquea.
+      var edicionBloqueada = 'Leyendo la edición en curso…';
+
       function refrescar() {
         var id = idEdicion();
         var d = leerCierre();
         var completos = campos.every(function (c) { return $(c).value.trim() !== ''; });
 
         var problema = problemaFechas();
+        if (!problema && edicionBloqueada) problema = edicionBloqueada;
+        if (!problema && $('regenerar-wrap').style.display !== 'none' && !$('regenerar').checked) {
+          problema = 'Esta edición ya tiene un formulario publicado. Si de verdad querés generarlo ' +
+            'de nuevo, marcá la casilla de arriba.';
+        }
 
         if (id && d) {
           $('preview').innerHTML =
@@ -595,7 +634,9 @@
         var btnG = $('btn-generar');
         if (!btnG.dataset.enCurso) {   // no pisar "Generando…" / "generado ✓"
           btnG.disabled = !completos || !!problema;
-          btnG.textContent = problema ? 'Revisá las fechas' : 'Generar formulario de la edición';
+          btnG.textContent = problema
+            ? (problemaFechas() ? 'Revisá las fechas' : 'No se puede generar todavía')
+            : 'Generar formulario de la edición';
         }
       }
 
