@@ -868,18 +868,57 @@
       // al entrar siempre se ve el encabezado
       try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (e) {}
 
+      // Mover la página a una posición, aguantando que el alto del documento
+      // cambie al mostrarse la categoría nueva (por eso los dos rAF) y que en
+      // algunos navegadores de celu el scroll suave se pierda (por eso la red
+      // de seguridad: si a los 400 ms la página no se movió nada, salto seco).
+      function scrollSeguro(destino) {
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            var y = typeof destino === 'function' ? destino() : destino;
+            var max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+            var fin = Math.max(0, Math.min(y, max));
+            var inicio = window.pageYOffset;
+            window.scrollTo({ top: fin, behavior: 'smooth' });
+            setTimeout(function () {
+              var ahora = window.pageYOffset;
+              var noSeMovio = Math.abs(ahora - inicio) < 4;
+              if (noSeMovio && Math.abs(ahora - fin) > 4) window.scrollTo(0, fin);
+            }, 400);
+          });
+        });
+      }
+
+      // Tope del carrusel de categorías (se calcula recién al momento de
+      // scrollear, porque la categoría nueva ya cambió el alto de la página).
+      function topeCarrusel() {
+        var ancla = wizardEl.querySelector('.wizard__progress') || wizardEl;
+        return ancla.getBoundingClientRect().top + window.pageYOffset - 12;
+      }
+
+      var scrollGuardado = {};   // índice de categoría → dónde quedó la página
       var primerPaso = true;
+
       var wizard = NM.initWizard(wizardEl, {
-        onStepChange: function (idx, stepEl) {
+        // el scroll lo maneja el formulario, no el wizard
+        manageScroll: false,
+        onLeaveStep: function (idx) {
+          scrollGuardado[idx] = window.pageYOffset;
+        },
+        onStepChange: function (idx, stepEl, info) {
           stepEl.querySelectorAll('.product').forEach(function (p) {
             p.classList.add('is-active');
           });
+          // Al abrir: la página queda arriba y se ve el encabezado completo.
           if (primerPaso) { primerPaso = false; return; }
-          // el encabezado de la página se ve solo al entrar; al cambiar de
-          // categoría el tope pasa a ser el carrusel de categorías
-          var ancla = wizardEl.querySelector('.wizard__progress') || stepEl;
-          var y = ancla.getBoundingClientRect().top + window.pageYOffset - 12;
-          window.scrollTo({ top: y, behavior: 'smooth' });
+          var volviendo = info && info.direction === 'prev';
+          if (volviendo && scrollGuardado[idx] != null) {
+            // Volver atrás: la página vuelve a donde estaba en esa categoría.
+            scrollSeguro(scrollGuardado[idx]);
+          } else {
+            // Avanzar: el carrusel de categorías queda arriba de todo.
+            scrollSeguro(topeCarrusel);
+          }
         }
       });
       window.scrollTo(0, 0);
