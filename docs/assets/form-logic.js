@@ -219,7 +219,7 @@
       }
     }
 
-    function render() {
+    function render(direccion) {
       steps.forEach(function (s, i) {
         s.classList.toggle('is-current', i === currentIndex);
       });
@@ -246,36 +246,73 @@
       if (btnNext) btnNext.classList.toggle('hidden', isLast);
       if (btnFinish) btnFinish.classList.toggle('hidden', !isLast || visited.size < stepCount);
 
-      // Scroll suave al inicio del wizard
-      if (elProgress) {
-        var top = elProgress.getBoundingClientRect().top + window.scrollY - 16;
-        window.scrollTo({ top: top, behavior: 'smooth' });
+      if (opts.onStepChange) {
+        opts.onStepChange(currentIndex, steps[currentIndex], {
+          direction: direccion || 'init'
+        });
       }
 
-      if (opts.onStepChange) opts.onStepChange(currentIndex, steps[currentIndex]);
+      // Scroll al carrusel de categorías. Si la página pasa
+      // `manageScroll: false` (como el formulario de pedidos nuevo, que además
+      // restaura la posición al volver atrás), el scroll lo decide ella en
+      // onStepChange y acá no se toca.
+      //
+      // Va DESPUÉS de onStepChange y detrás de dos requestAnimationFrame: al
+      // cambiar de categoría cambia el alto de la página, y un scroll suave
+      // lanzado antes de ese reflujo se pierde en varios navegadores de celu
+      // (era el motivo de que la página quedara abajo). La red de seguridad
+      // fuerza el salto si a los 400 ms la página no se movió nada.
+      if (opts.manageScroll !== false && elProgress && direccion) {
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            var max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+            var fin = Math.max(0, Math.min(
+              elProgress.getBoundingClientRect().top + window.pageYOffset - 16, max));
+            var inicio = window.pageYOffset;
+            window.scrollTo({ top: fin, behavior: 'smooth' });
+            setTimeout(function () {
+              var ahora = window.pageYOffset;
+              if (Math.abs(ahora - inicio) < 4 && Math.abs(ahora - fin) > 4) {
+                window.scrollTo(0, fin);
+              }
+            }, 400);
+          });
+        });
+      }
+    }
+
+    // Aviso de salida: la página puede guardar dónde quedó el scroll de la
+    // categoría que se está dejando, para restaurarlo si se vuelve a ella.
+    function salirDe(idx) {
+      if (opts.onLeaveStep) opts.onLeaveStep(idx);
     }
 
     function next() {
       if (currentIndex < stepCount - 1) {
+        salirDe(currentIndex);
         currentIndex++;
         visited.add(currentIndex);
-        render();
+        render('next');
       }
     }
 
     function prev() {
       if (currentIndex > 0) {
+        salirDe(currentIndex);
         currentIndex--;
-        render();
+        render('prev');
       }
     }
 
     function goTo(index) {
       if (index < 0 || index >= stepCount) return;
+      if (index === currentIndex) return;
       if (!visited.has(index) && index > currentIndex + 1) return; // no saltar adelante
+      var direccion = index < currentIndex ? 'prev' : 'next';
+      salirDe(currentIndex);
       currentIndex = index;
       visited.add(index);
-      render();
+      render(direccion);
     }
 
     if (btnNext) btnNext.addEventListener('click', next);
