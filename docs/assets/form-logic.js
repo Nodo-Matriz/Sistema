@@ -266,8 +266,21 @@
         requestAnimationFrame(function () {
           requestAnimationFrame(function () {
             var max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-            var fin = Math.max(0, Math.min(
-              elProgress.getBoundingClientRect().top + window.pageYOffset - 16, max));
+            // Si el carrusel es pegajoso (sticky/fixed), no sirve de ancla:
+            // estando abajo ya está arriba y "ir hasta él" es no moverse. En
+            // ese caso el destino es el inicio del paso, descontando la
+            // altura del carrusel que lo tapa.
+            var pos = getComputedStyle(elProgress).position;
+            var pegado = pos === 'sticky' || pos === 'fixed';
+            var destino;
+            if (pegado) {
+              var topProg = parseFloat(getComputedStyle(elProgress).top) || 0;
+              destino = steps[currentIndex].getBoundingClientRect().top + window.pageYOffset -
+                elProgress.offsetHeight - topProg - 16;
+            } else {
+              destino = elProgress.getBoundingClientRect().top + window.pageYOffset - 16;
+            }
+            var fin = Math.max(0, Math.min(destino, max));
             var inicio = window.pageYOffset;
             window.scrollTo({ top: fin, behavior: 'smooth' });
             setTimeout(function () {
