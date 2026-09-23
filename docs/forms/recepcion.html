@@ -1287,19 +1287,7 @@
           parsePedidos(res[4]);
 
           // Propuestas de ajuste pendientes de esta edición
-          propuestas = [];
-          res[6].table.rows.forEach(function (r) {
-            if (String(celda(r, 1)).trim() !== idEdicion) return;
-            if (String(celda(r, 10)).trim() !== 'Pendiente') return;
-            propuestas.push({
-              id_propuesta: String(celda(r, 0)).trim(),
-              id_producto: String(celda(r, 3)).trim(),
-              pedida: parseFloat(celda(r, 4)) || 0,
-              recibida: parseFloat(celda(r, 5)) || 0,
-              faltante: parseFloat(celda(r, 6)) || 0,
-              detalle: String(celda(r, 13)).trim()
-            });
-          });
+          parsePropuestas(res[6]);
 
           // Ítems de los pedidos de esta edición
           parseItems(res[7]);
@@ -2185,19 +2173,7 @@
 
           // ajustes: solo si nadie está cargando recortes
           if (res[2] && !ocupado) {
-            propuestas = [];
-            res[2].table.rows.forEach(function (r) {
-              if (String(celda(r, 1)).trim() !== idEdicion) return;
-              if (String(celda(r, 10)).trim() !== 'Pendiente') return;
-              propuestas.push({
-                id_propuesta: String(celda(r, 0)).trim(),
-                id_producto: String(celda(r, 3)).trim(),
-                pedida: parseFloat(celda(r, 4)) || 0,
-                recibida: parseFloat(celda(r, 5)) || 0,
-                faltante: parseFloat(celda(r, 6)) || 0,
-                detalle: String(celda(r, 13)).trim()
-              });
-            });
+            parsePropuestas(res[2]);
             renderAjustes();
           }
 
@@ -2275,6 +2251,32 @@
         return null;
       }
 
+      // Propuestas pendientes de la edición, UNA por producto. D2 genera una
+      // propuesta nueva en cada recepción comparando lo pedido original con lo
+      // recibido, así que un faltante ya repartido vuelve a aparecer como
+      // "Pendiente" (y con varias filas). Acá se juntan por producto y se
+      // guardan todos los ids, para marcarlos a todos como aplicados. El
+      // faltante REAL se calcula en renderAjustes contra los ítems de hoy.
+      function parsePropuestas(res) {
+        var porProducto = {};
+        res.table.rows.forEach(function (r) {
+          if (String(celda(r, 1)).trim() !== idEdicion) return;
+          if (String(celda(r, 10)).trim() !== 'Pendiente') return;
+          var idProd = String(celda(r, 3)).trim();
+          var id = String(celda(r, 0)).trim();
+          var p = porProducto[idProd];
+          if (!p) p = porProducto[idProd] = { id_producto: idProd, ids: [] };
+          // la fila más nueva (última recepción) pisa los datos
+          p.id_propuesta = id;
+          p.pedida = parseFloat(celda(r, 4)) || 0;
+          p.recibida = parseFloat(celda(r, 5)) || 0;
+          p.faltante = parseFloat(celda(r, 6)) || 0;
+          p.detalle = String(celda(r, 13)).trim();
+          if (p.ids.indexOf(id) === -1) p.ids.push(id);
+        });
+        propuestas = Object.keys(porProducto).map(function (k) { return porProducto[k]; });
+      }
+
       function afectadosDe(idProducto) {
         var out = [];
         itemsEd.forEach(function (it, idx) {
@@ -2293,19 +2295,7 @@
         if (btn) { btn.disabled = true; btn.textContent = 'Buscando…'; }
         gviz('sheet=Propuestas_Ajuste&range=A1:N500&headers=1&_=' + Date.now())
           .then(function (res) {
-            propuestas = [];
-            res.table.rows.forEach(function (r) {
-              if (String(celda(r, 1)).trim() !== idEdicion) return;
-              if (String(celda(r, 10)).trim() !== 'Pendiente') return;
-              propuestas.push({
-                id_propuesta: String(celda(r, 0)).trim(),
-                id_producto: String(celda(r, 3)).trim(),
-                pedida: parseFloat(celda(r, 4)) || 0,
-                recibida: parseFloat(celda(r, 5)) || 0,
-                faltante: parseFloat(celda(r, 6)) || 0,
-                detalle: String(celda(r, 13)).trim()
-              });
-            });
+            parsePropuestas(res);
             renderAjustes();
           })
           .catch(function () {})
@@ -2341,13 +2331,38 @@
           $('zona-auto').style.display = 'none';
           return;
         }
+        // Faltante real de cada propuesta: lo que los pedidos tienen HOY
+        // (ya descontado lo que se recortó antes) menos lo recibido. Si da
+        // cero, ese faltante ya fue repartido y no se vuelve a mostrar: es lo
+        // que evita aplicar el mismo recorte dos veces.
+        var visibles = 0;
+        propuestas.forEach(function (pr) {
+          var af = afectadosDe(pr.id_producto);
+          var actual = 0;
+          af.forEach(function (a) { actual += a.item.efectiva; });
+          pr.pendiente_hoy = Math.round(actual * 10000) / 10000;
+          pr.faltante_actual = Math.max(0, Math.round((actual - pr.recibida) * 10000) / 10000);
+          pr.ya_recortado = Math.max(0, Math.round((pr.pedida - actual) * 10000) / 10000);
+          if (pr.faltante_actual > 0.0001) visibles++;
+        });
+        if (!visibles) {
+          cont.innerHTML = '<p class="muted">Los faltantes registrados ya fueron repartidos: no hay ' +
+            'nada pendiente de recortar en esta edición.</p>';
+          $('btn-ajustes').disabled = true;
+          $('zona-auto').style.display = 'none';
+          return;
+        }
         $('zona-auto').style.display = 'block';
         propuestas.forEach(function (pr, pi) {
+          if (pr.faltante_actual <= 0.0001) return;   // ya repartido
           var af = afectadosDe(pr.id_producto);
           var html = '<div class="prop-card">';
           html += '<h3>⚠️ ' + (pr.detalle || pr.id_producto) + '</h3>';
-          html += '<p class="prop-sub">Se pidieron ' + pr.pedida +
-            ', llegaron ' + pr.recibida + ' → hay que recortar <strong>' + pr.faltante + '</strong>.</p>';
+          html += '<p class="prop-sub">Se pidieron ' + pr.pedida + ', llegaron ' + pr.recibida +
+            (pr.ya_recortado > 0.0001
+              ? ' (ya se recortaron ' + numeroAmable(pr.ya_recortado) + ' antes)'
+              : '') +
+            ' → hay que recortar <strong>' + numeroAmable(pr.faltante_actual) + '</strong>.</p>';
           if (!af.length) {
             html += '<p class="muted">No encontramos pedidos con este producto.</p>';
           }
@@ -2382,6 +2397,7 @@
         var cont = $('lista-ajustes');
         var algo = false;
         propuestas.forEach(function (pr, pi) {
+          if (!cont.querySelector('.restante[data-pi="' + pi + '"]')) return;   // ya repartida, sin tarjeta
           var suma = 0;
           var pasoMax = 1;   // la unidad vendible más grande entre los pedidos afectados
           Array.prototype.forEach.call(cont.querySelectorAll('.in-aj[data-pi="' + pi + '"]'), function (inp) {
@@ -2405,11 +2421,11 @@
           });
           if (suma > 0) algo = true;
           var p = cont.querySelector('.restante[data-pi="' + pi + '"]');
-          var resto = Math.round((pr.faltante - suma) * 10000) / 10000;
+          var resto = Math.round((pr.faltante_actual - suma) * 10000) / 10000;
           if (resto > 0.0001) {
             // todavía falta cubrir: hay que recortar más
             p.className = 'restante pendiente';
-            p.textContent = 'Falta repartir ' + numeroAmable(resto) + ' de ' + numeroAmable(pr.faltante);
+            p.textContent = 'Falta repartir ' + numeroAmable(resto) + ' de ' + numeroAmable(pr.faltante_actual);
           } else if (resto < -0.0001 && (-resto) >= pasoMax - 0.0001) {
             // recorte excesivo de verdad (más de una unidad vendible de más)
             p.className = 'restante pendiente';
@@ -2444,7 +2460,7 @@
           inputs.reverse();
           inputs.forEach(function (inp) { inp.value = 0; });
 
-          var falta = pr.faltante;
+          var falta = pr.faltante_actual;
           inputs.forEach(function (inp) {
             if (falta <= 0.0001) return;
             var max = parseFloat(inp.max) || 0;
@@ -2511,13 +2527,21 @@
         Object.keys(recortes).forEach(function (k) {
           var idx = parseInt(k, 10), it = itemsEd[idx], v = recortes[idx];
           var factor = factorFraccion(it.fraccion) || 1;
+          var recorteCant = Math.round((v / factor) * 10000) / 10000;
           itemsOut.push({
             id_item: it.id_item,
             id_pedido: it.id_pedido,
             id_producto: it.id_producto,
             producto: nombreProducto(it.id_producto),
             recorte_efectiva: v,
-            recorte_cantidad: Math.round((v / factor) * 10000) / 10000,
+            recorte_cantidad: recorteCant,
+            // Valores ABSOLUTOS: D3 escribe "queda en X" en vez de "restale Y".
+            // Así, si el mismo envío llega dos veces (doble clic, Replay), el
+            // resultado es el mismo y no se descuenta de más.
+            cantidad_antes: it.cantidad,
+            cantidad_nueva: Math.max(0, Math.round((it.cantidad - recorteCant) * 10000) / 10000),
+            efectiva_antes: it.efectiva,
+            efectiva_nueva: Math.max(0, Math.round((it.efectiva - v) * 10000) / 10000),
             precio: it.precio,
             observacion: 'Faltante del productor: -' + v
           });
@@ -2559,7 +2583,7 @@
             return 'N° ' + (ped ? ped.correlativo : '?') + ' ' +
               (ped ? (consumidores[ped.id_consumidor] || '') : '') + ': -' + recortes[idx];
           }).join(' | ');
-          return { id_propuesta: pr.id_propuesta, ajustes: txt, aprobado_por: quien };
+          return { id_propuesta: pr.id_propuesta, ids: pr.ids, ajustes: txt, aprobado_por: quien };
         });
 
         var btn = $('btn-ajustes');
@@ -2584,7 +2608,10 @@
         // Verificación real: D3 tiene que marcar cada propuesta como
         // "Aplicada" en Propuestas_Ajuste (columna K). Hasta que eso no se
         // vea en la planilla, no damos el recorte por hecho.
-        var idsEnviadas = propuestasOut.map(function (p) { return p.id_propuesta; });
+        var idsEnviadas = [];
+        propuestasOut.forEach(function (p) {
+          (p.ids || [p.id_propuesta]).forEach(function (id) { if (idsEnviadas.indexOf(id) === -1) idsEnviadas.push(id); });
+        });
         function finA() {
           caja.style.display = 'block';
           caja.style.background = '';
