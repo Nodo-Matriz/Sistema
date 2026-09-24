@@ -3,99 +3,709 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="robots" content="noindex">
-  <title>Recepción en galpón · Nodo Matríz (equipa)</title>
+  <title>Recepción en galpón · Nodo Matríz (equipo)</title>
   <link rel="stylesheet" href="../assets/styles.css">
-  <link rel="icon" type="image/png" href="../assets/logo-nodo-verde.png">
+  <link rel="icon" type="image/png" href="../assets/favicon-nodo.png">
   <style>
-    body { font-family: Georgia, serif; background: #f4efe6; color: #2e3a26; margin: 0; }
-    .wrap { max-width: 620px; margin: 0 auto; padding: 24px 16px 64px; }
+    /* ============================================================
+       Recepción en galpón — hereda el sistema de diseño de
+       ../assets/styles.css (Fraunces + Atkinson Hyperlegible,
+       paleta de tierra). Acá sólo van los componentes propios
+       de la app del equipo.
+       ============================================================ */
 
+    .wrap {
+      max-width: 680px;
+      padding: var(--s-6) var(--s-4) var(--s-9);
+    }
+
+    @media (min-width: 768px) {
+      .wrap { padding: var(--s-7) var(--s-5) var(--s-9); }
+    }
+
+    h1 { font-size: clamp(2rem, 6vw, 2.8rem); }
+
+    .lead { margin-bottom: var(--s-5); }
+
+    /* ── Tarjeta del equipo ──────────────────────────────── */
     .card-eq {
-      background: var(--c-leche, #fff);
-      border: 1px solid rgba(74, 107, 58, 0.15);
-      border-radius: 14px;
-      padding: var(--s-5, 20px);
-      margin-top: var(--s-4, 16px);
+      background: var(--c-leche);
+      border: 1px solid rgba(74, 107, 58, 0.14);
+      border-radius: var(--r-card);
+      padding: var(--s-5);
+      margin-top: var(--s-5);
+      box-shadow: var(--sh-suave);
     }
 
-    .campo { margin-bottom: var(--s-4, 16px); }
-    .campo label { display: block; font-weight: 700; margin-bottom: 6px; font-size: 0.92rem; }
-    .campo input, .campo select {
-      width: 100%; box-sizing: border-box; padding: 10px;
-      border: 1.5px solid var(--c-salvia, #c9c2b2); border-radius: 8px;
-      font-size: 1rem; font-family: inherit; background: #fff;
+    @media (min-width: 600px) {
+      .card-eq { padding: var(--s-6); }
     }
-    .campo input:focus, .campo select:focus { outline: none; border-color: var(--c-oliva, #4a6b3a); }
 
+    .card-eq h2 {
+      font-size: 1.5rem;
+      font-variation-settings: 'opsz' 48, 'SOFT' 60;
+      margin-bottom: var(--s-2);
+    }
+
+    .card-eq h2 + .muted { margin-top: 0; }
+
+    .card-eq > .muted {
+      font-size: 0.92rem;
+      line-height: 1.5;
+      margin-bottom: var(--s-5);
+    }
+
+    /* ── Campos ────────────────────────────────────────────── */
+    .campo { margin-bottom: var(--s-5); }
+
+    .campo label {
+      display: block;
+      font-weight: 700;
+      color: var(--c-corteza);
+      margin-bottom: var(--s-2);
+      font-size: 0.95rem;
+    }
+
+    .campo input,
+    .campo select {
+      width: 100%;
+      box-sizing: border-box;
+      font-family: var(--f-body);
+      font-size: 1rem;
+      padding: var(--s-3) var(--s-4);
+      border: 1.5px solid var(--c-salvia);
+      border-radius: var(--r-input);
+      background: var(--c-leche);
+      color: var(--c-suelo);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .campo input:focus,
+    .campo select:focus {
+      outline: none;
+      border-color: var(--c-oliva);
+      box-shadow: var(--sh-foco);
+    }
+
+    .campo select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1L6 6L11 1' stroke='%234A3E2E' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 1rem center;
+      padding-right: 2.5rem;
+    }
+
+    .campo select:disabled {
+      background-color: var(--c-crema-osc);
+      color: var(--c-tierra);
+    }
+
+    /* ── Avisos ────────────────────────────────────────────── */
     .aviso {
       background: rgba(110, 142, 85, 0.10);
-      border-left: 4px solid var(--c-oliva, #4a6b3a);
-      border-radius: 8px; padding: 12px 14px; margin: 16px 0; font-size: 0.95rem;
+      border-left: 4px solid var(--c-oliva);
+      border-radius: 14px;
+      padding: var(--s-4) var(--s-5);
+      margin: var(--s-5) 0;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: var(--c-corteza);
     }
-    .aviso.rojo { background: rgba(160, 60, 40, 0.08); border-left-color: #a03c28; }
 
-    /* Línea de producto */
+    .aviso.rojo {
+      background: rgba(166, 64, 43, 0.10);
+      border-left-color: var(--c-rojo);
+    }
+
+    /* ── Solapas ───────────────────────────────────────────── */
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+      margin-top: var(--s-5);
+      padding: 5px;
+      background: var(--c-crema-osc);
+      border-radius: 26px;
+      border: 1px solid rgba(74, 107, 58, 0.10);
+    }
+
+    .tabs button {
+      padding: 11px 4px;
+      border-radius: var(--r-pill);
+      font-family: var(--f-body);
+      font-size: 0.84rem;
+      font-weight: 700;
+      letter-spacing: 0.005em;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--c-corteza);
+      transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+      white-space: nowrap;
+    }
+
+    .tabs button:hover { background: rgba(110, 142, 85, 0.12); }
+
+    .tabs button.activa {
+      background: var(--c-musgo);
+      color: var(--c-crema);
+      box-shadow: var(--sh-suave);
+    }
+
+    .tabs button:focus-visible { outline: none; box-shadow: var(--sh-foco); }
+
+    @media (min-width: 620px) {
+      .tabs {
+        grid-template-columns: repeat(4, 1fr);
+        border-radius: var(--r-pill);
+      }
+      .tabs button { font-size: 0.94rem; padding: 11px 8px; }
+    }
+
+    /* ── Renglón de producto / pedido ──────────────────────── */
     .item {
-      display: flex; align-items: flex-start; gap: 10px;
-      border: 1px solid rgba(74, 107, 58, 0.18); border-radius: 10px;
-      padding: 10px 12px; margin-bottom: 8px; background: #fff;
+      display: flex;
+      align-items: flex-start;
+      gap: var(--s-3);
+      border: 1.5px solid rgba(74, 107, 58, 0.16);
+      border-radius: 14px;
+      padding: var(--s-3) var(--s-4);
+      margin-bottom: var(--s-2);
+      background: var(--c-leche);
       transition: background 0.15s, border-color 0.15s;
     }
-    .item.tildado { background: rgba(110, 142, 85, 0.10); border-color: var(--c-oliva, #4a6b3a); }
+
+    .item.tildado {
+      background: rgba(110, 142, 85, 0.11);
+      border-color: var(--c-oliva);
+    }
+
+    /* llegó algo, pero menos de lo pedido (o con observaciones): amarillo */
+    .item.parcial,
+    .item.tildado.parcial {
+      background: rgba(196, 149, 67, 0.16);
+      border-color: #C49543;
+    }
+    .item.parcial .linea-nombre { color: #6b4e12; }
+
+    /* no llegó nada (o vino rechazado): rojo */
+    .item.nada,
+    .item.tildado.nada {
+      background: rgba(166, 64, 43, 0.10);
+      border-color: #A6402B;
+    }
+    .item.nada .linea-nombre { color: #7a2f20; }
+
+    .item .nota-novedad {
+      display: none;
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+    .item.parcial .nota-novedad { display: block; color: #8a6614; }
+    .item.nada .nota-novedad { display: block; color: #A6402B; }
+    .item .detalle input.cant { width: 62px; font-size: 1.05rem; text-align: center; }
+
+    /* − / + para cargar la cantidad con el dedo */
+    .stepper {
+      display: inline-flex;
+      align-items: stretch;
+      border: 1px solid var(--c-musgo, #3c5230);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .stepper input.cant {
+      border: none !important;
+      border-radius: 0 !important;
+      border-left: 1px solid rgba(60,82,48,0.25) !important;
+      border-right: 1px solid rgba(60,82,48,0.25) !important;
+      margin: 0 !important;
+    }
+    .step-btn {
+      border: none;
+      background: rgba(60,82,48,0.08);
+      color: var(--c-musgo, #3c5230);
+      font-size: 1.35rem;
+      font-weight: 700;
+      line-height: 1;
+      width: 46px;
+      min-height: 46px;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .step-btn:active { background: rgba(60,82,48,0.22); }
+
     .item input[type="checkbox"] {
-      width: 26px; height: 26px; margin-top: 2px; accent-color: #3c5230; flex-shrink: 0; cursor: pointer;
+      width: 26px;
+      height: 26px;
+      margin-top: 2px;
+      accent-color: var(--c-musgo);
+      flex-shrink: 0;
+      cursor: pointer;
     }
+
     .item .cuerpo { flex: 1; min-width: 0; }
-    .item .linea-nombre { font-weight: 700; font-size: 0.98rem; }
-    .item .detalle { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; align-items: center; }
-    .item .detalle label { font-size: 0.8rem; color: #7a6f58; }
-    .item .detalle input[type="number"] {
-      width: 90px; padding: 7px; border: 1.5px solid #c9c2b2; border-radius: 8px;
-      font-size: 1rem; font-family: inherit;
+
+    .item .linea-nombre {
+      font-family: var(--f-display);
+      font-size: 1.08rem;
+      font-weight: 500;
+      font-variation-settings: 'opsz' 36, 'SOFT' 40;
+      color: var(--c-suelo);
+      line-height: 1.3;
     }
+
+    .item .detalle {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--s-2);
+      margin-top: var(--s-3);
+      align-items: center;
+    }
+
+    .item .detalle label {
+      font-size: 0.82rem;
+      color: var(--c-tierra);
+      font-style: italic;
+    }
+
+    .item .detalle input,
     .item .detalle select {
-      padding: 7px; border: 1.5px solid #c9c2b2; border-radius: 8px;
-      font-size: 0.9rem; font-family: inherit; background: #fff;
+      font-family: var(--f-body);
+      padding: 7px 10px;
+      border: 1.5px solid var(--c-salvia);
+      border-radius: 10px;
+      background: var(--c-leche);
+      color: var(--c-suelo);
     }
-    .item .detalle input[type="text"] {
-      flex: 1; min-width: 140px; padding: 7px; border: 1.5px solid #c9c2b2;
-      border-radius: 8px; font-size: 0.9rem; font-family: inherit;
+
+    .item .detalle input:focus,
+    .item .detalle select:focus {
+      outline: none;
+      border-color: var(--c-oliva);
+      box-shadow: var(--sh-foco);
     }
-    .item.no-llego .linea-nombre { text-decoration: none; color: #7a6f58; }
 
-    .progreso { font-size: 0.9rem; color: #7a6f58; margin: 10px 0; }
+    .item .detalle input[type="number"] { width: 92px; font-size: 1rem; }
+    .item .detalle select { font-size: 0.9rem; }
+    .item .detalle input[type="text"] { flex: 1; min-width: 140px; font-size: 0.9rem; }
 
+    .item.no-llego .linea-nombre { color: var(--c-tierra); }
+
+    .item.preparado {
+      background: rgba(110, 142, 85, 0.14);
+      border-color: var(--c-oliva);
+      opacity: 0.72;
+    }
+
+    .item .quien {
+      font-size: 0.82rem;
+      color: var(--c-musgo);
+      font-weight: 700;
+      margin-top: var(--s-1);
+    }
+
+    .progreso {
+      font-size: 0.9rem;
+      color: var(--c-tierra);
+      font-style: italic;
+      margin: var(--s-3) 0 var(--s-5);
+    }
+
+    /* ── Botón de confirmación ─────────────────────────────── */
     .btn-conf {
-      display: inline-block; width: 100%; box-sizing: border-box; text-align: center;
-      background: #3c5230; color: #fff; border: none; border-radius: 999px;
-      padding: 14px 20px; font-size: 1.05rem; cursor: pointer; font-family: inherit;
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      text-align: center;
+      background: var(--c-musgo);
+      color: var(--c-crema);
+      border: 2px solid var(--c-musgo);
+      border-radius: var(--r-pill);
+      padding: 14px 20px;
+      font-family: var(--f-body);
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, transform 0.15s, box-shadow 0.2s;
     }
-    .btn-conf:disabled { opacity: 0.5; cursor: not-allowed; }
 
+    .btn-conf:hover:not(:disabled) {
+      background: var(--c-oliva);
+      border-color: var(--c-oliva);
+      transform: translateY(-1px);
+      box-shadow: var(--sh-medio);
+    }
+
+    .btn-conf:focus-visible { outline: none; box-shadow: var(--sh-foco); }
+
+    .btn-conf:disabled {
+      background: var(--c-salvia);
+      border-color: var(--c-salvia);
+      color: var(--c-leche);
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* ── Caja de confirmación ──────────────────────────────── */
     .ok-box {
-      background: rgba(110, 142, 85, 0.12); border-left: 4px solid #4a6b3a;
-      padding: 12px 14px; border-radius: 8px; margin-top: 16px; display: none;
+      background: rgba(91, 122, 58, 0.12);
+      border-left: 4px solid var(--c-verde-ok);
+      color: var(--c-corteza);
+      padding: var(--s-4) var(--s-5);
+      border-radius: 14px;
+      margin-top: var(--s-5);
+      font-size: 0.95rem;
+      line-height: 1.5;
+      display: none;
     }
 
     .chip-reg {
-      display: inline-block; font-size: 0.8rem; background: rgba(110,142,85,0.15);
-      border-radius: 999px; padding: 2px 10px; margin-left: 6px; color: #3c5230; font-weight: 700;
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      background: var(--c-oliva-claro);
+      color: var(--c-leche);
+      border-radius: var(--r-pill);
+      padding: 2px 10px;
+      margin-left: 6px;
+      vertical-align: middle;
     }
-    h1 { margin-bottom: 4px; }
-    .muted { color: #7a6f58; }
 
-    /* Solapas */
-    .tabs { display: flex; gap: 8px; margin-top: 16px; }
-    .tabs button {
-      flex: 1; padding: 12px 8px; border-radius: 999px; font-size: 1rem;
-      font-family: inherit; cursor: pointer; border: 1.5px solid rgba(74,107,58,0.35);
-      background: transparent; color: #3c5230; font-weight: 700;
+    .titulo-manual {
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--c-tierra);
+      border-top: 1px dashed rgba(74, 107, 58, 0.25);
+      padding-top: 8px;
+      margin: 10px 0 4px;
     }
-    .tabs button.activa { background: #3c5230; color: #fff; border-color: #3c5230; }
 
-    .item.preparado { background: rgba(110,142,85,0.14); border-color: #4a6b3a; opacity: 0.75; }
-    .item .quien { font-size: 0.8rem; color: #3c5230; font-weight: 700; margin-top: 4px; }
+    /* ── Tarjetas de faltantes (solapa Ajustes) ────────────── */
+    .prop-card {
+      border: 2px dashed var(--c-salvia);
+      background: var(--c-crema-osc);
+      border-radius: var(--r-card);
+      padding: var(--s-5);
+      margin-bottom: var(--s-5);
+    }
+
+    .prop-card h3 {
+      font-size: 1.15rem;
+      font-variation-settings: 'opsz' 36, 'SOFT' 50;
+      margin: 0 0 var(--s-2);
+      line-height: 1.3;
+    }
+
+    .prop-card .prop-sub {
+      font-size: 0.88rem;
+      color: var(--c-tierra);
+      margin: 0 0 var(--s-4);
+      line-height: 1.45;
+    }
+
+    .prop-fila {
+      display: flex;
+      align-items: center;
+      gap: var(--s-3);
+      flex-wrap: wrap;
+      padding: var(--s-3) 0;
+      border-bottom: 1px dotted rgba(107, 93, 79, 0.28);
+    }
+
+    .prop-fila:last-of-type { border-bottom: none; }
+
+    .prop-quien { flex: 1 1 190px; line-height: 1.35; }
+
+    .prop-fila label {
+      font-size: 0.85rem;
+      color: var(--c-tierra);
+      font-style: italic;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--s-2);
+    }
+
+    .prop-fila input[type="number"] {
+      width: 84px;
+      font-family: var(--f-body);
+      font-size: 1rem;
+      font-style: normal;
+      padding: 7px 8px;
+      border: 1.5px solid var(--c-salvia);
+      border-radius: 10px;
+      background: var(--c-leche);
+      color: var(--c-suelo);
+    }
+
+    .prop-fila input[type="number"]:focus {
+      outline: none;
+      border-color: var(--c-oliva);
+      box-shadow: var(--sh-foco);
+    }
+
+    .queda {
+      font-size: 0.85rem;
+      color: var(--c-tierra);
+      flex: 1 1 100%;
+      font-style: italic;
+    }
+
+    .restante {
+      font-weight: 700;
+      margin: var(--s-4) 0 0;
+      padding-top: var(--s-3);
+      border-top: 1.5px solid var(--c-salvia);
+      color: var(--c-corteza);
+    }
+
+    .restante.completo { color: var(--c-verde-ok); }
+    .restante.pendiente { color: var(--c-arcilla-oscuro); }
+
+    /* ── Control de productos por pedido (solapa Entrega) ──── */
+    .btn-control {
+      margin-top: var(--s-2);
+      background: none;
+      border: 1.5px solid var(--c-salvia);
+      border-radius: var(--r-pill);
+      padding: 5px 12px;
+      font-family: var(--f-body);
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--c-tierra);
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .btn-control:hover { border-color: var(--c-oliva); color: var(--c-musgo); }
+
+    .items-ped {
+      display: none;
+      margin-top: var(--s-3);
+      border-top: 1px dotted rgba(107, 93, 79, 0.28);
+      padding-top: var(--s-3);
+    }
+
+    .tag-productor {
+      display: inline-block; margin-left: 8px; padding: 1px 8px;
+      font-size: 0.74rem; font-weight: 700; letter-spacing: 0.02em;
+      color: var(--c-musgo, #3c5230); background: rgba(60,82,48,0.10);
+      border-radius: 999px; vertical-align: middle; white-space: nowrap;
+    }
+    .item-ped.no-va .tag-productor { opacity: 0.5; }
+    .item-ped {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0;
+      cursor: pointer;
+      font-size: 0.92rem;
+      color: var(--c-suelo);
+    }
+
+    .item-ped input {
+      width: 22px;
+      height: 22px;
+      accent-color: var(--c-musgo);
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+
+    .item-ped.ok .txt { text-decoration: line-through; opacity: 0.55; }
+
+    .item-ped.no-va .txt {
+      text-decoration: line-through;
+      opacity: 0.45;
+      font-style: italic;
+    }
+
+    .prog-control {
+      font-size: 0.8rem;
+      color: var(--c-tierra);
+      font-style: italic;
+      padding-top: 4px;
+    }
+
+    /* ── Tablero de progreso (Armado y entrega) ─────────────── */
+    .tablero {
+      background: var(--c-crema-osc);
+      border: 1px solid rgba(74, 107, 58, 0.10);
+      border-radius: var(--r-card);
+      padding: var(--s-4) var(--s-5);
+      margin-bottom: var(--s-5);
+    }
+
+    .barra-linea {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 5px;
+    }
+
+    .barra-linea + .barra { margin-bottom: var(--s-4); }
+    .barra:last-child { margin-bottom: 0; }
+
+    .barra-tit {
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--c-corteza);
+    }
+
+    .barra-num {
+      font-family: var(--f-display);
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--c-suelo);
+    }
+
+    .barra {
+      height: 12px;
+      background: var(--c-leche);
+      border: 1px solid rgba(74, 107, 58, 0.14);
+      border-radius: var(--r-pill);
+      overflow: hidden;
+    }
+
+    .barra-fill {
+      height: 100%;
+      width: 0;
+      background: var(--c-oliva-claro);
+      border-radius: var(--r-pill);
+      transition: width 0.4s ease;
+    }
+
+    .barra-fill.fill-entrega { background: var(--c-musgo); }
+
+    /* ── Tarjetas de pedido con estado ──────────────────────── */
+    .ped-card {
+      border: 1.5px solid rgba(74, 107, 58, 0.16);
+      border-radius: 14px;
+      margin-bottom: var(--s-2);
+      background: var(--c-leche);
+      overflow: hidden;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .ped-card.armado { background: rgba(110, 142, 85, 0.08); border-color: var(--c-salvia); }
+    .ped-card.entregado { background: rgba(110, 142, 85, 0.14); border-color: var(--c-oliva); opacity: 0.75; }
+
+    .ped-head {
+      display: flex;
+      align-items: center;
+      gap: var(--s-3);
+      padding: var(--s-3) var(--s-4);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .ped-head .ped-nombre {
+      flex: 1;
+      font-family: var(--f-display);
+      font-size: 1.08rem;
+      font-weight: 500;
+      font-variation-settings: 'opsz' 36, 'SOFT' 40;
+      color: var(--c-suelo);
+      line-height: 1.3;
+      min-width: 0;
+    }
+
+    .chip-ped {
+      flex-shrink: 0;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border-radius: var(--r-pill);
+      padding: 3px 10px;
+      white-space: nowrap;
+    }
+
+    .chip-ped.pendiente { background: var(--c-crema-osc); color: var(--c-tierra); }
+    .chip-ped.armado { background: var(--c-oliva-claro); color: var(--c-leche); }
+    .chip-ped.entregado { background: var(--c-musgo); color: var(--c-crema); }
+
+    .ped-cuerpo {
+      display: none;
+      padding: 0 var(--s-4) var(--s-4);
+      border-top: 1px dotted rgba(107, 93, 79, 0.28);
+    }
+
+    .ped-card.abierto .ped-cuerpo { display: block; }
+    .ped-card.abierto { border-color: var(--c-oliva); }
+
+    .btn-accion {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      text-align: center;
+      margin-top: var(--s-3);
+      background: var(--c-musgo);
+      color: var(--c-crema);
+      border: 2px solid var(--c-musgo);
+      border-radius: var(--r-pill);
+      padding: 12px 18px;
+      font-family: var(--f-body);
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .btn-accion:hover { background: var(--c-oliva); border-color: var(--c-oliva); }
+
+    .btn-accion.armar { background: var(--c-oliva-claro); border-color: var(--c-oliva-claro); }
+    .btn-accion.armar:hover { background: var(--c-oliva); border-color: var(--c-oliva); }
+
+    .btn-accion:disabled {
+      background: var(--c-salvia);
+      border-color: var(--c-salvia);
+      cursor: not-allowed;
+    }
+
+    .btn-accion.confirmar {
+      background: var(--c-arcilla-oscuro);
+      border-color: var(--c-arcilla-oscuro);
+    }
+
+    .btn-deshacer {
+      display: block;
+      margin: var(--s-3) auto 0;
+      background: none;
+      border: 1.5px solid var(--c-salvia);
+      border-radius: var(--r-pill);
+      padding: 7px 16px;
+      font-family: var(--f-body);
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--c-tierra);
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .btn-deshacer:hover { border-color: var(--c-arcilla-oscuro); color: var(--c-arcilla-oscuro); }
+
+    .ped-head .caret {
+      flex-shrink: 0;
+      color: var(--c-tierra);
+      font-size: 0.8rem;
+      transition: transform 0.15s;
+    }
+
+    .ped-card.abierto .caret { transform: rotate(90deg); }
   </style>
 </head>
 <body>
@@ -106,7 +716,7 @@
         <img src="../assets/logo-nodo-verde.png" alt="Nodo Matríz" style="width:48px; height:48px;">
         <span>
           <span class="site-mark__name">Nodo Matríz</span>
-          <span class="site-mark__sub">recepción en galpón</span>
+          <span class="site-mark__sub">recepción en galpón · equipo</span>
         </span>
       </a>
     </header>
@@ -120,10 +730,23 @@
 
     <div class="aviso" id="estado-edicion">Cargando la edición vigente…</div>
 
+    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+                margin: 0 0 12px;">
+      <button type="button" class="btn btn--ghost btn--small" id="btn-refrescar-todo"
+        title="Vuelve a leer la planilla ahora mismo">↻ Actualizar</button>
+      <span id="sello-refresco" style="font-size:0.82rem; color:var(--c-tierra); font-style:italic;">
+        datos al día
+      </span>
+      <span style="font-size:0.78rem; color:var(--c-tierra);">
+        · la pantalla se actualiza sola cada 25 s
+      </span>
+    </div>
+
     <div class="tabs">
       <button type="button" id="tab-recepcion" class="activa">📥 Recepción</button>
       <button type="button" id="tab-fracc">🔪 Fraccionamiento</button>
-      <button type="button" id="tab-retiro">🛍 Retiro</button>
+      <button type="button" id="tab-ajustes">⚖️ Ajustes</button>
+      <button type="button" id="tab-entrega">🛍 Entrega</button>
     </div>
 
     <div id="vista-recepcion">
@@ -131,7 +754,11 @@
     <div class="card-eq fade-in" data-delay="2">
       <div class="campo">
         <label for="recibido-por">¿Quién recibe? *</label>
-        <input type="text" id="recibido-por" placeholder="Tu nombre" autocomplete="name">
+        <select id="recibido-por">
+          <option value="">— Elegí tu nombre —</option>
+        </select>
+        <input type="text" id="recibido-por-otro" placeholder="Nombre de quien ayuda hoy"
+               autocomplete="name" style="display:none; margin-top:8px;">
       </div>
 
       <div class="campo">
@@ -139,21 +766,24 @@
         <select id="sel-productor" disabled>
           <option value="">Cargando…</option>
         </select>
+        <button type="button" class="btn btn--ghost btn--small" id="btn-refrescar"
+                style="margin-top:10px;">↻ Actualizar registros</button>
       </div>
     </div>
 
     <div class="card-eq" id="card-items" style="display:none;">
       <h2 id="titulo-productor"></h2>
-      <p class="muted" style="font-size:0.9rem;">
+      <p class="muted">
         Tildá cada renglón a medida que lo confirmás. Lo que quede sin tildar
         se registra como <strong>no recibido</strong> (cantidad 0).
       </p>
+      <div class="aviso rojo" id="aviso-dup" style="display:none;"></div>
       <div id="lista-items"></div>
       <p class="progreso" id="progreso"></p>
 
       <div class="campo">
-        <label for="clave">Clave de equipa *</label>
-        <input type="password" id="clave" placeholder="La clave compartida de la equipa">
+        <label for="clave">Clave de equipo *</label>
+        <input type="password" id="clave" placeholder="La clave compartida del equipo">
       </div>
 
       <button type="button" class="btn-conf" id="btn-confirmar" disabled>Registrar recepción</button>
@@ -163,28 +793,52 @@
       </div>
     </div>
 
+    <div class="card-eq" id="card-faltantes">
+      <h2>⚠️ Revisar faltantes</h2>
+      <p class="muted">
+        Cuando ya recibiste a <strong>todos</strong> los productores, tocá acá.
+        El sistema compara lo que se pidió contra lo que llegó y muestra el
+        detalle acá mismo; los faltantes quedan además registrados para
+        repartirlos en la solapa <strong>Ajustes</strong>.
+      </p>
+
+      <div class="campo">
+        <label for="clave-falt">Clave de equipo *</label>
+        <input type="password" id="clave-falt" placeholder="La clave compartida del equipo">
+      </div>
+
+      <button type="button" class="btn-conf" id="btn-faltantes">Revisar faltantes de la edición</button>
+
+      <div class="ok-box" id="ok-faltantes"></div>
+      <div id="tabla-faltantes" style="margin-top:12px;"></div>
+    </div>
+
     </div><!-- /vista-recepcion -->
 
     <!-- ── Vista Fraccionamiento ── -->
     <div id="vista-fracc" style="display:none;">
       <div class="card-eq">
         <h2>Plan de fraccionamiento</h2>
-        <p class="muted" style="font-size:0.9rem;">
+        <p class="muted">
           Estas son las porciones que hay que armar para esta edición.
           Tildá cada renglón cuando esté <strong>empaquetado</strong> y registrá.
         </p>
 
         <div class="campo">
           <label for="preparado-por">¿Quién prepara? *</label>
-          <input type="text" id="preparado-por" placeholder="Tu nombre" autocomplete="name">
+          <select id="preparado-por">
+            <option value="">— Elegí tu nombre —</option>
+          </select>
+          <input type="text" id="preparado-por-otro" placeholder="Nombre de quien ayuda hoy"
+                 autocomplete="name" style="display:none; margin-top:8px;">
         </div>
 
         <div id="lista-fracc"></div>
         <p class="progreso" id="progreso-fracc"></p>
 
         <div class="campo">
-          <label for="clave-fracc">Clave de equipa *</label>
-          <input type="password" id="clave-fracc" placeholder="La clave compartida de la equipa">
+          <label for="clave-fracc">Clave de equipo *</label>
+          <input type="password" id="clave-fracc" placeholder="La clave compartida del equipo">
         </div>
 
         <button type="button" class="btn-conf" id="btn-fracc" disabled>Registrar fracciones preparadas</button>
@@ -195,38 +849,107 @@
       </div>
     </div>
 
-    <!-- ── Vista Retiro ── -->
-    <div id="vista-retiro" style="display:none;">
+    <!-- ── Vista Ajustes ── -->
+    <div id="vista-ajustes" style="display:none;">
       <div class="card-eq">
-        <h2>Retiro de pedidos</h2>
-        <p class="muted" style="font-size:0.9rem;">
-          Tildá cada pedido cuando el consumidor lo <strong>retira del galpón</strong> y registrá.
-          Reemplaza las marcas de color de la planilla heladera.
+        <h2>Repartir los faltantes</h2>
+        <p class="muted">
+          Acá aparecen los faltantes que detectó el sistema. Decidan entre todas
+          cuánto se le recorta a cada pedido. Lo que recorten se
+          <strong>descuenta del total a pagar</strong> de esa persona.
         </p>
 
         <div class="campo">
-          <label for="entregado-por">¿Quién entrega? *</label>
-          <input type="text" id="entregado-por" placeholder="Tu nombre" autocomplete="name">
+          <label for="aprobado-por">¿Quién carga la decisión? *</label>
+          <select id="aprobado-por">
+            <option value="">— Elegí tu nombre —</option>
+          </select>
+          <input type="text" id="aprobado-por-otro" placeholder="Nombre de quien ayuda hoy"
+                 autocomplete="name" style="display:none; margin-top:8px;">
+        </div>
+
+        <p style="margin:0 0 8px;">
+          <button type="button" class="btn btn--ghost btn--small" id="btn-refrescar-ajustes"
+            title="Vuelve a leer los faltantes registrados en la planilla">↻ Buscar faltantes nuevos</button>
+        </p>
+
+        <div id="zona-auto" style="display:none; margin:0 0 14px;">
+          <button type="button" class="btn btn--primary btn--small" id="btn-auto"
+            style="width:100%;">✂️ RECORTAR POR ORDEN DE LLEGADA</button>
+          <p class="muted" style="font-size:0.85rem; margin:6px 0 0;">
+            Reparte el faltante empezando por los pedidos más nuevos: quien pidió
+            primero se queda con lo suyo. Después podés retocar a mano.
+          </p>
+        </div>
+
+        <div id="lista-ajustes"></div>
+
+        <div class="campo">
+          <label for="clave-ajustes">Clave de equipo *</label>
+          <input type="password" id="clave-ajustes" placeholder="La clave compartida del equipo">
+        </div>
+
+        <button type="button" class="btn-conf" id="btn-ajustes" disabled>
+          ENVIAR PEDIDOS ACTUALIZADOS
+        </button>
+        <p class="muted" style="font-size:0.85rem; margin-top:8px;">
+          Aplica los recortes en la planilla y le manda a cada consumidor
+          afectado el detalle nuevo de su pedido y el total actualizado.
+        </p>
+
+        <div class="ok-box" id="ok-ajustes">
+          ✅ Ajustes aplicados. Los pedidos quedaron actualizados.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Vista Entrega ── -->
+    <div id="vista-entrega" style="display:none;">
+      <div class="card-eq">
+        <h2>Armado y entrega</h2>
+        <p class="muted">
+          Tocá un pedido para <strong>abrir o cerrar</strong> su detalle e ir
+          tachando mientras armás el cajón. Con todo tachado aparece
+          <strong>“✓ Cajón armado”</strong>; cuando el consumidor lo retira,
+          tocá <strong>“Entregar pedido”</strong> (pide confirmación).
+          Cada registro se guarda al instante y los demás teléfonos lo ven solos.
+        </p>
+
+        <div class="campo">
+          <label for="entregado-por">¿Quién está en la entrega? *</label>
+          <select id="entregado-por">
+            <option value="">— Elegí tu nombre —</option>
+          </select>
+          <input type="text" id="entregado-por-otro" placeholder="Nombre de quien ayuda hoy"
+                 autocomplete="name" style="display:none; margin-top:8px;">
         </div>
 
         <div class="campo">
-          <label for="buscar-retiro">Buscar consumidor</label>
-          <input type="text" id="buscar-retiro" placeholder="Escribí parte del nombre…">
+          <label for="clave-entrega">Clave de equipo *</label>
+          <input type="password" id="clave-entrega" placeholder="La clave compartida del equipo">
         </div>
 
-        <div id="lista-retiro"></div>
-        <p class="progreso" id="progreso-retiro"></p>
+        <div class="tablero">
+          <div class="barra-linea">
+            <span class="barra-tit">Cajones armados</span>
+            <span class="barra-num" id="num-armados">—</span>
+          </div>
+          <div class="barra"><div class="barra-fill" id="barra-armados"></div></div>
+          <div class="barra-linea">
+            <span class="barra-tit">Entregados</span>
+            <span class="barra-num" id="num-entregados">—</span>
+          </div>
+          <div class="barra"><div class="barra-fill fill-entrega" id="barra-entregados"></div></div>
+        </div>
 
         <div class="campo">
-          <label for="clave-retiro">Clave de equipa *</label>
-          <input type="password" id="clave-retiro" placeholder="La clave compartida de la equipa">
+          <label for="buscar-entrega">Buscar consumidor</label>
+          <input type="text" id="buscar-entrega" placeholder="Escribí parte del nombre…">
         </div>
 
-        <button type="button" class="btn-conf" id="btn-retiro" disabled>Registrar retiros</button>
+        <div class="aviso rojo" id="aviso-entrega" style="display:none;"></div>
 
-        <div class="ok-box" id="ok-retiro">
-          ✅ Retiros registrados.
-        </div>
+        <div id="lista-entrega"></div>
       </div>
     </div>
 
@@ -246,20 +969,45 @@
       var WEBHOOK_D1     = 'https://hook.us2.make.com/wh4waco8hddd4qvggwfpul8wxyo2s9xo';
       var WEBHOOK_FRAC   = 'https://hook.us2.make.com/pnu4revwv7cpba73qpnif4bsa0cuw86i';
       var WEBHOOK_RETIRO = 'https://hook.us2.make.com/gd5qh8wry0v9wmnsqfwp96vjmua55e36';
+      var WEBHOOK_D2     = 'https://hook.us2.make.com/aodjwri3frhtfj8yk7mnegpb6czva9j9';
+      var WEBHOOK_D3     = 'https://hook.us2.make.com/8w3cb9fk11gf9rj9352ai7k4pixpmm1n';
+      // Escenario A5 (cambios de estado): al entregar el último pedido, la
+      // edición pasa a "Liquidación" y la guía avanza al paso 7.
+      var WEBHOOK_A5     = 'https://hook.us2.make.com/qyqw5eh5f6gcbdd558o4t21krx4k72hy';
       var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
 
       var $ = function (id) { return document.getElementById(id); };
+
+      // Devuelve true si el webhook está configurado; si no, avisa en pantalla.
+      function webhookListo(url, nombre, contenedorId) {
+        if (typeof url === 'string' && url.indexOf('https://hook.') === 0) return true;
+        var caja = $(contenedorId);
+        if (caja) {
+          caja.style.display = 'block';
+          caja.style.background = 'rgba(166, 64, 43, 0.10)';
+          caja.style.color = '#A6402B';
+          caja.innerHTML = '🚫 Este botón todavía no está conectado (falta cargar la ' +
+            'dirección del escenario ' + nombre + ' en el archivo). Avisale a quien ' +
+            'administra el sistema — no se envió nada.';
+        }
+        return false;
+      }
 
       var idEdicion = '';
       var productores = {};   // id -> nombre
       var lineas = [];        // filas de Comandas_Calc A:H
       var registrados = {};   // id_productor -> true (en esta sesión)
+      var recibidosVivo = {}; // id_productor -> quién lo recibió (según la hoja Recepciones)
+      var equipoNombres = []; // nombres activos de la hoja Equipo
       var planFracc = [];     // filas de Plan_Fraccionamiento de la edición
-      var pedidos = [];       // pedidos de la edición (para Retiro)
+      var pedidos = [];       // pedidos de la edición (para Entrega)
       var consumidores = {};  // id -> nombre
+      var contactos = {};     // id -> {tel, email}
+      var propuestas = [];    // faltantes pendientes de la edición
+      var itemsEd = [];       // ítems de los pedidos de la edición
 
       // ── Solapas ──────────────────────────────────────────────────
-      var VISTAS = ['recepcion', 'fracc', 'retiro'];
+      var VISTAS = ['recepcion', 'fracc', 'ajustes', 'entrega'];
       function mostrarVista(cual) {
         VISTAS.forEach(function (v) {
           document.getElementById('vista-' + v).style.display = (v === cual) ? 'block' : 'none';
@@ -273,8 +1021,8 @@
       // ── util gviz ────────────────────────────────────────────────
       function gviz(params) {
         var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
-          '/gviz/tq?tqx=out:json&' + params;
-        return fetch(url)
+          '/gviz/tq?tqx=out:json&' + params + '&_=' + Date.now();
+        return fetch(url, { cache: 'no-store' })
           .then(function (r) { return r.text(); })
           .then(function (t) {
             var m = t.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
@@ -288,6 +1036,30 @@
         return c.v;
       }
 
+      // "2 paquetes de 200 g" · "1 paquete de 1/2 kg" · "2 kg"
+      // (si la fracción ya trae su propia unidad —200g, 500cc— no se repite)
+      function unidadMostrada(u) {
+        u = String(u || '').trim();
+        return /^(pack|packs|paq\.?|paquetes?)$/i.test(u) ? 'paq.' : u;
+      }
+
+      function etiquetaUnidad(l, cant) {
+        if (!l.fraccion) return unidadMostrada(l.unidad);
+        var fr = String(l.fraccion).trim();
+        var traeUnidad = /(g|gr|grs|gramos?|ml|cc|kg|l|lt|litros?)\s*$/i.test(fr);
+        return 'paq. de ' + fr + (traeUnidad ? '' : ' ' + unidadMostrada(l.unidad));
+      }
+
+      // 0.25 -> "0,25" (coma, como se escribe acá) y al revés
+      function numeroAmable(n) {
+        if (n === '' || n === null || n === undefined) return '';
+        return String(n).replace('.', ',');
+      }
+      function aNumero(txt) {
+        var v = parseFloat(String(txt).replace(',', '.').trim());
+        return isNaN(v) ? null : v;
+      }
+
       // ── factor de fracción: "1/2" → 0.5 · "2" → 2 · "100grs" → 1 ─
       function factorFraccion(f) {
         f = String(f || '').trim();
@@ -296,6 +1068,131 @@
         if (m) return parseInt(m[1], 10) / parseInt(m[2], 10);
         var n = parseFloat(f.replace(',', '.'));
         return isNaN(n) ? 1 : n;
+      }
+
+      // ── equipo: desplegables de "¿quién?" ────────────────────────
+      var QUIEN_IDS = ['recibido-por', 'preparado-por', 'aprobado-por', 'entregado-por'];
+
+      function armarSelectsEquipo() {
+        QUIEN_IDS.forEach(function (id) {
+          var sel = $(id), otro = $(id + '-otro');
+          if (!equipoNombres.length) {
+            // Sin hoja Equipo todavía: se escribe el nombre a mano, como antes.
+            sel.style.display = 'none';
+            otro.style.display = 'block';
+            otro.placeholder = 'Tu nombre';
+            return;
+          }
+          sel.innerHTML = '<option value="">— Elegí tu nombre —</option>';
+          equipoNombres.forEach(function (n) {
+            var op = document.createElement('option');
+            op.value = n;
+            op.textContent = n;
+            sel.appendChild(op);
+          });
+          var op = document.createElement('option');
+          op.value = '__otro__';
+          op.textContent = 'Otra persona…';
+          sel.appendChild(op);
+        });
+      }
+
+      function valorQuien(id) {
+        var sel = $(id);
+        if (sel.style.display === 'none' || sel.value === '__otro__') {
+          return $(id + '-otro').value.trim();
+        }
+        return sel.value.trim();
+      }
+
+      function parseEquipo(res) {
+        equipoNombres = [];
+        if (!res) return;
+        try {
+          res.table.rows.forEach(function (r) {
+            var nombre = String(celda(r, 1)).trim();
+            var activa = String(celda(r, 4)).trim().toLowerCase();
+            if (nombre && (activa === 'sí' || activa === 'si' || activa === '')) {
+              equipoNombres.push(nombre);
+            }
+          });
+        } catch (e) { equipoNombres = []; }
+      }
+
+      function parsePedidos(res) {
+        pedidos = [];
+        if (!res) return;
+        res.table.rows.forEach(function (r) {
+          if (String(celda(r, 1)).trim() !== idEdicion) return;
+          pedidos.push({
+            id_pedido: String(celda(r, 0)).trim(),
+            id_consumidor: String(celda(r, 2)).trim(),
+            correlativo: parseInt(celda(r, 3), 10) || 0,
+            estado: String(celda(r, 5)).trim(),
+            aporte: parseFloat(celda(r, 7)) || 0,
+            total: parseFloat(celda(r, 10)) || 0
+          });
+        });
+        pedidos.sort(function (a, b) { return a.correlativo - b.correlativo; });
+      }
+
+      // Detalle de lo registrado, por id_recepcion: lo que se muestra al
+      // volver a elegir un productor ya recibido (tal cual quedó guardado).
+      var recepDetalle = {};
+      var CALIDADES = ['OK', 'Con observaciones', 'Rechazado', 'No llegó'];
+
+      function parseItems(res) {
+        itemsEd = [];
+        if (!res) return;
+        res.table.rows.forEach(function (r) {
+          var idPed = String(celda(r, 1)).trim();
+          if (idPed.indexOf(idEdicion) === -1) return;
+          itemsEd.push({
+            id_item: String(celda(r, 0)).trim(),
+            id_pedido: idPed,
+            id_producto: String(celda(r, 2)).trim(),
+            id_productor: String(celda(r, 3) || '').trim(),
+            cantidad: parseFloat(celda(r, 4)) || 0,
+            fraccion: String(celda(r, 5)).trim(),
+            precio: parseFloat(celda(r, 6)) || 0,
+            efectiva: parseFloat(celda(r, 10)) || 0
+          });
+        });
+      }
+
+      function parseRecepciones(res) {
+        recibidosVivo = {};
+        recepDetalle = {};
+        if (!res) return;
+        try {
+          res.table.rows.forEach(function (r) {
+            if (String(celda(r, 1)).trim() !== idEdicion) return;
+            var idP = String(celda(r, 2)).trim();
+            if (idP && !recibidosVivo[idP]) {
+              recibidosVivo[idP] = String(celda(r, 4)).trim();
+            }
+            var idRec = String(celda(r, 0)).trim();
+            if (!idRec) return;
+            // calidad y observaciones: se buscan por valor entre las columnas
+            // I..L para no depender del orden exacto de la hoja
+            var calidad = '', obs = '';
+            for (var c = 8; c <= 11; c++) {
+              var v = String(celda(r, c) || '').trim();
+              if (!v) continue;
+              if (!calidad && CALIDADES.indexOf(v) !== -1) { calidad = v; continue; }
+              if (calidad && !obs && isNaN(parseFloat(v))) obs = v;
+            }
+            recepDetalle[idRec] = {
+              recibida: parseFloat(celda(r, 7)) || 0,   // cantidad efectiva
+              calidad: calidad,
+              obs: obs
+            };
+          });
+        } catch (e) { recibidosVivo = {}; recepDetalle = {}; }
+      }
+
+      function idRecepcionDe(idProd, l) {
+        return 'REC' + idEdicion + '-' + idProd + '-' + l.id_producto + (l.fraccion ? '-' + l.fraccion : '');
       }
 
       // ── carga inicial ────────────────────────────────────────────
@@ -307,7 +1204,12 @@
           gviz('sheet=Productores&range=A1:B300&headers=1'),
           gviz('sheet=Plan_Fraccionamiento&range=A1:L500&headers=1'),
           gviz('sheet=Pedidos&range=A1:U3000&headers=1'),
-          gviz('sheet=Consumidores&range=A1:B2000&headers=1')
+          gviz('sheet=Consumidores&range=A1:D2000&headers=1'),
+          gviz('sheet=Propuestas_Ajuste&range=A1:N500&headers=1'),
+          gviz('sheet=Items&range=A1:M3000&headers=1'),
+          // Las dos últimas no son críticas: si la hoja no existe, seguimos igual.
+          gviz('sheet=Equipo&range=A1:E100&headers=1').catch(function () { return null; }),
+          gviz('sheet=Recepciones&range=A1:L4000&headers=1').catch(function () { return null; })
         ]).then(function (res) {
           var rowsK = res[0].table.rows;
           idEdicion = rowsK.length ? String(celda(rowsK[0], 0)).trim() : '';
@@ -334,8 +1236,22 @@
           });
 
           if (!idEdicion || !lineas.length) {
+            // Sin comandas no hay nada que recibir: la app se cierra entera
+            // para que nadie cargue recepciones "al aire".
             $('estado-edicion').className = 'aviso rojo';
-            $('estado-edicion').textContent = 'No hay comandas generadas. Primero generá las comandas de la edición desde la herramienta de equipa.';
+            $('estado-edicion').innerHTML = '🚫 <strong>Todavía no hay comandas generadas' +
+              (idEdicion ? ' para ' + idEdicion : '') + '.</strong><br>' +
+              'La app del galpón se usa después de generar las comandas: es lo que ' +
+              'define qué tiene que traer cada productor.<br><br>' +
+              '<a href="comandas.html" class="btn btn--ghost btn--small">Ir a comandas a productores</a>';
+            var tabs = document.querySelector('.tabs');
+            if (tabs) tabs.style.display = 'none';
+            VISTAS.forEach(function (v) {
+              var el = $('vista-' + v);
+              if (el) el.style.display = 'none';
+            });
+            var barra = $('btn-refrescar-todo');
+            if (barra && barra.parentNode) barra.parentNode.style.display = 'none';
             return;
           }
 
@@ -343,6 +1259,7 @@
           planFracc = [];
           res[3].table.rows.forEach(function (r) {
             if (String(celda(r, 1)).trim() !== idEdicion) return;
+            if (!String(celda(r, 2)).trim() && !String(celda(r, 5) || '').trim()) return;   // fila vacía
             planFracc.push({
               id_plan: String(celda(r, 0)).trim(),
               id_producto: String(celda(r, 2)).trim(),
@@ -355,32 +1272,37 @@
             });
           });
 
-          // Consumidores (nombres)
+          // Consumidores (nombres + contacto)
           res[5].table.rows.forEach(function (r) {
             var id = String(celda(r, 0)).trim();
-            if (id) consumidores[id] = String(celda(r, 1)).trim();
+            if (!id) return;
+            consumidores[id] = String(celda(r, 1)).trim();
+            contactos[id] = {
+              tel: String(celda(r, 2)).trim(),
+              email: String(celda(r, 3)).trim()
+            };
           });
 
           // Pedidos de la edición
-          pedidos = [];
-          res[4].table.rows.forEach(function (r) {
-            if (String(celda(r, 1)).trim() !== idEdicion) return;
-            pedidos.push({
-              id_pedido: String(celda(r, 0)).trim(),
-              id_consumidor: String(celda(r, 2)).trim(),
-              correlativo: parseInt(celda(r, 3), 10) || 0,
-              estado: String(celda(r, 5)).trim(),
-              total: parseFloat(celda(r, 10)) || 0
-            });
-          });
-          pedidos.sort(function (a, b) { return a.correlativo - b.correlativo; });
+          parsePedidos(res[4]);
+
+          // Propuestas de ajuste pendientes de esta edición
+          parsePropuestas(res[6]);
+
+          // Ítems de los pedidos de esta edición
+          parseItems(res[7]);
+
+          parseEquipo(res[8]);
+          parseRecepciones(res[9]);
 
           $('estado-edicion').innerHTML = 'Edición vigente: <strong>' + idEdicion +
             '</strong> · ' + contarProductores() + ' productores · ' +
             planFracc.length + ' fracciones · ' + pedidos.length + ' pedidos';
+          armarSelectsEquipo();
           armarSelect();
           renderFracc();
-          renderRetiro();
+          renderAjustes();
+          renderEntrega();
         }).catch(function () {
           $('estado-edicion').className = 'aviso rojo';
           $('estado-edicion').textContent = 'No pudimos leer la planilla. Revisá la conexión y recargá.';
@@ -393,8 +1315,17 @@
         return Object.keys(s).length;
       }
 
+      function marcaRecibido(idProd) {
+        if (recibidosVivo[idProd]) {
+          return ' ✓ recibido' + (recibidosVivo[idProd] ? ' por ' + recibidosVivo[idProd] : '');
+        }
+        if (registrados[idProd]) return ' ✓ registrado';
+        return '';
+      }
+
       function armarSelect() {
         var sel = $('sel-productor');
+        var elegido = sel.value;
         sel.innerHTML = '<option value="">— Elegir productor —</option>';
         var vistos = {};
         lineas.forEach(function (l) {
@@ -402,12 +1333,59 @@
           vistos[l.id_productor] = true;
           var op = document.createElement('option');
           op.value = l.id_productor;
-          op.textContent = (productores[l.id_productor] || l.id_productor) +
-            (registrados[l.id_productor] ? ' ✓ registrado' : '');
+          op.textContent = (productores[l.id_productor] || l.id_productor) + marcaRecibido(l.id_productor);
           sel.appendChild(op);
         });
         sel.disabled = false;
+        if (elegido) sel.value = elegido;
       }
+
+      // Una recepción por productor y edición: si ya está registrada, la
+      // pantalla la muestra en modo lectura y el botón queda apagado. No hay
+      // forma de duplicarla.
+      function actualizarAvisoDup(idProd) {
+        var caja = $('aviso-dup');
+        var quien = recibidosVivo[idProd] || '';
+        var ya = quien || registrados[idProd];
+        var btn = $('btn-confirmar');
+
+        if (!ya) {
+          caja.style.display = 'none';
+          bloqueadoPorRegistro = false;
+          btn.textContent = 'Registrar recepción';
+          validar();
+          return;
+        }
+
+        bloqueadoPorRegistro = true;
+        caja.style.display = 'block';
+        caja.className = 'aviso';
+        caja.innerHTML = '✅ <strong>Recepción ya registrada' +
+          (quien ? ' por ' + quien : '') + '.</strong>';
+        btn.disabled = true;
+        btn.textContent = 'Ya registrada ✓';
+        // dejar los renglones en modo consulta
+        Array.prototype.forEach.call($('lista-items').querySelectorAll('input, select'), function (el) {
+          el.disabled = true;
+        });
+      }
+
+      // ↻ vuelve a leer la hoja Recepciones sin recargar la página
+      $('btn-refrescar').addEventListener('click', function () {
+        var b = $('btn-refrescar');
+        b.disabled = true;
+        b.textContent = 'Actualizando…';
+        gviz('sheet=Recepciones&range=A1:L4000&headers=1&_=' + Date.now())
+          .then(function (res) { parseRecepciones(res); })
+          .catch(function () {})
+          .then(function () {
+            armarSelect();
+            var elegido = $('sel-productor').value;
+            if (elegido) actualizarAvisoDup(elegido);
+            b.disabled = false;
+            b.textContent = '↻ Actualizar registros';
+          });
+      });
 
       // ── render de la lista del productor elegido ─────────────────
       $('sel-productor').addEventListener('change', function () {
@@ -425,9 +1403,7 @@
 
         propias.forEach(function (l, i) {
           var esperado = l.fraccion ? l.cant_paquetes : l.cant_efectiva;
-          var unidadMuestra = l.fraccion
-            ? 'paquetes de ' + l.fraccion + ' ' + l.unidad
-            : l.unidad;
+          var unidadMuestra = etiquetaUnidad(l, esperado);
 
           var div = document.createElement('div');
           div.className = 'item no-llego';
@@ -438,7 +1414,11 @@
               '<div class="linea-nombre"></div>' +
               '<div class="detalle" style="display:none;">' +
                 '<label>Recibido:</label>' +
-                '<input type="number" class="cant" inputmode="decimal" min="0" step="any">' +
+                '<span class="stepper">' +
+                  '<button type="button" class="step-btn step-menos" tabindex="-1" aria-label="restar uno">−</button>' +
+                  '<input type="text" class="cant" inputmode="decimal">' +
+                  '<button type="button" class="step-btn step-mas" tabindex="-1" aria-label="sumar uno">+</button>' +
+                '</span>' +
                 '<span class="muted" style="font-size:0.8rem;"></span>' +
                 '<select class="calidad">' +
                   '<option value="OK">Calidad OK</option>' +
@@ -447,26 +1427,161 @@
                 '</select>' +
                 '<input type="text" class="obs" placeholder="Observación (opcional)">' +
               '</div>' +
+              '<div class="nota-novedad"></div>' +
             '</div>';
 
           div.querySelector('.linea-nombre').textContent =
-            (l.producto || l.id_producto) + ' — esperado: ' + esperado + ' ' + unidadMuestra;
-          div.querySelector('.cant').value = esperado;
-          div.querySelector('.detalle .muted').textContent = unidadMuestra;
+            (l.producto || l.id_producto) + ' — esperado: ' + numeroAmable(esperado) + ' ' + unidadMuestra;
+          var inp = div.querySelector('.cant');
+          inp.value = numeroAmable(esperado);
+          inp.dataset.max = String(esperado);   // tope: lo solicitado
+          inp.dataset.paso = '1';                // − / + suman de a una unidad vendible
+          div.querySelector('.detalle .muted').textContent = etiquetaUnidad(l, 0);
+
+          // Ya registrada: se muestra exactamente como quedó en la planilla
+          var det = recepDetalle[idRecepcionDe(idProd, l)];
+          if ((recibidosVivo[idProd] || registrados[idProd]) && det) {
+            var factor = l.fraccion ? (factorFraccion(l.fraccion) || 1) : 1;
+            var mostrada = Math.round((det.recibida / factor) * 1000) / 1000;
+            var llego = det.calidad !== 'No llegó' && !(det.calidad === '' && det.recibida <= 0);
+            var chk = div.querySelector('.chk');
+            chk.checked = llego;
+            if (llego) {
+              div.classList.add('tildado'); div.classList.remove('no-llego');
+              div.querySelector('.detalle').style.display = 'flex';
+              inp.value = numeroAmable(mostrada);
+              var selCal = div.querySelector('.calidad');
+              if (det.calidad && CALIDADES.indexOf(det.calidad) !== -1 && det.calidad !== 'No llegó') {
+                selCal.value = det.calidad;
+              }
+              var obsTxt = det.obs.replace(/ · Rechazado: no se recibe$/, '')
+                                  .replace(/ · [\d.,]+ × .*$/, '');
+              div.querySelector('.obs').value = obsTxt;
+            }
+          }
 
           cont.appendChild(div);
         });
 
+        marcarTodos();
         $('titulo-productor').textContent = productores[idProd] || idProd;
         $('card-items').style.display = 'block';
         $('card-items').dataset.idProd = idProd;
+        actualizarAvisoDup(idProd);
         actualizarProgreso();
       }
 
-      // Tildar / destildar
+      // Estado visual de un renglón: verde si llegó completo y sin
+      // observaciones · rojo si hay novedad (falta, rechazo, observación).
+      function marcarNovedad(item) {
+        var chk = item.querySelector('.chk');
+        var inp = item.querySelector('.cant');
+        var cal = item.querySelector('.calidad').value;
+        var max = parseFloat(inp.dataset.max);
+        var v = aNumero(inp.value);
+        var nota = item.querySelector('.nota-novedad');
+        var msg = '';
+        var estado = 'ok';   // 'ok' | 'parcial' (amarillo) | 'nada' (rojo)
+
+        if (!chk.checked) {
+          msg = '⚠ No llegó nada: se registra como faltante completo.';
+          estado = 'nada';
+        } else if (cal === 'Rechazado') {
+          msg = '⚠ Rechazado: no se recibe, cuenta como faltante completo (' +
+            numeroAmable(max) + ').';
+          estado = 'nada';
+        } else if (v === null) {
+          msg = '⚠ Falta indicar cuánto llegó.';
+          estado = 'parcial';
+        } else if (v <= 0) {
+          msg = '⚠ No llegó nada: faltante completo.';
+          estado = 'nada';
+        } else if (!isNaN(max) && v < max - 0.0001) {
+          msg = '⚠ Llegó de menos: falta ' + numeroAmable(Math.round((max - v) * 1000) / 1000) + '.';
+          estado = 'parcial';
+        } else if (cal === 'Con observaciones') {
+          msg = '⚠ Llegó completo, pero con observaciones.';
+          estado = 'parcial';
+        }
+
+        nota.textContent = msg;
+        item.classList.toggle('parcial', estado === 'parcial');
+        item.classList.toggle('nada', estado === 'nada');
+      }
+
+      function marcarTodos() {
+        Array.prototype.forEach.call($('lista-items').querySelectorAll('.item'), marcarNovedad);
+      }
+
+      // Un producto marcado "Rechazado" al que le suben la cantidad vuelve a
+      // "Calidad OK": así un toque equivocado en Rechazado se deshace solo.
+      function desRechazarSiSube(item, v) {
+        var sel = item.querySelector('.calidad');
+        if (sel && sel.value === 'Rechazado' && v > 0) sel.value = 'OK';
+      }
+
+      // Tope y formato del campo "Recibido" (acepta coma: 0,25)
+      $('lista-items').addEventListener('input', function (e) {
+        if (!e.target.classList.contains('cant')) return;
+        desRechazarSiSube(e.target.closest('.item'), aNumero(e.target.value) || 0);
+        var max = parseFloat(e.target.dataset.max);
+        var v = aNumero(e.target.value);
+        if (!isNaN(max) && v !== null && v > max) {
+          e.target.value = numeroAmable(max);
+          var nota = e.target.closest('.detalle').querySelector('.muted');
+          var original = nota.dataset.orig || nota.textContent;
+          nota.dataset.orig = original;
+          nota.textContent = '⚠ máximo: lo solicitado (' + numeroAmable(max) + ')';
+          nota.style.color = '#A6402B';
+          setTimeout(function () {
+            nota.textContent = original;
+            nota.style.color = '';
+          }, 2500);
+        }
+        marcarNovedad(e.target.closest('.item'));
+      });
+
+      // − / + para cargar lo recibido con el dedo, sin tipear (celular)
+      $('lista-items').addEventListener('click', function (e) {
+        var btn = e.target.closest ? e.target.closest('.step-btn') : null;
+        if (!btn) return;
+        var item = btn.closest('.item');
+        var inp = item.querySelector('.cant');
+        if (!inp || inp.disabled) return;
+        var max = parseFloat(inp.dataset.max);
+        var paso = parseFloat(inp.dataset.paso) || 1;
+        var v = aNumero(inp.value);
+        if (v === null) v = 0;
+        v += btn.classList.contains('step-mas') ? paso : -paso;
+        v = Math.round(v * 10000) / 10000;
+        if (v < 0) v = 0;
+        if (!isNaN(max) && v > max) v = max;
+        inp.value = numeroAmable(v);
+        desRechazarSiSube(item, v);
+        marcarNovedad(item);
+      });
+
+      // Tildar / destildar · cambio de calidad
       $('lista-items').addEventListener('change', function (e) {
-        if (!e.target.classList.contains('chk')) return;
         var item = e.target.closest('.item');
+        if (!item) return;
+
+        if (e.target.classList.contains('calidad')) {
+          var inp = item.querySelector('.cant');
+          if (e.target.value === 'Rechazado') {
+            // lo rechazado no se recibe: cuenta entero como faltante. La
+            // cantidad NO se bloquea: si fue un toque por error, con − / +
+            // o escribiendo se vuelve a aceptar.
+            if ((aNumero(inp.value) || 0) > 0) inp.dataset.previo = inp.value;
+            inp.value = '0';
+          } else if ((aNumero(inp.value) || 0) <= 0) {
+            inp.value = inp.dataset.previo || numeroAmable(inp.dataset.max);
+          }
+          marcarNovedad(item);
+          return;
+        }
+
+        if (!e.target.classList.contains('chk')) return;
         var det = item.querySelector('.detalle');
         if (e.target.checked) {
           item.classList.add('tildado');
@@ -477,6 +1592,7 @@
           item.classList.add('no-llego');
           det.style.display = 'none';
         }
+        marcarNovedad(item);
         actualizarProgreso();
       });
 
@@ -487,12 +1603,30 @@
         validar();
       }
 
+      var bloqueadoPorRegistro = false;
+
       function validar() {
-        var ok = $('recibido-por').value.trim() !== '' && $('clave').value.trim() !== '';
+        var ok = valorQuien('recibido-por') !== '' && $('clave').value.trim() !== '' &&
+                 !bloqueadoPorRegistro;
         $('btn-confirmar').disabled = !ok;
       }
-      $('recibido-por').addEventListener('input', validar);
       $('clave').addEventListener('input', validar);
+
+      // Mostrar/ocultar el campo "Otra persona…" y revalidar en los 4 selects
+      QUIEN_IDS.forEach(function (id) {
+        var sel = $(id), otro = $(id + '-otro');
+        sel.addEventListener('change', function () {
+          otro.style.display = (sel.value === '__otro__') ? 'block' : 'none';
+          if (sel.value === '__otro__') otro.focus();
+          revalidarQuien();
+        });
+        otro.addEventListener('input', revalidarQuien);
+      });
+      function revalidarQuien() {
+        validar();
+        validarFracc();
+        validarEntrega();
+      }
 
       // ── envío ────────────────────────────────────────────────────
       $('btn-confirmar').addEventListener('click', function () {
@@ -504,13 +1638,19 @@
         propias.forEach(function (l, i) {
           var div = divs[i];
           var tildado = div.querySelector('.chk').checked;
+          var calidad = tildado ? div.querySelector('.calidad').value : 'No llegó';
           var factor = l.fraccion ? factorFraccion(l.fraccion) : 1;
           var pedidaEf = l.cant_efectiva;
-          var recibidaMostrada = tildado ? (parseFloat(div.querySelector('.cant').value) || 0) : 0;
+          // lo rechazado no se recibe: cuenta como faltante completo
+          var recibidaMostrada = (tildado && calidad !== 'Rechazado')
+            ? (aNumero(div.querySelector('.cant').value) || 0) : 0;
           var recibidaEf = l.fraccion ? recibidaMostrada * factor : recibidaMostrada;
           recibidaEf = Math.round(recibidaEf * 1000) / 1000;
 
           var obs = tildado ? div.querySelector('.obs').value.trim() : 'No recibido';
+          if (calidad === 'Rechazado') {
+            obs = (obs ? obs + ' · ' : '') + 'Rechazado: no se recibe';
+          }
           if (l.fraccion && tildado) {
             obs = (obs ? obs + ' · ' : '') + recibidaMostrada + ' × ' + l.fraccion + ' ' + l.unidad;
           }
@@ -522,7 +1662,7 @@
             cantidad_pedida: pedidaEf,
             cantidad_recibida: recibidaEf,
             diferencia: Math.round((recibidaEf - pedidaEf) * 1000) / 1000,
-            calidad: tildado ? div.querySelector('.calidad').value : 'No llegó',
+            calidad: calidad,
             observaciones: obs
           });
         });
@@ -530,7 +1670,7 @@
         var payload = {
           id_edicion: idEdicion,
           id_productor: idProd,
-          recibido_por: $('recibido-por').value.trim(),
+          recibido_por: valorQuien('recibido-por'),
           clave: $('clave').value.trim(),
           items: items
         };
@@ -551,6 +1691,7 @@
           btn.disabled = false;
           $('ok-box').style.display = 'block';
           registrados[idProd] = true;
+          recibidosVivo[idProd] = valorQuien('recibido-por');
           armarSelect();
           $('sel-productor').value = idProd;
           window.scrollTo(0, document.body.scrollHeight);
@@ -607,11 +1748,10 @@
 
       function validarFracc() {
         var nuevas = $('lista-fracc').querySelectorAll('.chk-f:checked:not(:disabled)').length;
-        var ok = $('preparado-por').value.trim() !== '' &&
+        var ok = valorQuien('preparado-por') !== '' &&
                  $('clave-fracc').value.trim() !== '' && nuevas > 0;
         $('btn-fracc').disabled = !ok;
       }
-      $('preparado-por').addEventListener('input', validarFracc);
       $('clave-fracc').addEventListener('input', validarFracc);
 
       $('btn-fracc').addEventListener('click', function () {
@@ -626,7 +1766,7 @@
         var payload = {
           tipo: 'fraccionamiento',
           id_edicion: idEdicion,
-          preparado_por: $('preparado-por').value.trim(),
+          preparado_por: valorQuien('preparado-por'),
           clave: $('clave-fracc').value.trim(),
           items: items
         };
@@ -650,125 +1790,1025 @@
             var chk = divs[i].querySelector('.chk-f');
             if (chk.checked && !chk.disabled) {
               p.estado = 'Preparado';
-              p.preparado_por = $('preparado-por').value.trim();
+              p.preparado_por = valorQuien('preparado-por');
             }
           });
           renderFracc();
         }
       });
 
-      // ── Retiro ───────────────────────────────────────────────────
+      // ── Entrega ──────────────────────────────────────────────────
       function nombreConsumidor(p) {
         return consumidores[p.id_consumidor] || p.id_consumidor || '(sin nombre)';
       }
 
-      function renderRetiro() {
-        var cont = $('lista-retiro');
+      function infoProducto(id) {
+        for (var i = 0; i < lineas.length; i++) {
+          if (lineas[i].id_producto === id) {
+            return { nombre: lineas[i].producto || id, unidad: lineas[i].unidad || '' };
+          }
+        }
+        return { nombre: id, unidad: '' };
+      }
+
+      function itemsDePedido(idPed) {
+        return itemsEd.filter(function (it) { return it.id_pedido === idPed; });
+      }
+
+      function textoItem(it) {
+        var info = infoProducto(it.id_producto);
+        if (it.efectiva <= 0) return info.nombre + ' — faltante, no va';
+        var cant;
+        if (it.fraccion) {
+          cant = it.cantidad + ' × ' + it.fraccion + (info.unidad ? ' ' + info.unidad : '');
+        } else {
+          cant = it.efectiva + (info.unidad ? ' ' + info.unidad : '');
+        }
+        return cant + ' · ' + info.nombre;
+      }
+
+      // Estado local de la solapa
+      var pedAbierto = '';   // id_pedido desplegado
+      var overrides = {};    // id_pedido -> {estado} optimista hasta que la planilla confirme
+      var LS_TICKS = 'nm_ticks_';  // tildes de control guardados en el navegador
+
+      function rango(e) { return e === 'Entregado' ? 2 : (e === 'Armado' ? 1 : 0); }
+
+      function estadoDe(p) {
+        var base = (p.estado === 'Entregado' || p.estado === 'Armado') ? p.estado : 'Pendiente';
+        var o = overrides[p.id_pedido];
+        // Un registro recién hecho (incluso un "deshacer") manda sobre la
+        // planilla hasta que ella lo confirme (~30 seg); después expira.
+        if (o && (Date.now() - o.ts) < 180000) return o.estado;
+        return base;
+      }
+
+      function leerTicks(idPed) {
+        try {
+          return JSON.parse(localStorage.getItem(LS_TICKS + idEdicion + '-' + idPed)) || [];
+        } catch (e) { return []; }
+      }
+
+      function guardarTicks(idPed, idxs) {
+        try {
+          if (idxs.length) localStorage.setItem(LS_TICKS + idEdicion + '-' + idPed, JSON.stringify(idxs));
+          else localStorage.removeItem(LS_TICKS + idEdicion + '-' + idPed);
+        } catch (e) {}
+      }
+
+      function renderEntrega() {
+        var cont = $('lista-entrega');
         cont.innerHTML = '';
 
         if (!pedidos.length) {
           cont.innerHTML = '<p class="muted">No hay pedidos para esta edición.</p>';
-          $('progreso-retiro').textContent = '';
+          actualizarTablero();
           return;
         }
 
-        var filtro = $('buscar-retiro').value.trim().toLowerCase();
+        var filtro = $('buscar-entrega').value.trim().toLowerCase();
 
         pedidos.forEach(function (p, i) {
           var nombre = nombreConsumidor(p);
           if (filtro && nombre.toLowerCase().indexOf(filtro) === -1) return;
 
-          var yaEntregado = (p.estado === 'Entregado');
-          var div = document.createElement('div');
-          div.className = 'item' + (yaEntregado ? ' preparado' : ' no-llego');
-          div.dataset.idx = String(i);
-          div.innerHTML =
-            '<input type="checkbox" class="chk-r" aria-label="Retirado"' +
-              (yaEntregado ? ' checked disabled' : '') + '>' +
-            '<div class="cuerpo">' +
-              '<div class="linea-nombre"></div>' +
-              '<div class="quien"></div>' +
-            '</div>';
-          div.querySelector('.linea-nombre').textContent =
+          var est = estadoDe(p);   // 'Pendiente' | 'Armado' | 'Entregado'
+          var its = itemsDePedido(p.id_pedido);
+          var ticks = leerTicks(p.id_pedido);
+
+          var card = document.createElement('div');
+          card.className = 'ped-card ' + est.toLowerCase() +
+            (pedAbierto === p.id_pedido ? ' abierto' : '');
+          card.dataset.idx = String(i);
+          card.innerHTML =
+            '<div class="ped-head">' +
+              '<span class="caret">▶</span>' +
+              '<span class="ped-nombre"></span>' +
+              '<span class="chip-ped ' + est.toLowerCase() + '">' +
+                (est === 'Pendiente' ? 'pendiente'
+                  : est === 'Armado' ? '✓ armado' : '✓✓ entregado') +
+              '</span>' +
+            '</div>' +
+            '<div class="ped-cuerpo"></div>';
+          card.querySelector('.ped-nombre').textContent =
             'N° ' + p.correlativo + ' · ' + nombre +
             ' — $' + Math.round(p.total).toLocaleString('es-AR');
-          div.querySelector('.quien').textContent = yaEntregado ? '✓ Entregado' : '';
-          cont.appendChild(div);
+
+          var cuerpo = card.querySelector('.ped-cuerpo');
+
+          if (its.length) {
+            its.forEach(function (it, k) {
+              var noVa = it.efectiva <= 0;
+              var marcado = noVa || est !== 'Pendiente' || ticks.indexOf(k) !== -1;
+              var fila = document.createElement('label');
+              fila.className = 'item-ped' + (noVa ? ' no-va' : (marcado ? ' ok' : ''));
+              fila.innerHTML = '<input type="checkbox" class="chk-item" data-k="' + k + '"' +
+                ((noVa || est !== 'Pendiente') ? ' disabled' : '') +
+                (marcado ? ' checked' : '') + '><span class="txt"></span>';
+              fila.querySelector('.txt').textContent = textoItem(it);
+              // de qué cajón sale: el productor, al lado de cada ítem
+              var idProdIt = it.id_productor || productorDeProducto(it.id_producto);
+              if (idProdIt) {
+                var tag = document.createElement('span');
+                tag.className = 'tag-productor';
+                tag.textContent = productores[idProdIt] || idProdIt;
+                fila.querySelector('.txt').appendChild(tag);
+              }
+              cuerpo.appendChild(fila);
+            });
+            var prog = document.createElement('div');
+            prog.className = 'prog-control';
+            cuerpo.appendChild(prog);
+          } else {
+            cuerpo.insertAdjacentHTML('beforeend',
+              '<p class="muted" style="margin-top:var(--s-3);">Este pedido no tiene ítems cargados.</p>');
+          }
+
+          if (est === 'Pendiente') {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'btn-accion armar';
+            b.textContent = '✓ Cajón armado';
+            cuerpo.appendChild(b);
+          } else if (est === 'Armado') {
+            var b2 = document.createElement('button');
+            b2.type = 'button';
+            b2.className = 'btn-accion';
+            b2.textContent = 'Entregar pedido';
+            cuerpo.appendChild(b2);
+          } else if (est === 'Entregado') {
+            var b3 = document.createElement('button');
+            b3.type = 'button';
+            b3.className = 'btn-deshacer';
+            b3.textContent = '↩ Deshacer entrega (si fue un error)';
+            cuerpo.appendChild(b3);
+          }
+
+          cont.appendChild(card);
+          actualizarControlPed(card);
         });
-        actualizarProgresoRetiro();
+        actualizarTablero();
       }
 
-      $('buscar-retiro').addEventListener('input', renderRetiro);
+      function actualizarControlPed(card) {
+        var tot = card.querySelectorAll('.chk-item:not(:disabled)').length;
+        var ok = card.querySelectorAll('.chk-item:checked:not(:disabled)').length;
+        var prog = card.querySelector('.prog-control');
+        if (prog) prog.textContent = tot ? ok + ' de ' + tot + ' controlados' : '';
+        var btn = card.querySelector('.btn-accion.armar');
+        if (btn) btn.disabled = tot > 0 && ok < tot;
+      }
 
-      $('lista-retiro').addEventListener('change', function (e) {
-        if (!e.target.classList.contains('chk-r') || e.target.disabled) return;
-        var item = e.target.closest('.item');
-        if (e.target.checked) { item.classList.add('tildado'); item.classList.remove('no-llego'); }
-        else { item.classList.remove('tildado'); item.classList.add('no-llego'); }
-        actualizarProgresoRetiro();
+      function actualizarTablero() {
+        var tot = pedidos.length;
+        var arm = 0, ent = 0;
+        pedidos.forEach(function (p) {
+          var e = estadoDe(p);
+          if (e === 'Armado' || e === 'Entregado') arm++;
+          if (e === 'Entregado') ent++;
+        });
+        $('num-armados').textContent = arm + ' de ' + tot;
+        $('num-entregados').textContent = ent + ' de ' + tot;
+        $('barra-armados').style.width = tot ? (arm / tot * 100) + '%' : '0%';
+        $('barra-entregados').style.width = tot ? (ent / tot * 100) + '%' : '0%';
+      }
+
+      $('buscar-entrega').addEventListener('input', renderEntrega);
+
+      // Tocar la tarjeta la despliega; tocar el botón registra la acción
+      $('lista-entrega').addEventListener('click', function (e) {
+        var deshacer = e.target.closest('.btn-deshacer');
+        if (deshacer) {
+          var cardD = deshacer.closest('.ped-card');
+          var pD = pedidos[parseInt(cardD.dataset.idx, 10)];
+          // volver a "Armado" reusa la ruta armado del escenario de Make
+          registrarAccion(pD, 'armado', deshacer);
+          return;
+        }
+        var btn = e.target.closest('.btn-accion');
+        if (btn) {
+          var card = btn.closest('.ped-card');
+          var p = pedidos[parseInt(card.dataset.idx, 10)];
+          if (btn.classList.contains('armar')) {
+            registrarAccion(p, 'armado', btn);
+            return;
+          }
+          // Entregar pide confirmación: dos toques seguidos
+          if (!btn.dataset.conf) {
+            btn.dataset.conf = '1';
+            btn.classList.add('confirmar');
+            btn.textContent = '¿Confirmás la entrega? Tocá de nuevo';
+            setTimeout(function () {
+              if (!btn.isConnected || !btn.dataset.conf) return;
+              delete btn.dataset.conf;
+              btn.classList.remove('confirmar');
+              btn.textContent = 'Entregar pedido';
+            }, 4000);
+            return;
+          }
+          delete btn.dataset.conf;
+          registrarAccion(p, 'entrega', btn);
+          return;
+        }
+        var head = e.target.closest('.ped-head');
+        if (!head) return;
+        var card2 = head.closest('.ped-card');
+        var p2 = pedidos[parseInt(card2.dataset.idx, 10)];
+        pedAbierto = (pedAbierto === p2.id_pedido) ? '' : p2.id_pedido;
+        renderEntrega();
       });
 
-      function actualizarProgresoRetiro() {
-        var hechos = pedidos.filter(function (p) { return p.estado === 'Entregado'; }).length;
-        var nuevos = $('lista-retiro').querySelectorAll('.chk-r:checked:not(:disabled)').length;
-        $('progreso-retiro').textContent = hechos + ' de ' + pedidos.length +
-          ' ya entregados · ' + nuevos + ' por registrar ahora';
-        validarRetiro();
-      }
-
-      function validarRetiro() {
-        var nuevos = $('lista-retiro').querySelectorAll('.chk-r:checked:not(:disabled)').length;
-        var ok = $('entregado-por').value.trim() !== '' &&
-                 $('clave-retiro').value.trim() !== '' && nuevos > 0;
-        $('btn-retiro').disabled = !ok;
-      }
-      $('entregado-por').addEventListener('input', validarRetiro);
-      $('clave-retiro').addEventListener('input', validarRetiro);
-
-      $('btn-retiro').addEventListener('click', function () {
-        var divs = $('lista-retiro').querySelectorAll('.item');
-        var items = [];
-        Array.prototype.forEach.call(divs, function (div) {
-          var chk = div.querySelector('.chk-r');
-          if (chk.checked && !chk.disabled) {
-            items.push({ id_pedido: pedidos[parseInt(div.dataset.idx, 10)].id_pedido });
-          }
+      // Tachar productos mientras se arma el cajón (queda guardado en el navegador)
+      $('lista-entrega').addEventListener('change', function (e) {
+        if (!e.target.classList.contains('chk-item')) return;
+        var card = e.target.closest('.ped-card');
+        var p = pedidos[parseInt(card.dataset.idx, 10)];
+        e.target.closest('.item-ped').classList.toggle('ok', e.target.checked);
+        var idxs = [];
+        Array.prototype.forEach.call(card.querySelectorAll('.chk-item:not(:disabled)'), function (ci) {
+          if (ci.checked) idxs.push(parseInt(ci.getAttribute('data-k'), 10));
         });
-        if (!items.length) return;
+        guardarTicks(p.id_pedido, idxs);
+        actualizarControlPed(card);
+      });
 
-        var payload = {
-          tipo: 'retiro',
-          id_edicion: idEdicion,
-          entregado_por: $('entregado-por').value.trim(),
-          clave: $('clave-retiro').value.trim(),
-          items: items
-        };
+      function avisoEntrega(msg) {
+        var caja = $('aviso-entrega');
+        if (!msg) { caja.style.display = 'none'; return; }
+        caja.style.display = 'block';
+        caja.textContent = msg;
+      }
 
-        var btn = $('btn-retiro');
+      function registrarAccion(p, accion, btn) {
+        avisoEntrega('');
+        var quien = valorQuien('entregado-por');
+        var clave = $('clave-entrega').value.trim();
+        if (!quien) { avisoEntrega('Antes de registrar, elegí tu nombre arriba de todo.'); return; }
+        if (!clave) { avisoEntrega('Falta la clave de equipo (arriba de todo).'); return; }
+
         btn.disabled = true;
-        btn.textContent = 'Registrando…';
+        btn.textContent = 'Guardando…';
 
         fetch(WEBHOOK_RETIRO, {
           method: 'POST',
           mode: 'no-cors',
           headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify(payload)
-        }).then(finR).catch(finR);
+          body: JSON.stringify({
+            tipo: 'retiro',      // el escenario de Make espera este valor: no cambiar
+            accion: accion,      // 'armado' | 'entrega'
+            id_edicion: idEdicion,
+            entregado_por: quien,
+            clave: clave,
+            items: [{ id_pedido: p.id_pedido }]
+          })
+        }).then(fin).catch(fin);
 
-        function finR() {
-          btn.textContent = 'Registrar retiros';
-          $('ok-retiro').style.display = 'block';
-          Array.prototype.forEach.call(divs, function (div) {
-            var chk = div.querySelector('.chk-r');
-            if (chk.checked && !chk.disabled) {
-              pedidos[parseInt(div.dataset.idx, 10)].estado = 'Entregado';
+        function fin() {
+          overrides[p.id_pedido] = {
+            estado: accion === 'armado' ? 'Armado' : 'Entregado',
+            ts: Date.now()
+          };
+          if (accion === 'armado') guardarTicks(p.id_pedido, []);
+          if (accion === 'entrega') {
+            pedAbierto = '';
+            // ¿era el último? -> la edición pasa a Liquidación (paso 7)
+            var todos = pedidos.length > 0 && pedidos.every(function (p2) {
+              return estadoDe(p2) === 'Entregado';
+            });
+            if (todos && WEBHOOK_A5.indexOf('https://hook.') === 0) {
+              fetch(WEBHOOK_A5, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify({
+                  tipo: 'iniciar_liquidacion',
+                  clave: $('clave-entrega').value.trim()
+                })
+              }).catch(function () {});
+              var caja = $('aviso-entrega');
+              caja.style.display = 'block';
+              caja.style.background = 'rgba(110, 142, 85, 0.12)';
+              caja.style.borderLeftColor = 'var(--c-verde-ok, #5b7a3a)';
+              caja.style.color = 'var(--c-corteza, #4a4234)';
+              caja.textContent = '🎉 ¡Último pedido entregado! La edición pasa a ' +
+                'Liquidación y la guía avanza al paso 7.';
+            }
+          }
+          renderEntrega();
+        }
+      }
+
+      // La pantalla se actualiza sola: relee Pedidos cada 30 segundos
+      // (leer la planilla no gasta operaciones de Make)
+      function refrescarPedidos() {
+        if (!idEdicion) return;
+        gviz('sheet=Pedidos&range=A1:U3000&headers=1')
+          .then(function (res) { parsePedidos(res); renderEntrega(); })
+          .catch(function () {});
+      }
+      setInterval(function () {
+        if ($('vista-entrega').style.display === 'none') return;
+        refrescarPedidos();
+      }, 30000);
+      document.getElementById('tab-entrega').addEventListener('click', refrescarPedidos);
+
+      // ══ Refresco en vivo de TODO el galpón ═══════════════════════
+      // Varios teléfonos trabajan a la vez sobre la misma edición: la
+      // pantalla relee la planilla sola y avisa cuándo fue la última vez.
+      // Nunca pisa lo que alguien está cargando sin guardar.
+      var ultimoRefrescoGalpon = Date.now();
+
+      function hayTrabajoSinGuardar() {
+        // recepción con un productor abierto y renglones ya tocados
+        if ($('card-items').style.display !== 'none' &&
+            $('lista-items').querySelectorAll('.chk:checked').length) return true;
+        // fraccionamiento con tildes nuevos
+        if ($('lista-fracc').querySelectorAll('.chk-f:checked:not(:disabled)').length) return true;
+        // ajustes con recortes cargados
+        var recortes = $('lista-ajustes').querySelectorAll('.in-aj');
+        for (var i = 0; i < recortes.length; i++) {
+          if (parseFloat(recortes[i].value) > 0) return true;
+        }
+        return false;
+      }
+
+      function textoAntiguedad() {
+        var seg = Math.round((Date.now() - ultimoRefrescoGalpon) / 1000);
+        if (seg < 15) return 'datos al día';
+        if (seg < 90) return 'actualizado hace ' + seg + ' s';
+        return 'actualizado hace ' + Math.round(seg / 60) + ' min';
+      }
+
+      function pintarAntiguedad() {
+        var el = $('sello-refresco');
+        if (!el) return;
+        var seg = Math.round((Date.now() - ultimoRefrescoGalpon) / 1000);
+        el.textContent = textoAntiguedad();
+        el.style.color = seg > 120 ? '#A6402B' : '';
+      }
+      setInterval(pintarAntiguedad, 5000);
+
+      function refrescoVivo(manual) {
+        if (!idEdicion) return;
+        var btn = $('btn-refrescar-todo');
+        if (manual && btn) { btn.disabled = true; btn.textContent = 'Actualizando…'; }
+
+        Promise.all([
+          gviz('sheet=Recepciones&range=A1:L4000&headers=1').catch(function () { return null; }),
+          gviz('sheet=Pedidos&range=A1:U3000&headers=1').catch(function () { return null; }),
+          gviz('sheet=Propuestas_Ajuste&range=A1:N500&headers=1').catch(function () { return null; }),
+          gviz('sheet=Plan_Fraccionamiento&range=A1:L500&headers=1').catch(function () { return null; })
+        ]).then(function (res) {
+          var ocupado = hayTrabajoSinGuardar();
+
+          // quién ya fue recibido (marca ✓ en el select de productores)
+          if (res[0]) {
+            parseRecepciones(res[0]);
+            if ($('card-items').style.display === 'none') armarSelect();
+            else actualizarAvisoDup($('card-items').dataset.idProd);
+          }
+
+          // pedidos y entrega: siempre seguro de re-renderizar
+          if (res[1]) { parsePedidos(res[1]); renderEntrega(); }
+
+          // ajustes: solo si nadie está cargando recortes
+          if (res[2] && !ocupado) {
+            parsePropuestas(res[2]);
+            renderAjustes();
+          }
+
+          // fraccionamiento: solo si nadie está tildando
+          if (res[3] && !ocupado) {
+            planFracc = [];
+            res[3].table.rows.forEach(function (r) {
+              if (String(celda(r, 1)).trim() !== idEdicion) return;
+              if (!String(celda(r, 2)).trim() && !String(celda(r, 5) || '').trim()) return;   // fila vacía
+              planFracc.push({
+                id_plan: String(celda(r, 0)).trim(),
+                id_producto: String(celda(r, 2)).trim(),
+                nombre: String(celda(r, 3)).trim(),
+                fraccion: String(celda(r, 4)).trim(),
+                porciones: celda(r, 5),
+                unidades: celda(r, 6),
+                estado: String(celda(r, 8)).trim(),
+                preparado_por: String(celda(r, 9)).trim()
+              });
+            });
+            renderFracc();
+          }
+
+          ultimoRefrescoGalpon = Date.now();
+          pintarAntiguedad();
+          if (manual && btn) {
+            btn.disabled = false;
+            btn.textContent = '↻ Actualizar';
+            if (ocupado) {
+              avisoEntrega('');
+              var s = $('sello-refresco');
+              if (s) s.textContent = 'actualizado (no se tocó lo que estás cargando)';
+            }
+          }
+        }).catch(function () {
+          if (manual && btn) { btn.disabled = false; btn.textContent = '↻ Actualizar'; }
+        });
+      }
+
+      $('btn-refrescar-todo').addEventListener('click', function () { refrescoVivo(true); });
+
+      // cada 25 segundos, al volver a la pestaña y al volver con "atrás"
+      setInterval(function () { if (!document.hidden) refrescoVivo(false); }, 25000);
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) refrescoVivo(false);
+      });
+      window.addEventListener('focus', function () { refrescoVivo(false); });
+      window.addEventListener('pageshow', function (e) { if (e.persisted) refrescoVivo(false); });
+
+      // (compat: otras partes del código llaman a esta validación)
+      function validarEntrega() { /* la validación ahora ocurre al tocar cada botón */ }
+
+      // ── Vista Ajustes (D3) ───────────────────────────────────────
+      function pesos(n) { return '$' + Math.round(n).toLocaleString('es-AR'); }
+
+      // productor de un producto según las comandas (por si el ítem no lo trae)
+      function productorDeProducto(id) {
+        for (var i = 0; i < lineas.length; i++) {
+          if (lineas[i].id_producto === id) return lineas[i].id_productor;
+        }
+        return '';
+      }
+
+      function nombreProducto(id) {
+        for (var i = 0; i < lineas.length; i++) {
+          if (lineas[i].id_producto === id) return lineas[i].producto;
+        }
+        return id;
+      }
+
+      function pedidoDe(idPed) {
+        for (var i = 0; i < pedidos.length; i++) {
+          if (pedidos[i].id_pedido === idPed) return pedidos[i];
+        }
+        return null;
+      }
+
+      // Propuestas pendientes de la edición, UNA por producto. D2 genera una
+      // propuesta nueva en cada recepción comparando lo pedido original con lo
+      // recibido, así que un faltante ya repartido vuelve a aparecer como
+      // "Pendiente" (y con varias filas). Acá se juntan por producto y se
+      // guardan todos los ids, para marcarlos a todos como aplicados. El
+      // faltante REAL se calcula en renderAjustes contra los ítems de hoy.
+      function parsePropuestas(res) {
+        var porProducto = {};
+        res.table.rows.forEach(function (r) {
+          if (String(celda(r, 1)).trim() !== idEdicion) return;
+          if (String(celda(r, 10)).trim() !== 'Pendiente') return;
+          var idProd = String(celda(r, 3)).trim();
+          var id = String(celda(r, 0)).trim();
+          var p = porProducto[idProd];
+          if (!p) p = porProducto[idProd] = { id_producto: idProd, ids: [] };
+          // la fila más nueva (última recepción) pisa los datos
+          p.id_propuesta = id;
+          p.pedida = parseFloat(celda(r, 4)) || 0;
+          p.recibida = parseFloat(celda(r, 5)) || 0;
+          p.faltante = parseFloat(celda(r, 6)) || 0;
+          p.detalle = String(celda(r, 13)).trim();
+          if (p.ids.indexOf(id) === -1) p.ids.push(id);
+        });
+        propuestas = Object.keys(porProducto).map(function (k) { return porProducto[k]; });
+      }
+
+      function afectadosDe(idProducto) {
+        var out = [];
+        itemsEd.forEach(function (it, idx) {
+          if (it.id_producto !== idProducto || it.efectiva <= 0) return;
+          var ped = pedidoDe(it.id_pedido);
+          if (!ped) return;
+          out.push({ item: it, idx: idx, ped: ped });
+        });
+        out.sort(function (a, b) { return a.ped.correlativo - b.ped.correlativo; });
+        return out;
+      }
+
+      // Relee Propuestas_Ajuste (las escribe D2 después de revisar faltantes)
+      function refrescarPropuestas(btn) {
+        if (!idEdicion) return;
+        if (btn) { btn.disabled = true; btn.textContent = 'Buscando…'; }
+        gviz('sheet=Propuestas_Ajuste&range=A1:N500&headers=1&_=' + Date.now())
+          .then(function (res) {
+            parsePropuestas(res);
+            renderAjustes();
+          })
+          .catch(function () {})
+          .then(function () {
+            if (btn) { btn.disabled = false; btn.textContent = '↻ Buscar faltantes nuevos'; }
+          });
+      }
+
+      $('btn-refrescar-ajustes').addEventListener('click', function () {
+        refrescarPropuestas(this);
+      });
+      // al entrar a la solapa Ajustes, buscar lo último registrado
+      document.getElementById('tab-ajustes').addEventListener('click', function () {
+        refrescarPropuestas(null);
+      });
+
+      // Una "unidad vendible" del item: lo que representa 1 en el selector
+      // del formulario (1 unidad, 1 paquete de 1/2 kg, etc.).
+      function pasoDe(item) {
+        var p = (item.cantidad > 0) ? (item.efectiva / item.cantidad) : 1;
+        p = Math.round(p * 10000) / 10000;
+        return (p > 0) ? p : 1;
+      }
+
+      function renderAjustes() {
+        var cont = $('lista-ajustes');
+        cont.innerHTML = '';
+        if (!propuestas.length) {
+          cont.innerHTML = '<p class="muted">No hay faltantes pendientes de repartir en esta edición. ' +
+            'Si recién corriste la revisión de faltantes en la solapa Recepción, esperá unos ' +
+            'segundos y tocá «↻ Buscar faltantes nuevos».</p>';
+          $('btn-ajustes').disabled = true;
+          $('zona-auto').style.display = 'none';
+          return;
+        }
+        // Faltante real de cada propuesta: lo que los pedidos tienen HOY
+        // (ya descontado lo que se recortó antes) menos lo recibido. Si da
+        // cero, ese faltante ya fue repartido y no se vuelve a mostrar: es lo
+        // que evita aplicar el mismo recorte dos veces.
+        var visibles = 0;
+        propuestas.forEach(function (pr) {
+          var af = afectadosDe(pr.id_producto);
+          var actual = 0;
+          af.forEach(function (a) { actual += a.item.efectiva; });
+          pr.pendiente_hoy = Math.round(actual * 10000) / 10000;
+          pr.faltante_actual = Math.max(0, Math.round((actual - pr.recibida) * 10000) / 10000);
+          pr.ya_recortado = Math.max(0, Math.round((pr.pedida - actual) * 10000) / 10000);
+          if (pr.faltante_actual > 0.0001) visibles++;
+        });
+        // Lo contrario también es un problema: si los pedidos tienen MENOS de
+        // lo que llegó, se recortó de más (p. ej. un recorte aplicado dos
+        // veces) y hay mercadería sin dueño. No se corrige sola: se avisa.
+        var demas = propuestas.filter(function (pr) {
+          return pr.recibida - pr.pendiente_hoy > 0.0001;
+        });
+        var avisoDemas = '';
+        if (demas.length) {
+          avisoDemas = '<div class="prop-card" style="border-color:#A6402B;">' +
+            '<h3 style="color:#A6402B;">⚠️ Se recortó de más</h3>' +
+            '<p class="prop-sub">En estos productos los pedidos tienen <strong>menos</strong> de lo que ' +
+            'llegó al galpón: sobra mercadería que no está asignada a nadie. Revisá en la planilla ' +
+            '(hoja Items) si algún recorte se aplicó dos veces.</p><ul style="margin:6px 0 0 18px;">' +
+            demas.map(function (pr) {
+              return '<li>' + (pr.detalle || pr.id_producto) + ': llegaron ' + numeroAmable(pr.recibida) +
+                ', los pedidos tienen ' + numeroAmable(pr.pendiente_hoy) + ' → sobran <strong>' +
+                numeroAmable(Math.round((pr.recibida - pr.pendiente_hoy) * 10000) / 10000) + '</strong></li>';
+            }).join('') + '</ul></div>';
+        }
+        if (!visibles) {
+          cont.innerHTML = avisoDemas + '<p class="muted">Los faltantes registrados ya fueron repartidos: no hay ' +
+            'nada pendiente de recortar en esta edición.</p>';
+          $('btn-ajustes').disabled = true;
+          $('zona-auto').style.display = 'none';
+          return;
+        }
+        if (avisoDemas) cont.insertAdjacentHTML('beforeend', avisoDemas);
+        $('zona-auto').style.display = 'block';
+        propuestas.forEach(function (pr, pi) {
+          if (pr.faltante_actual <= 0.0001) return;   // ya repartido
+          var af = afectadosDe(pr.id_producto);
+          var html = '<div class="prop-card">';
+          html += '<h3>⚠️ ' + (pr.detalle || pr.id_producto) + '</h3>';
+          html += '<p class="prop-sub">Se pidieron ' + pr.pedida + ', llegaron ' + pr.recibida +
+            (pr.ya_recortado > 0.0001
+              ? ' (ya se recortaron ' + numeroAmable(pr.ya_recortado) + ' antes)'
+              : '') +
+            ' → hay que recortar <strong>' + numeroAmable(pr.faltante_actual) + '</strong>.</p>';
+          if (!af.length) {
+            html += '<p class="muted">No encontramos pedidos con este producto.</p>';
+          }
+          if (af.length) {
+            html += '<p class="titulo-manual">RECORTE MANUAL</p>';
+          }
+          af.forEach(function (a) {
+            // el paso es una unidad de lo que se vende: si pidió 3 paquetes de
+            // 1/2 kg (efectiva 1,5) el paso es 0,5; si pidió 3 unidades, 1.
+            var paso = pasoDe(a.item);
+            html += '<div class="prop-fila">' +
+              '<span class="prop-quien">N° ' + a.ped.correlativo + ' · ' +
+              (consumidores[a.ped.id_consumidor] || a.ped.id_consumidor) +
+              ' — pidió <strong>' + a.item.efectiva + '</strong></span>' +
+              '<label>recortar ' +
+              '<input type="number" class="in-aj" data-pi="' + pi + '" data-idx="' + a.idx +
+              '" min="0" max="' + a.item.efectiva + '" step="' + paso +
+              '" data-paso="' + paso + '" value="0">' +
+              '</label><span class="queda"></span></div>';
+          });
+          html += '<p class="restante" data-pi="' + pi + '"></p></div>';
+          cont.insertAdjacentHTML('beforeend', html);
+        });
+
+        Array.prototype.forEach.call(cont.querySelectorAll('.in-aj'), function (inp) {
+          inp.addEventListener('input', recalcAjustes);
+        });
+        recalcAjustes();
+      }
+
+      function recalcAjustes() {
+        var cont = $('lista-ajustes');
+        var algo = false;
+        propuestas.forEach(function (pr, pi) {
+          if (!cont.querySelector('.restante[data-pi="' + pi + '"]')) return;   // ya repartida, sin tarjeta
+          var suma = 0;
+          var pasoMax = 1;   // la unidad vendible más grande entre los pedidos afectados
+          Array.prototype.forEach.call(cont.querySelectorAll('.in-aj[data-pi="' + pi + '"]'), function (inp) {
+            var v = parseFloat(inp.value) || 0;
+            var max = parseFloat(inp.max) || 0;
+            var paso = parseFloat(inp.dataset.paso) || 1;
+            if (paso > pasoMax) pasoMax = paso;
+            if (v < 0) { v = 0; inp.value = 0; }
+            if (v > max) { v = max; inp.value = max; }
+            // solo múltiplos de una unidad vendible
+            var mult = Math.round(v / paso) * paso;
+            mult = Math.round(mult * 10000) / 10000;
+            if (Math.abs(mult - v) > 0.0001) { v = mult; inp.value = v; }
+            suma += v;
+            var it = itemsEd[parseInt(inp.getAttribute('data-idx'), 10)];
+            var q = inp.parentNode.parentNode.querySelector('.queda');
+            q.textContent = v > 0
+              ? '→ se lleva ' + (Math.round((it.efectiva - v) * 10000) / 10000) +
+                ' · ' + pesos(v * it.precio) + ' menos a pagar'
+              : '';
+          });
+          if (suma > 0) algo = true;
+          var p = cont.querySelector('.restante[data-pi="' + pi + '"]');
+          var resto = Math.round((pr.faltante_actual - suma) * 10000) / 10000;
+          if (resto > 0.0001) {
+            // todavía falta cubrir: hay que recortar más
+            p.className = 'restante pendiente';
+            p.textContent = 'Falta repartir ' + numeroAmable(resto) + ' de ' + numeroAmable(pr.faltante_actual);
+          } else if (resto < -0.0001 && (-resto) >= pasoMax - 0.0001) {
+            // recorte excesivo de verdad (más de una unidad vendible de más)
+            p.className = 'restante pendiente';
+            p.textContent = 'Estás recortando ' + numeroAmable(-resto) + ' de más';
+          } else if (resto < -0.0001) {
+            // sobra menos de una unidad vendible: es inevitable, no se puede
+            // partir el envase. El faltante queda cubierto.
+            p.className = 'restante completo';
+            p.textContent = '✓ Repartido (sobra ' + numeroAmable(-resto) +
+              ': no se puede partir la unidad, queda en el Nodo)';
+          } else {
+            p.className = 'restante completo';
+            p.textContent = '✓ Repartido completo';
+          }
+        });
+        $('btn-ajustes').disabled = !algo;
+      }
+
+      // ── Recorte automático por orden de llegada ─────────────────
+      // El faltante lo absorben los pedidos más nuevos: quien pidió primero
+      // se queda con lo suyo. Se recorta de a una unidad vendible por vez.
+      $('btn-auto').addEventListener('click', function () {
+        var cont = $('lista-ajustes');
+        var resumen = [];
+
+        propuestas.forEach(function (pr, pi) {
+          var inputs = Array.prototype.slice.call(
+            cont.querySelectorAll('.in-aj[data-pi="' + pi + '"]'));
+          if (!inputs.length) return;
+
+          // del más nuevo al más viejo (afectadosDe los ordena por correlativo)
+          inputs.reverse();
+          inputs.forEach(function (inp) { inp.value = 0; });
+
+          var falta = pr.faltante_actual;
+          inputs.forEach(function (inp) {
+            if (falta <= 0.0001) return;
+            var max = parseFloat(inp.max) || 0;
+            var paso = parseFloat(inp.dataset.paso) || 1;
+            // Se recorta en unidades enteras vendibles. Como no se puede
+            // entregar media unidad que no llegó, este pedido absorbe las
+            // unidades enteras necesarias para cubrir lo que falta
+            // (redondeando hacia arriba), hasta el tope de lo que pidió.
+            var pasosNec = Math.ceil((falta - 0.0001) / paso);   // enteras para cubrir el faltante
+            var pasosMax = Math.round(max / paso);               // lo máximo que tiene este pedido
+            var pasos = Math.min(pasosNec, pasosMax);
+            var recorte = Math.round(pasos * paso * 10000) / 10000;
+            if (recorte > 0) {
+              inp.value = recorte;
+              falta = Math.round((falta - recorte) * 10000) / 10000;
+              var it = itemsEd[parseInt(inp.getAttribute('data-idx'), 10)];
+              resumen.push({ idx: parseInt(inp.getAttribute('data-idx'), 10), recorte: recorte, it: it });
             }
           });
-          renderRetiro();
+        });
+
+        recalcAjustes();
+        var caja = $('ok-ajustes');
+        caja.style.display = 'block';
+        caja.style.background = '';
+        caja.style.color = '';
+        caja.innerHTML = resumen.length
+          ? '✂️ <strong>Recorte propuesto por orden de llegada.</strong> Mirá abajo cómo ' +
+            'queda cada pedido: se puede retocar a mano antes de enviar. Cuando esté bien, ' +
+            'tocá <strong>ENVIAR PEDIDOS ACTUALIZADOS</strong>.'
+          : '⚠️ No se pudo repartir automáticamente: revisá los faltantes a mano.';
+        $('lista-ajustes').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+
+      $('btn-ajustes').addEventListener('click', function () {
+        var caja = $('ok-ajustes');
+        function errorA(msg) {
+          caja.style.display = 'block';
+          caja.style.background = 'rgba(166, 64, 43, 0.10)';
+          caja.style.color = '#A6402B';
+          caja.textContent = msg;
+        }
+        if (!webhookListo(WEBHOOK_D3, 'D3 · Ajustes', 'ok-ajustes')) return;
+        var quien = valorQuien('aprobado-por');
+        var clave = $('clave-ajustes').value.trim();
+        if (!quien) { errorA('Falta tu nombre.'); return; }
+        if (!clave) { errorA('Falta la clave de equipo.'); return; }
+
+        var recortes = {};      // idx de itemsEd -> cantidad recortada
+        var porPropuesta = {};  // pi -> [idx]
+        Array.prototype.forEach.call($('lista-ajustes').querySelectorAll('.in-aj'), function (inp) {
+          var v = parseFloat(inp.value) || 0;
+          if (v <= 0) return;
+          var idx = parseInt(inp.getAttribute('data-idx'), 10);
+          var pi = parseInt(inp.getAttribute('data-pi'), 10);
+          recortes[idx] = v;
+          (porPropuesta[pi] = porPropuesta[pi] || []).push(idx);
+        });
+
+        // Se manda SOLO el recorte (delta) de cada ítem. Los valores nuevos
+        // los calcula Make leyendo la fila viva de la planilla, así dos
+        // personas pueden ajustar a la vez sin pisarse.
+        var itemsOut = [], tocados = {};
+        Object.keys(recortes).forEach(function (k) {
+          var idx = parseInt(k, 10), it = itemsEd[idx], v = recortes[idx];
+          var factor = factorFraccion(it.fraccion) || 1;
+          var recorteCant = Math.round((v / factor) * 10000) / 10000;
+          itemsOut.push({
+            id_item: it.id_item,
+            id_pedido: it.id_pedido,
+            id_producto: it.id_producto,
+            producto: nombreProducto(it.id_producto),
+            recorte_efectiva: v,
+            recorte_cantidad: recorteCant,
+            // Valores ABSOLUTOS: D3 escribe "queda en X" en vez de "restale Y".
+            // Así, si el mismo envío llega dos veces (doble clic, Replay), el
+            // resultado es el mismo y no se descuenta de más.
+            cantidad_antes: it.cantidad,
+            cantidad_nueva: Math.max(0, Math.round((it.cantidad - recorteCant) * 10000) / 10000),
+            cantidad_efectiva_antes: it.efectiva,
+            cantidad_efectiva_nueva: Math.max(0, Math.round((it.efectiva - v) * 10000) / 10000),
+            precio: it.precio,
+            observacion: 'Faltante del productor: -' + v
+          });
+          tocados[it.id_pedido] = true;
+        });
+
+        // Datos informativos por pedido (para el mail de aviso). Los montos
+        // nuevos NO van acá: los recalcula Make sumando Items!H de la fila viva.
+        var pedidosOut = Object.keys(tocados).map(function (idPed) {
+          var ped = pedidoDe(idPed);
+          var devuelto = 0, detalle = [];
+          itemsEd.forEach(function (it, idx) {
+            if (it.id_pedido !== idPed) return;
+            var v = recortes[idx] || 0;
+            if (v > 0) {
+              devuelto += v * it.precio;
+              detalle.push('• ' + nombreProducto(it.id_producto) + ': pediste ' + it.efectiva +
+                ' y te llevás ' + (Math.round((it.efectiva - v) * 10000) / 10000) +
+                ' (' + pesos(v * it.precio) + ' menos)');
+            }
+          });
+          var c = contactos[ped.id_consumidor] || {};
+          return {
+            id_pedido: idPed,
+            correlativo: ped.correlativo,
+            nombre: consumidores[ped.id_consumidor] || ped.id_consumidor,
+            email: c.email || '',
+            telefono: c.tel || '',
+            total_anterior: ped.total,
+            monto_devuelto: Math.round(devuelto),
+            detalle_recortes: detalle.join('\n')
+          };
+        });
+
+        var propuestasOut = Object.keys(porPropuesta).map(function (k) {
+          var pi = parseInt(k, 10), pr = propuestas[pi];
+          var txt = porPropuesta[pi].map(function (idx) {
+            var it = itemsEd[idx], ped = pedidoDe(it.id_pedido);
+            return 'N° ' + (ped ? ped.correlativo : '?') + ' ' +
+              (ped ? (consumidores[ped.id_consumidor] || '') : '') + ': -' + recortes[idx];
+          }).join(' | ');
+          return { id_propuesta: pr.id_propuesta, ids: pr.ids, ajustes: txt, aprobado_por: quien };
+        });
+
+        var btn = $('btn-ajustes');
+        btn.disabled = true;
+        btn.textContent = 'Enviando…';
+
+        fetch(WEBHOOK_D3, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            tipo: 'ajustes',
+            id_edicion: idEdicion,
+            aprobado_por: quien,
+            clave: clave,
+            items: itemsOut,
+            pedidos: pedidosOut,
+            propuestas: propuestasOut
+          })
+        }).then(finA).catch(finA);
+
+        // Verificación real: D3 tiene que marcar cada propuesta como
+        // "Aplicada" en Propuestas_Ajuste (columna K). Hasta que eso no se
+        // vea en la planilla, no damos el recorte por hecho.
+        var idsEnviadas = [];
+        propuestasOut.forEach(function (p) {
+          (p.ids || [p.id_propuesta]).forEach(function (id) { if (idsEnviadas.indexOf(id) === -1) idsEnviadas.push(id); });
+        });
+        function finA() {
+          caja.style.display = 'block';
+          caja.style.background = '';
+          caja.style.color = '';
+          caja.innerHTML = '⏳ <strong>Aplicando los recortes en la planilla…</strong> ' +
+            'Esta pantalla avisa sola cuando queden confirmados.';
+          var intentos = 0;
+          var timer = setInterval(function () {
+            intentos++;
+            if (intentos > 20) {   // ~2,5 minutos
+              clearInterval(timer);
+              btn.disabled = false;
+              btn.textContent = 'ENVIAR PEDIDOS ACTUALIZADOS';
+              errorA('⚠️ Los recortes NO quedaron aplicados: en la planilla las propuestas ' +
+                'siguen como "Pendiente". El escenario D3 de Make no las procesó (revisá ' +
+                'que esté encendido, que la clave sea la correcta y el History de D3). ' +
+                'Lo cargado acá sigue en pantalla: cuando D3 esté bien, volvé a tocar ENVIAR.');
+              return;
+            }
+            gviz('sheet=Propuestas_Ajuste&range=A1:N500&headers=1&_=' + Date.now())
+              .then(function (res) {
+                var pendientes = 0;
+                res.table.rows.forEach(function (r) {
+                  var id = String(celda(r, 0)).trim();
+                  if (idsEnviadas.indexOf(id) === -1) return;
+                  if (String(celda(r, 10)).trim() === 'Pendiente') pendientes++;
+                });
+                if (pendientes > 0) return;   // D3 todavía trabajando
+                clearInterval(timer);
+                btn.textContent = 'Pedidos actualizados ✓';
+                caja.innerHTML = '✅ <strong>Recortes aplicados y confirmados en la planilla.</strong> ' +
+                  'A cada consumidor afectado le llega por correo el detalle nuevo de su ' +
+                  'pedido con el total actualizado.';
+                // releer ítems (cantidades ya recortadas) y propuestas
+                gviz('sheet=Items&range=A1:M3000&headers=1&_=' + Date.now())
+                  .then(function (ri) { parseItems(ri); })
+                  .catch(function () {})
+                  .then(function () { refrescarPropuestas(null); });
+              })
+              .catch(function () {});
+          }, 8000);
         }
       });
 
+      // ── D2 · Revisar faltantes ───────────────────────────────────
+      $('btn-faltantes').addEventListener('click', function () {
+        var caja = $('ok-faltantes');
+        if (!webhookListo(WEBHOOK_D2, 'D2 · Faltantes', 'ok-faltantes')) return;
+
+        if (!idEdicion) {
+          caja.style.display = 'block';
+          caja.style.background = 'rgba(166, 64, 43, 0.10)';
+          caja.style.color = '#A6402B';
+          caja.textContent = 'Todavía no cargó la edición vigente. Esperá unos segundos y probá de nuevo.';
+          return;
+        }
+        var clave = $('clave-falt').value.trim();
+        if (!clave) {
+          caja.style.display = 'block';
+          caja.style.background = 'rgba(166, 64, 43, 0.10)';
+          caja.style.color = '#A6402B';
+          caja.textContent = 'Falta la clave de equipo.';
+          return;
+        }
+
+        var btn = $('btn-faltantes');
+        btn.disabled = true;
+        btn.textContent = 'Revisando…';
+
+        // registro en Make (genera las propuestas de ajuste)
+        fetch(WEBHOOK_D2, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ tipo: 'faltantes', id_edicion: idEdicion, clave: clave })
+        }).catch(function () {});
+
+        // detalle EN PANTALLA, leído directo de la planilla
+        gviz('sheet=Recepciones&range=A1:L4000&headers=1&_=' + Date.now())
+          .then(function (res) {
+            var agg = {};
+            var conRecepcion = {};
+            res.table.rows.forEach(function (r) {
+              if (String(celda(r, 1)).trim() !== idEdicion) return;
+              var idP = String(celda(r, 2)).trim();
+              var idProd = String(celda(r, 5)).trim();
+              if (!idProd) return;
+              conRecepcion[idP] = true;
+              var k = idP + '|' + idProd;
+              if (!agg[k]) agg[k] = { idP: idP, idProd: idProd, ped: 0, rec: 0 };
+              agg[k].ped += parseFloat(celda(r, 6)) || 0;
+              agg[k].rec += parseFloat(celda(r, 7)) || 0;
+            });
+
+            var falt = [];
+            Object.keys(agg).forEach(function (k) {
+              var a = agg[k];
+              if (a.rec < a.ped - 0.0001) falt.push(a);
+            });
+            falt.sort(function (a, b) { return (a.idP + a.idProd) < (b.idP + b.idProd) ? -1 : 1; });
+
+            // productores con comanda que todavía no tienen recepción registrada
+            var pendientes = {};
+            lineas.forEach(function (l) {
+              if (!conRecepcion[l.id_productor]) pendientes[l.id_productor] = true;
+            });
+            var sinRec = Object.keys(pendientes).map(function (id) {
+              return productores[id] || id;
+            });
+
+            function num(n) { return Math.round(n * 100) / 100; }
+            var html = '';
+            if (sinRec.length) {
+              html += '<div class="aviso rojo" style="display:block;">Todavía no se registró ' +
+                'la recepción de: <strong>' + sinRec.join(', ') + '</strong>. ' +
+                'Sus faltantes no están incluidos abajo.</div>';
+            }
+            if (!falt.length) {
+              html += '<p class="muted" style="font-size:0.95rem;">🎉 Sin faltantes: llegó todo lo pedido' +
+                (sinRec.length ? ' (de lo recibido hasta ahora)' : '') + '.</p>';
+            } else {
+              html += '<p style="font-weight:700; margin:6px 0;">' + falt.length +
+                ' producto' + (falt.length === 1 ? '' : 's') + ' con faltante:</p>';
+              falt.forEach(function (a) {
+                html += '<div class="item no-llego" style="display:block; padding:10px 14px;">' +
+                  '<strong>' + nombreProducto(a.idProd) + '</strong> · ' +
+                  (productores[a.idP] || a.idP) + '<br>' +
+                  '<span class="muted" style="font-size:0.88rem;">pedido: ' + num(a.ped) +
+                  ' · llegó: ' + num(a.rec) +
+                  ' · <strong style="color:#A6402B;">falta: ' + num(a.ped - a.rec) +
+                  '</strong></span></div>';
+              });
+            }
+            $('tabla-faltantes').innerHTML = html;
+
+            btn.disabled = false;
+            btn.textContent = 'Revisar faltantes de la edición';
+            caja.style.display = 'block';
+            caja.style.background = '';
+            caja.style.color = '';
+            caja.innerHTML = '✅ Revisión hecha: el detalle está acá abajo. Los faltantes ' +
+              'quedan registrados para repartirlos en la solapa <strong>Ajustes</strong>.';
+            // dar tiempo a que D2 escriba las propuestas y traerlas solas
+            setTimeout(function () { refrescarPropuestas(null); }, 12000);
+            setTimeout(function () { refrescarPropuestas(null); }, 30000);
+          })
+          .catch(function () {
+            btn.disabled = false;
+            btn.textContent = 'Revisar faltantes de la edición';
+            caja.style.display = 'block';
+            caja.style.background = 'rgba(166, 64, 43, 0.10)';
+            caja.style.color = '#A6402B';
+            caja.textContent = 'No pude leer la planilla para mostrar el detalle. Probá de nuevo.';
+          });
+      });
+
       cargar();
+    })();
+  </script>
+  <script>
+    // Clave de equipo compartida entre las páginas durante la sesión:
+    // precarga todos los campos de clave y guarda lo que se tipee.
+    (function () {
+      'use strict';
+      var K = 'nm_clave_equipo';
+      var inputs = document.querySelectorAll('input[type="password"][id^="clave"]');
+      var guardada = '';
+      try { guardada = sessionStorage.getItem(K) || ''; } catch (e) {}
+      inputs.forEach(function (inp) {
+        if (guardada && !inp.value) inp.value = guardada;
+        inp.addEventListener('change', function () {
+          var v = inp.value.trim();
+          if (!v) return;
+          try { sessionStorage.setItem(K, v); } catch (e) {}
+          inputs.forEach(function (otro) { if (!otro.value) otro.value = v; });
+        });
+      });
     })();
   </script>
 </body>
