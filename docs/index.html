@@ -424,6 +424,7 @@
           tabla con el alias/CBU de cada uno para hacer las transferencias.
           Las transferencias las hace siempre una persona.
         </p>
+        <div class="ok-mini" id="control-totales" style="display:none;"></div>
         <div class="campo-a1">
           <input type="password" id="clave-liq" placeholder="Clave de equipo">
           <button type="button" class="btn btn--primary btn--small" id="btn-liquidacion">
@@ -660,6 +661,65 @@
 
       // Lee Pagos_productor de la edición y, si hay filas, muestra la tabla.
       // Devuelve la cantidad de filas encontradas.
+      // Control de totales: la planilla recalcula cada pedido desde sus ítems
+      // (Pedidos!Y subtotal_calc, Z total_calc, AA diferencia). Si K (lo que
+      // se le cobra a la persona) no coincide con lo que suman sus ítems,
+      // acá aparece y la liquidación no se genera hasta corregirlo.
+      var totalesConDiferencia = null;   // null = no se pudo controlar
+      function controlarTotales(id) {
+        return gviz('sheet=Pedidos&range=A1:AA2000&headers=1').then(function (res) {
+          var malos = [], hayControl = false, total = 0;
+          res.table.rows.forEach(function (r) {
+            if (String(celda(r, 1)).trim() !== id) return;
+            total++;
+            var ctrl = String(celda(r, 26)).trim();   // AA diferencia
+            if (ctrl !== '') hayControl = true;
+            if (ctrl !== '' && ctrl.toLowerCase() !== 'ok') {
+              malos.push({
+                correlativo: String(celda(r, 3)).trim(),
+                cobrado: parseFloat(celda(r, 10)) || 0,      // K total_a_abonar
+                calculado: parseFloat(celda(r, 25)) || 0     // Z total_calc
+              });
+            }
+          });
+          var caja = $('control-totales');
+          if (!caja) return malos;
+          if (!total) { caja.style.display = 'none'; totalesConDiferencia = null; return malos; }
+          if (!hayControl) {
+            totalesConDiferencia = null;
+            caja.style.display = 'block';
+            caja.style.background = 'rgba(166, 64, 43, 0.10)';
+            caja.style.borderLeftColor = '#A6402B';
+            caja.style.color = '#A6402B';
+            caja.innerHTML = '⚠️ <strong>Sin control de totales.</strong> La hoja Pedidos no tiene las ' +
+              'columnas de control (Y, Z, AA). Hasta que estén, nadie verifica que lo que se cobra ' +
+              'coincida con los ítems.';
+            return malos;
+          }
+          totalesConDiferencia = malos.length;
+          caja.style.display = 'block';
+          if (!malos.length) {
+            caja.style.background = '';
+            caja.style.borderLeftColor = '';
+            caja.style.color = '';
+            caja.innerHTML = '✅ <strong>Totales controlados:</strong> los ' + total +
+              ' pedidos de ' + id + ' coinciden con sus ítems.';
+          } else {
+            caja.style.background = 'rgba(166, 64, 43, 0.10)';
+            caja.style.borderLeftColor = '#A6402B';
+            caja.style.color = '#A6402B';
+            caja.innerHTML = '⛔ <strong>' + malos.length + ' pedido' + (malos.length === 1 ? '' : 's') +
+              ' con el total desparejo</strong> respecto de sus ítems. Hay que corregirlo en la ' +
+              'planilla antes de liquidar:<ul style="margin:6px 0 0 18px;">' +
+              malos.map(function (m) {
+                return '<li>N° ' + m.correlativo + ': se cobra $ ' + m.cobrado.toLocaleString('es-AR') +
+                  ', los ítems suman $ ' + m.calculado.toLocaleString('es-AR') + '</li>';
+              }).join('') + '</ul>';
+          }
+          return malos;
+        });
+      }
+
       function leerLiquidacion(id) {
         return Promise.all([
           gviz('sheet=Pagos_productor&range=A1:J2000&headers=1'),
@@ -736,6 +796,11 @@
           return;
         }
         if (!edicionVigente) { aviso('No encuentro la edición en curso.', true); return; }
+        if (totalesConDiferencia) {
+          aviso('⛔ Hay pedidos con el total desparejo respecto de sus ítems (ver arriba). ' +
+            'Corregilos en la planilla y recargá esta página antes de liquidar.', true);
+          return;
+        }
 
         btn.disabled = true;
         btn.textContent = 'Calculando…';
@@ -857,6 +922,12 @@
         gate('btn-liquidacion', 'porque-liq', !cerrada && paso >= 7,
           'Se habilita cuando termina la entrega (la edición pasa a «Liquidación»).');
         if (!cerrada && paso >= 7) {
+          controlarTotales(id).then(function (malos) {
+            if (malos.length) {
+              gate('btn-liquidacion', 'porque-liq', false,
+                'Hay ' + malos.length + ' pedido(s) con el total desparejo: corregilos antes de liquidar.');
+            }
+          }).catch(function () {});
           leerLiquidacion(id).then(function (n) {
             if (n > 0) {
               gate('btn-liquidacion', 'porque-liq', false,
