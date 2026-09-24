@@ -793,26 +793,6 @@
       </div>
     </div>
 
-    <div class="card-eq" id="card-faltantes">
-      <h2>⚠️ Revisar faltantes</h2>
-      <p class="muted">
-        Cuando ya recibiste a <strong>todos</strong> los productores, tocá acá.
-        El sistema compara lo que se pidió contra lo que llegó y muestra el
-        detalle acá mismo; los faltantes quedan además registrados para
-        repartirlos en la solapa <strong>Ajustes</strong>.
-      </p>
-
-      <div class="campo">
-        <label for="clave-falt">Clave de equipo *</label>
-        <input type="password" id="clave-falt" placeholder="La clave compartida del equipo">
-      </div>
-
-      <button type="button" class="btn-conf" id="btn-faltantes">Revisar faltantes de la edición</button>
-
-      <div class="ok-box" id="ok-faltantes"></div>
-      <div id="tabla-faltantes" style="margin-top:12px;"></div>
-    </div>
-
     </div><!-- /vista-recepcion -->
 
     <!-- ── Vista Fraccionamiento ── -->
@@ -854,10 +834,13 @@
       <div class="card-eq">
         <h2>Repartir los faltantes</h2>
         <p class="muted">
-          Acá aparecen los faltantes que detectó el sistema. Decidan entre todas
-          cuánto se le recorta a cada pedido. Lo que recorten se
-          <strong>descuenta del total a pagar</strong> de esa persona.
+          Los faltantes aparecen acá solos, a medida que se registra cada
+          recepción: el sistema compara lo que llegó con lo que tienen los
+          pedidos hoy. Decidan entre todas cuánto se le recorta a cada pedido;
+          lo que recorten se <strong>descuenta del total a pagar</strong> de esa
+          persona.
         </p>
+        <div id="aviso-sin-recepcion" class="aviso rojo" style="display:none;"></div>
 
         <div class="campo">
           <label for="aprobado-por">¿Quién carga la decisión? *</label>
@@ -867,11 +850,6 @@
           <input type="text" id="aprobado-por-otro" placeholder="Nombre de quien ayuda hoy"
                  autocomplete="name" style="display:none; margin-top:8px;">
         </div>
-
-        <p style="margin:0 0 8px;">
-          <button type="button" class="btn btn--ghost btn--small" id="btn-refrescar-ajustes"
-            title="Vuelve a leer los faltantes registrados en la planilla">↻ Buscar faltantes nuevos</button>
-        </p>
 
         <div id="zona-auto" style="display:none; margin:0 0 14px;">
           <button type="button" class="btn btn--primary btn--small" id="btn-auto"
@@ -969,7 +947,6 @@
       var WEBHOOK_D1     = 'https://hook.us2.make.com/wh4waco8hddd4qvggwfpul8wxyo2s9xo';
       var WEBHOOK_FRAC   = 'https://hook.us2.make.com/pnu4revwv7cpba73qpnif4bsa0cuw86i';
       var WEBHOOK_RETIRO = 'https://hook.us2.make.com/gd5qh8wry0v9wmnsqfwp96vjmua55e36';
-      var WEBHOOK_D2     = 'https://hook.us2.make.com/aodjwri3frhtfj8yk7mnegpb6czva9j9';
       var WEBHOOK_D3     = 'https://hook.us2.make.com/8w3cb9fk11gf9rj9352ai7k4pixpmm1n';
       // Escenario A5 (cambios de estado): al entregar el último pedido, la
       // edición pasa a "Liquidación" y la guía avanza al paso 7.
@@ -1140,6 +1117,9 @@
       // volver a elegir un productor ya recibido (tal cual quedó guardado).
       var recepDetalle = {};
       var CALIDADES = ['OK', 'Con observaciones', 'Rechazado', 'No llegó'];
+      // Lo recibido por producto en esta edición (suma de Recepciones):
+      // es la fuente de los faltantes de la solapa Ajustes.
+      var recepPorProducto = {};
 
       function parseItems(res) {
         itemsEd = [];
@@ -1163,6 +1143,7 @@
       function parseRecepciones(res) {
         recibidosVivo = {};
         recepDetalle = {};
+        recepPorProducto = {};
         if (!res) return;
         try {
           res.table.rows.forEach(function (r) {
@@ -1170,6 +1151,13 @@
             var idP = String(celda(r, 2)).trim();
             if (idP && !recibidosVivo[idP]) {
               recibidosVivo[idP] = String(celda(r, 4)).trim();
+            }
+            var idProdRec = String(celda(r, 5)).trim();
+            if (idProdRec) {
+              var acc = recepPorProducto[idProdRec];
+              if (!acc) acc = recepPorProducto[idProdRec] = { id_producto: idProdRec, id_productor: idP, pedida: 0, recibida: 0 };
+              acc.pedida += parseFloat(celda(r, 6)) || 0;
+              acc.recibida += parseFloat(celda(r, 7)) || 0;
             }
             var idRec = String(celda(r, 0)).trim();
             if (!idRec) return;
@@ -1188,7 +1176,7 @@
               obs: obs
             };
           });
-        } catch (e) { recibidosVivo = {}; recepDetalle = {}; }
+        } catch (e) { recibidosVivo = {}; recepDetalle = {}; recepPorProducto = {}; }
       }
 
       function idRecepcionDe(idProd, l) {
@@ -1205,7 +1193,7 @@
           gviz('sheet=Plan_Fraccionamiento&range=A1:L500&headers=1'),
           gviz('sheet=Pedidos&range=A1:U3000&headers=1'),
           gviz('sheet=Consumidores&range=A1:D2000&headers=1'),
-          gviz('sheet=Propuestas_Ajuste&range=A1:N500&headers=1'),
+          Promise.resolve(null),   // (libre: antes Propuestas_Ajuste)
           gviz('sheet=Items&range=A1:M3000&headers=1'),
           // Las dos últimas no son críticas: si la hoja no existe, seguimos igual.
           gviz('sheet=Equipo&range=A1:E100&headers=1').catch(function () { return null; }),
@@ -1286,14 +1274,12 @@
           // Pedidos de la edición
           parsePedidos(res[4]);
 
-          // Propuestas de ajuste pendientes de esta edición
-          parsePropuestas(res[6]);
-
           // Ítems de los pedidos de esta edición
           parseItems(res[7]);
 
           parseEquipo(res[8]);
           parseRecepciones(res[9]);
+          calcularFaltantes();
 
           $('estado-edicion').innerHTML = 'Edición vigente: <strong>' + idEdicion +
             '</strong> · ' + contarProductores() + ' productores · ' +
@@ -2156,7 +2142,7 @@
         Promise.all([
           gviz('sheet=Recepciones&range=A1:L4000&headers=1').catch(function () { return null; }),
           gviz('sheet=Pedidos&range=A1:U3000&headers=1').catch(function () { return null; }),
-          gviz('sheet=Propuestas_Ajuste&range=A1:N500&headers=1').catch(function () { return null; }),
+          gviz('sheet=Items&range=A1:M3000&headers=1').catch(function () { return null; }),
           gviz('sheet=Plan_Fraccionamiento&range=A1:L500&headers=1').catch(function () { return null; })
         ]).then(function (res) {
           var ocupado = hayTrabajoSinGuardar();
@@ -2171,9 +2157,11 @@
           // pedidos y entrega: siempre seguro de re-renderizar
           if (res[1]) { parsePedidos(res[1]); renderEntrega(); }
 
-          // ajustes: solo si nadie está cargando recortes
-          if (res[2] && !ocupado) {
-            parsePropuestas(res[2]);
+          // ajustes: faltantes recalculados con lo recibido y los ítems de
+          // hoy; solo si nadie está cargando recortes
+          if (!ocupado) {
+            if (res[2]) parseItems(res[2]);
+            calcularFaltantes();
             renderAjustes();
           }
 
@@ -2251,30 +2239,34 @@
         return null;
       }
 
-      // Propuestas pendientes de la edición, UNA por producto. D2 genera una
-      // propuesta nueva en cada recepción comparando lo pedido original con lo
-      // recibido, así que un faltante ya repartido vuelve a aparecer como
-      // "Pendiente" (y con varias filas). Acá se juntan por producto y se
-      // guardan todos los ids, para marcarlos a todos como aplicados. El
-      // faltante REAL se calcula en renderAjustes contra los ítems de hoy.
-      function parsePropuestas(res) {
-        var porProducto = {};
-        res.table.rows.forEach(function (r) {
-          if (String(celda(r, 1)).trim() !== idEdicion) return;
-          if (String(celda(r, 10)).trim() !== 'Pendiente') return;
-          var idProd = String(celda(r, 3)).trim();
-          var id = String(celda(r, 0)).trim();
-          var p = porProducto[idProd];
-          if (!p) p = porProducto[idProd] = { id_producto: idProd, ids: [] };
-          // la fila más nueva (última recepción) pisa los datos
-          p.id_propuesta = id;
-          p.pedida = parseFloat(celda(r, 4)) || 0;
-          p.recibida = parseFloat(celda(r, 5)) || 0;
-          p.faltante = parseFloat(celda(r, 6)) || 0;
-          p.detalle = String(celda(r, 13)).trim();
-          if (p.ids.indexOf(id) === -1) p.ids.push(id);
+      // Faltantes de la edición, UNO por producto, calculados acá mismo:
+      // lo que llegó (suma de Recepciones) contra lo que los pedidos tienen
+      // hoy (Items). No dependen de ningún escenario ni de ningún botón:
+      // aparecen en cuanto se registra una recepción. El faltante REAL se
+      // termina de calcular en renderAjustes contra los ítems vivos.
+      function calcularFaltantes() {
+        propuestas = Object.keys(recepPorProducto).map(function (k) {
+          var a = recepPorProducto[k];
+          return {
+            id_producto: a.id_producto,
+            id_productor: a.id_productor,
+            pedida: Math.round(a.pedida * 10000) / 10000,
+            recibida: Math.round(a.recibida * 10000) / 10000,
+            detalle: nombreProducto(a.id_producto) + ' · ' + (productores[a.id_productor] || a.id_productor),
+            id_propuesta: '',
+            ids: []
+          };
         });
-        propuestas = Object.keys(porProducto).map(function (k) { return porProducto[k]; });
+        propuestas.sort(function (x, y) { return x.detalle < y.detalle ? -1 : 1; });
+      }
+
+      // productores con comanda que todavía no registraron recepción
+      function productoresSinRecepcion() {
+        var pend = {};
+        lineas.forEach(function (l) {
+          if (!recibidosVivo[l.id_productor]) pend[l.id_productor] = true;
+        });
+        return Object.keys(pend).map(function (id) { return productores[id] || id; });
       }
 
       function afectadosDe(idProducto) {
@@ -2289,27 +2281,25 @@
         return out;
       }
 
-      // Relee Propuestas_Ajuste (las escribe D2 después de revisar faltantes)
-      function refrescarPropuestas(btn) {
+      // Relee recepciones e ítems y vuelve a calcular los faltantes
+      function refrescarPropuestas(forzar) {
         if (!idEdicion) return;
-        if (btn) { btn.disabled = true; btn.textContent = 'Buscando…'; }
-        gviz('sheet=Propuestas_Ajuste&range=A1:N500&headers=1&_=' + Date.now())
-          .then(function (res) {
-            parsePropuestas(res);
-            renderAjustes();
-          })
-          .catch(function () {})
-          .then(function () {
-            if (btn) { btn.disabled = false; btn.textContent = '↻ Buscar faltantes nuevos'; }
-          });
+        // no pisar recortes que alguien está cargando (salvo tras aplicarlos)
+        if (!forzar && hayTrabajoSinGuardar()) return;
+        Promise.all([
+          gviz('sheet=Recepciones&range=A1:L4000&headers=1&_=' + Date.now()).catch(function () { return null; }),
+          gviz('sheet=Items&range=A1:M3000&headers=1&_=' + Date.now()).catch(function () { return null; })
+        ]).then(function (res) {
+          if (res[0]) parseRecepciones(res[0]);
+          if (res[1]) parseItems(res[1]);
+          calcularFaltantes();
+          renderAjustes();
+        }).catch(function () {});
       }
 
-      $('btn-refrescar-ajustes').addEventListener('click', function () {
-        refrescarPropuestas(this);
-      });
-      // al entrar a la solapa Ajustes, buscar lo último registrado
+      // al entrar a la solapa Ajustes, traer lo último registrado
       document.getElementById('tab-ajustes').addEventListener('click', function () {
-        refrescarPropuestas(null);
+        refrescarPropuestas();
       });
 
       // Una "unidad vendible" del item: lo que representa 1 en el selector
@@ -2323,10 +2313,20 @@
       function renderAjustes() {
         var cont = $('lista-ajustes');
         cont.innerHTML = '';
+        var sinRec = productoresSinRecepcion();
+        var avisoSin = $('aviso-sin-recepcion');
+        if (avisoSin) {
+          if (sinRec.length) {
+            avisoSin.style.display = 'block';
+            avisoSin.innerHTML = 'Todavía no se registró la recepción de: <strong>' + sinRec.join(', ') +
+              '</strong>. Sus faltantes van a aparecer acá cuando se registren.';
+          } else {
+            avisoSin.style.display = 'none';
+          }
+        }
         if (!propuestas.length) {
-          cont.innerHTML = '<p class="muted">No hay faltantes pendientes de repartir en esta edición. ' +
-            'Si recién corriste la revisión de faltantes en la solapa Recepción, esperá unos ' +
-            'segundos y tocá «↻ Buscar faltantes nuevos».</p>';
+          cont.innerHTML = '<p class="muted">Todavía no hay ninguna recepción registrada en esta edición. ' +
+            'Los faltantes aparecen acá solos a medida que se registran.</p>';
           $('btn-ajustes').disabled = true;
           $('zona-auto').style.display = 'none';
           return;
@@ -2365,8 +2365,8 @@
             }).join('') + '</ul></div>';
         }
         if (!visibles) {
-          cont.innerHTML = avisoDemas + '<p class="muted">Los faltantes registrados ya fueron repartidos: no hay ' +
-            'nada pendiente de recortar en esta edición.</p>';
+          cont.innerHTML = avisoDemas + '<p class="muted">🎉 Sin faltantes pendientes: de lo recibido hasta ahora ' +
+            'llegó todo lo que tienen los pedidos' + (sinRec.length ? ' (faltan recepciones por registrar)' : '') + '.</p>';
           $('btn-ajustes').disabled = true;
           $('zona-auto').style.display = 'none';
           return;
@@ -2596,15 +2596,9 @@
           };
         });
 
-        var propuestasOut = Object.keys(porPropuesta).map(function (k) {
-          var pi = parseInt(k, 10), pr = propuestas[pi];
-          var txt = porPropuesta[pi].map(function (idx) {
-            var it = itemsEd[idx], ped = pedidoDe(it.id_pedido);
-            return 'N° ' + (ped ? ped.correlativo : '?') + ' ' +
-              (ped ? (consumidores[ped.id_consumidor] || '') : '') + ': -' + recortes[idx];
-          }).join(' | ');
-          return { id_propuesta: pr.id_propuesta, ids: pr.ids, ajustes: txt, aprobado_por: quien };
-        });
+        // Ya no hay filas de Propuestas_Ajuste que marcar (los faltantes se
+        // calculan en la app): la ruta 3 de D3 no recibe nada.
+        var propuestasOut = [];
 
         var btn = $('btn-ajustes');
         btn.disabled = true;
@@ -2625,13 +2619,11 @@
           })
         }).then(finA).catch(finA);
 
-        // Verificación real: D3 tiene que marcar cada propuesta como
-        // "Aplicada" en Propuestas_Ajuste (columna K). Hasta que eso no se
-        // vea en la planilla, no damos el recorte por hecho.
-        var idsEnviadas = [];
-        propuestasOut.forEach(function (p) {
-          (p.ids || [p.id_propuesta]).forEach(function (id) { if (idsEnviadas.indexOf(id) === -1) idsEnviadas.push(id); });
-        });
+        // Verificación real: D3 tiene que dejar en Items la cantidad nueva de
+        // cada ítem recortado. Hasta que eso no se vea en la planilla, no
+        // damos el recorte por hecho.
+        var esperados = {};
+        itemsOut.forEach(function (it) { esperados[it.id_item] = it.cantidad_nueva; });
         function finA() {
           caja.style.display = 'block';
           caja.style.background = '';
@@ -2645,19 +2637,20 @@
               clearInterval(timer);
               btn.disabled = false;
               btn.textContent = 'ENVIAR PEDIDOS ACTUALIZADOS';
-              errorA('⚠️ Los recortes NO quedaron aplicados: en la planilla las propuestas ' +
-                'siguen como "Pendiente". El escenario D3 de Make no las procesó (revisá ' +
+              errorA('⚠️ Los recortes NO quedaron aplicados: en la planilla (hoja Items) las ' +
+                'cantidades siguen como antes. El escenario D3 de Make no los procesó (revisá ' +
                 'que esté encendido, que la clave sea la correcta y el History de D3). ' +
                 'Lo cargado acá sigue en pantalla: cuando D3 esté bien, volvé a tocar ENVIAR.');
               return;
             }
-            gviz('sheet=Propuestas_Ajuste&range=A1:N500&headers=1&_=' + Date.now())
+            gviz('sheet=Items&range=A1:M3000&headers=1&_=' + Date.now())
               .then(function (res) {
                 var pendientes = 0;
                 res.table.rows.forEach(function (r) {
                   var id = String(celda(r, 0)).trim();
-                  if (idsEnviadas.indexOf(id) === -1) return;
-                  if (String(celda(r, 10)).trim() === 'Pendiente') pendientes++;
+                  if (!(id in esperados)) return;
+                  var cant = parseFloat(celda(r, 4)) || 0;
+                  if (Math.abs(cant - esperados[id]) > 0.0001) pendientes++;
                 });
                 if (pendientes > 0) return;   // D3 todavía trabajando
                 clearInterval(timer);
@@ -2665,127 +2658,12 @@
                 caja.innerHTML = '✅ <strong>Recortes aplicados y confirmados en la planilla.</strong> ' +
                   'A cada consumidor afectado le llega por correo el detalle nuevo de su ' +
                   'pedido con el total actualizado.';
-                // releer ítems (cantidades ya recortadas) y propuestas
-                gviz('sheet=Items&range=A1:M3000&headers=1&_=' + Date.now())
-                  .then(function (ri) { parseItems(ri); })
-                  .catch(function () {})
-                  .then(function () { refrescarPropuestas(null); });
+                // releer recepciones e ítems (cantidades ya recortadas)
+                refrescarPropuestas(true);
               })
               .catch(function () {});
           }, 8000);
         }
-      });
-
-      // ── D2 · Revisar faltantes ───────────────────────────────────
-      $('btn-faltantes').addEventListener('click', function () {
-        var caja = $('ok-faltantes');
-        if (!webhookListo(WEBHOOK_D2, 'D2 · Faltantes', 'ok-faltantes')) return;
-
-        if (!idEdicion) {
-          caja.style.display = 'block';
-          caja.style.background = 'rgba(166, 64, 43, 0.10)';
-          caja.style.color = '#A6402B';
-          caja.textContent = 'Todavía no cargó la edición vigente. Esperá unos segundos y probá de nuevo.';
-          return;
-        }
-        var clave = $('clave-falt').value.trim();
-        if (!clave) {
-          caja.style.display = 'block';
-          caja.style.background = 'rgba(166, 64, 43, 0.10)';
-          caja.style.color = '#A6402B';
-          caja.textContent = 'Falta la clave de equipo.';
-          return;
-        }
-
-        var btn = $('btn-faltantes');
-        btn.disabled = true;
-        btn.textContent = 'Revisando…';
-
-        // registro en Make (genera las propuestas de ajuste)
-        fetch(WEBHOOK_D2, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ tipo: 'faltantes', id_edicion: idEdicion, clave: clave })
-        }).catch(function () {});
-
-        // detalle EN PANTALLA, leído directo de la planilla
-        gviz('sheet=Recepciones&range=A1:L4000&headers=1&_=' + Date.now())
-          .then(function (res) {
-            var agg = {};
-            var conRecepcion = {};
-            res.table.rows.forEach(function (r) {
-              if (String(celda(r, 1)).trim() !== idEdicion) return;
-              var idP = String(celda(r, 2)).trim();
-              var idProd = String(celda(r, 5)).trim();
-              if (!idProd) return;
-              conRecepcion[idP] = true;
-              var k = idP + '|' + idProd;
-              if (!agg[k]) agg[k] = { idP: idP, idProd: idProd, ped: 0, rec: 0 };
-              agg[k].ped += parseFloat(celda(r, 6)) || 0;
-              agg[k].rec += parseFloat(celda(r, 7)) || 0;
-            });
-
-            var falt = [];
-            Object.keys(agg).forEach(function (k) {
-              var a = agg[k];
-              if (a.rec < a.ped - 0.0001) falt.push(a);
-            });
-            falt.sort(function (a, b) { return (a.idP + a.idProd) < (b.idP + b.idProd) ? -1 : 1; });
-
-            // productores con comanda que todavía no tienen recepción registrada
-            var pendientes = {};
-            lineas.forEach(function (l) {
-              if (!conRecepcion[l.id_productor]) pendientes[l.id_productor] = true;
-            });
-            var sinRec = Object.keys(pendientes).map(function (id) {
-              return productores[id] || id;
-            });
-
-            function num(n) { return Math.round(n * 100) / 100; }
-            var html = '';
-            if (sinRec.length) {
-              html += '<div class="aviso rojo" style="display:block;">Todavía no se registró ' +
-                'la recepción de: <strong>' + sinRec.join(', ') + '</strong>. ' +
-                'Sus faltantes no están incluidos abajo.</div>';
-            }
-            if (!falt.length) {
-              html += '<p class="muted" style="font-size:0.95rem;">🎉 Sin faltantes: llegó todo lo pedido' +
-                (sinRec.length ? ' (de lo recibido hasta ahora)' : '') + '.</p>';
-            } else {
-              html += '<p style="font-weight:700; margin:6px 0;">' + falt.length +
-                ' producto' + (falt.length === 1 ? '' : 's') + ' con faltante:</p>';
-              falt.forEach(function (a) {
-                html += '<div class="item no-llego" style="display:block; padding:10px 14px;">' +
-                  '<strong>' + nombreProducto(a.idProd) + '</strong> · ' +
-                  (productores[a.idP] || a.idP) + '<br>' +
-                  '<span class="muted" style="font-size:0.88rem;">pedido: ' + num(a.ped) +
-                  ' · llegó: ' + num(a.rec) +
-                  ' · <strong style="color:#A6402B;">falta: ' + num(a.ped - a.rec) +
-                  '</strong></span></div>';
-              });
-            }
-            $('tabla-faltantes').innerHTML = html;
-
-            btn.disabled = false;
-            btn.textContent = 'Revisar faltantes de la edición';
-            caja.style.display = 'block';
-            caja.style.background = '';
-            caja.style.color = '';
-            caja.innerHTML = '✅ Revisión hecha: el detalle está acá abajo. Los faltantes ' +
-              'quedan registrados para repartirlos en la solapa <strong>Ajustes</strong>.';
-            // dar tiempo a que D2 escriba las propuestas y traerlas solas
-            setTimeout(function () { refrescarPropuestas(null); }, 12000);
-            setTimeout(function () { refrescarPropuestas(null); }, 30000);
-          })
-          .catch(function () {
-            btn.disabled = false;
-            btn.textContent = 'Revisar faltantes de la edición';
-            caja.style.display = 'block';
-            caja.style.background = 'rgba(166, 64, 43, 0.10)';
-            caja.style.color = '#A6402B';
-            caja.textContent = 'No pude leer la planilla para mostrar el detalle. Probá de nuevo.';
-          });
       });
 
       cargar();
