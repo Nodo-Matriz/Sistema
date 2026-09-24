@@ -662,23 +662,32 @@
       // Lee Pagos_productor de la edición y, si hay filas, muestra la tabla.
       // Devuelve la cantidad de filas encontradas.
       // Control de totales: la planilla recalcula cada pedido desde sus ítems
-      // (Pedidos!Y subtotal_calc, Z total_calc, AA diferencia). Si K (lo que
-      // se le cobra a la persona) no coincide con lo que suman sus ítems,
-      // acá aparece y la liquidación no se genera hasta corregirlo.
+      // en dos columnas de Pedidos llamadas "total_calc" y "diferencia". Se
+      // buscan por el nombre del encabezado, así pueden estar en cualquier
+      // columna libre (T, U, Y, Z...) sin tocar esta página. Si K (lo que se le
+      // cobra a la persona) no coincide con lo que suman sus ítems, acá aparece
+      // y la liquidación no se genera hasta corregirlo.
       var totalesConDiferencia = null;   // null = no se pudo controlar
       function controlarTotales(id) {
-        return gviz('sheet=Pedidos&range=A1:AA2000&headers=1').then(function (res) {
+        return gviz('sheet=Pedidos&range=A1:Z2000&headers=1').then(function (res) {
           var malos = [], hayControl = false, total = 0;
+          var colCalc = -1, colDif = -1;
+          (res.table.cols || []).forEach(function (c, i) {
+            var lab = String(c.label || '').trim().toLowerCase();
+            if (lab === 'total_calc') colCalc = i;
+            if (lab === 'diferencia') colDif = i;
+          });
           res.table.rows.forEach(function (r) {
             if (String(celda(r, 1)).trim() !== id) return;
             total++;
-            var ctrl = String(celda(r, 26)).trim();   // AA diferencia
+            if (colDif < 0) return;
+            var ctrl = String(celda(r, colDif)).trim();
             if (ctrl !== '') hayControl = true;
             if (ctrl !== '' && ctrl.toLowerCase() !== 'ok') {
               malos.push({
                 correlativo: String(celda(r, 3)).trim(),
                 cobrado: parseFloat(celda(r, 10)) || 0,      // K total_a_abonar
-                calculado: parseFloat(celda(r, 25)) || 0     // Z total_calc
+                calculado: colCalc >= 0 ? (parseFloat(celda(r, colCalc)) || 0) : 0
               });
             }
           });
@@ -692,8 +701,8 @@
             caja.style.borderLeftColor = '#A6402B';
             caja.style.color = '#A6402B';
             caja.innerHTML = '⚠️ <strong>Sin control de totales.</strong> La hoja Pedidos no tiene las ' +
-              'columnas de control (Y, Z, AA). Hasta que estén, nadie verifica que lo que se cobra ' +
-              'coincida con los ítems.';
+              'columnas de control (encabezados <code>total_calc</code> y <code>diferencia</code>, entre A y Z). ' +
+              'Hasta que estén, nadie verifica que lo que se cobra coincida con los ítems.';
             return malos;
           }
           totalesConDiferencia = malos.length;
