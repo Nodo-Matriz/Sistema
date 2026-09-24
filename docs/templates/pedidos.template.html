@@ -252,10 +252,9 @@
           <p class="muted">
             Los precios que ves son los de cada productor, sin intermediarios:
             llegan a tu mesa tal como salen de la huerta, el horno o el tambo.
-            Todo lo demás —gestionar los pedidos, mover los alimentos, sostener
-            el galpón y el tiempo de la equipa— se sostiene únicamente con este
-            aporte de quienes eligen abastecerse a través del Nodo. Elegí según
-            tus posibilidades reales.
+            Todo lo demás: gestionar los pedidos, mover los alimentos, sostener
+            el galpón y el tiempo de labor de la equipa, se sostiene únicamente
+            con este aporte de quienes eligen abastecerse a través del Nodo.
           </p>
           <div class="field">
             <label class="field__label">Porcentaje de aporte</label>
@@ -318,13 +317,16 @@
               </label>
             </div>
             <p class="muted" style="margin-top:var(--s-2); font-size:0.85rem;">
-              15% es el mínimo sugerido. Todo lo que sume por encima vuelve al Nodo.
+              15% es el mínimo. Todo lo que sume por encima vuelve al Nodo.
             </p>
-            <div id="aporte-otro-campo" style="display:none; margin-top: var(--s-3); padding-left: var(--s-6);">
+            <div id="aporte-otro-campo" style="display:none; margin-top: var(--s-3); padding-left: var(--s-6); align-items:center; flex-wrap:wrap; gap:6px;">
               <input class="input" type="number" id="aporte-input-custom"
-                     min="0" max="100" step="1" placeholder="Ej: 15"
+                     min="15" max="100" step="1" placeholder="Ej: 40"
                      style="width: 130px;">
-              <span class="muted" style="margin-left: var(--s-2);">%</span>
+              <span class="muted">%</span>
+              <span class="muted" id="aporte-otro-aviso" style="display:none; flex-basis:100%; color:#A6402B; font-size:0.85rem;">
+                El aporte no puede ser menor al 15%.
+              </span>
             </div>
           </div>
         </div>
@@ -1289,7 +1291,8 @@
               var esp = parseFraccionEspecial(s.fraccion, p.unidad);
               multiplicador = esp ? esp.valor : parseFraction(s.fraccion);
             }
-            var subtotalItem = (p.precio || 0) * s.cantidad * multiplicador;
+            // Redondeado a pesos enteros: la planilla guarda H como entero y controla K×G contra H.
+            var subtotalItem = Math.round((p.precio || 0) * s.cantidad * multiplicador);
             subtotal += subtotalItem;
 
             items.push({
@@ -1457,18 +1460,32 @@
       var aporteOtroCampo = document.getElementById('aporte-otro-campo');
       var aporteInputCustom = document.getElementById('aporte-input-custom');
 
+      // "Otro" nunca puede quedar por debajo del mínimo: mientras se tipea
+      // un valor menor (o nada) se calcula con el mínimo y se avisa; al salir
+      // del campo, se corrige el valor.
+      var APORTE_MIN = 15;
+      var aporteOtroAviso = document.getElementById('aporte-otro-aviso');
+
       function getAportePorc() {
         var checked = document.querySelector('input[name="aporte_porcent"]:checked');
-        if (!checked) return 15;
+        if (!checked) return APORTE_MIN;
         if (checked.value === 'otro') {
-          return parseFloat(aporteInputCustom.value) || 0;
+          var v = parseFloat(aporteInputCustom.value);
+          return (isNaN(v) || v < APORTE_MIN) ? APORTE_MIN : v;
         }
-        return parseFloat(checked.value) || 0;
+        return parseFloat(checked.value) || APORTE_MIN;
+      }
+
+      function avisarAporteMinimo() {
+        if (!aporteOtroAviso) return;
+        var v = parseFloat(aporteInputCustom.value);
+        aporteOtroAviso.style.display = (aporteInputCustom.value !== '' && v < APORTE_MIN) ? 'block' : 'none';
       }
 
       aporteRadios.forEach(function (r) {
         r.addEventListener('change', function () {
           aporteOtroCampo.style.display = (r.value === 'otro' && r.checked) ? 'flex' : 'none';
+          if (r.value === 'otro' && r.checked) aporteInputCustom.focus();
           var calc = calcularItems();
           actualizarTotales(calc.subtotal);
         });
@@ -1476,6 +1493,14 @@
 
       if (aporteInputCustom) {
         aporteInputCustom.addEventListener('input', function () {
+          avisarAporteMinimo();
+          var calc = calcularItems();
+          actualizarTotales(calc.subtotal);
+        });
+        aporteInputCustom.addEventListener('change', function () {
+          var v = parseFloat(aporteInputCustom.value);
+          if (isNaN(v) || v < APORTE_MIN) aporteInputCustom.value = String(APORTE_MIN);
+          avisarAporteMinimo();
           var calc = calcularItems();
           actualizarTotales(calc.subtotal);
         });
