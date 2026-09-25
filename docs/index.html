@@ -809,19 +809,30 @@
       }
 
       // ── Avisos de ajuste a consumidores (escenario D3b) ─────────
-      // Cuenta, en Pedidos de la edición, los "Modificado" sin aviso (Q ≠ Sí)
-      // y los ya avisados (Q = Sí). Es lo mismo que filtra D3b.
+      // Un pedido "con recortes" es el que tiene algún ítem Descontado o
+      // Faltante en Items (el estado del pedido no sirve: D4 lo pasa a
+      // Entregado). Pendientes = con recortes y Q ≠ Sí; avisados = Q = Sí.
       function leerAvisos(id) {
-        return gviz('sheet=Pedidos&range=A1:Z2000&headers=1').then(function (res) {
-          var pend = 0, hechos = 0, modificados = 0;
-          res.table.rows.forEach(function (r) {
+        return Promise.all([
+          gviz('sheet=Pedidos&range=A1:Z2000&headers=1'),
+          gviz('sheet=Items&range=A1:S5000&headers=1')
+        ]).then(function (res) {
+          var conRecortes = {};
+          res[1].table.rows.forEach(function (r) {
+            var idPed = String(celda(r, 1)).trim();
+            if (idPed.indexOf(id) === -1) return;
+            var est = String(celda(r, 8)).trim().toLowerCase();   // I estado_item
+            if (est === 'descontado' || est === 'faltante') conRecortes[idPed] = true;
+          });
+          var pend = 0, hechos = 0;
+          res[0].table.rows.forEach(function (r) {
             if (String(celda(r, 1)).trim() !== id) return;
-            var estado = String(celda(r, 5)).trim().toLowerCase();
+            var idPed = String(celda(r, 0)).trim();
             var q = String(celda(r, 16)).trim().toLowerCase();   // Q aviso_faltante_enviado
             if (q === 'sí' || q === 'si') { hechos++; return; }
-            if (estado === 'modificado') { modificados++; pend++; }
+            if (conRecortes[idPed]) pend++;
           });
-          return { pendientes: pend, avisados: hechos, modificados: modificados };
+          return { pendientes: pend, avisados: hechos };
         });
       }
 
