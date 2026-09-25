@@ -410,6 +410,27 @@
           </a>
           <span class="porque" id="porque-paso6"></span>
         </p>
+
+        <div class="solo-prueba" style="margin-top:14px;" id="bloque-avisos">
+          <div class="etiqueta">Avisar a los consumidores por los faltantes</div>
+          <p class="nota" style="margin-bottom:8px;">
+            Cuando <strong>todas</strong> las recepciones estén registradas y los
+            faltantes repartidos, este botón le manda a cada consumidor con
+            recortes <strong>un solo correo</strong> con su pedido como quedó y
+            el total final a abonar. Los que no tuvieron recortes no reciben nada.
+            Se puede tocar una sola vez por edición: los pedidos ya avisados no se
+            vuelven a avisar.
+          </p>
+          <div class="ok-mini" id="estado-avisos" style="display:none;"></div>
+          <div class="campo-a1">
+            <input type="password" id="clave-avisos" placeholder="Clave de equipo">
+            <button type="button" class="btn btn--primary btn--small" id="btn-avisos">
+              Avisar a los consumidores
+            </button>
+          </div>
+          <span class="porque" id="porque-avisos"></span>
+          <div class="ok-mini" id="ok-avisos"></div>
+        </div>
       </div>
 
       <div class="paso futuro" id="paso-7">
@@ -482,6 +503,7 @@
       var WEBHOOK_A5 = 'https://hook.us2.make.com/qyqw5eh5f6gcbdd558o4t21krx4k72hy';
       // Escenario E3 (liquidación a productores).
       var WEBHOOK_E3 = 'https://hook.us2.make.com/dt98kkee6wq3wxr80y8jkf7gzyn3weix';
+      var WEBHOOK_D3B = 'https://hook.us2.make.com/4a2eptxftvx5b3wn7vptjljkjxx3og14';
 
       var $ = function (id) { return document.getElementById(id); };
 
@@ -497,6 +519,7 @@
         $('clave-a1').value = claveGuardada();
         $('clave-cerrar').value = claveGuardada();
         $('clave-liq').value = claveGuardada();
+        $('clave-avisos').value = claveGuardada();
       }
 
       // habilita/deshabilita un botón de la guía con su motivo
@@ -785,6 +808,112 @@
         cont.innerHTML = h;
       }
 
+      // ── Avisos de ajuste a consumidores (escenario D3b) ─────────
+      // Cuenta, en Pedidos de la edición, los "Modificado" sin aviso (Q ≠ Sí)
+      // y los ya avisados (Q = Sí). Es lo mismo que filtra D3b.
+      function leerAvisos(id) {
+        return gviz('sheet=Pedidos&range=A1:Z2000&headers=1').then(function (res) {
+          var pend = 0, hechos = 0, modificados = 0;
+          res.table.rows.forEach(function (r) {
+            if (String(celda(r, 1)).trim() !== id) return;
+            var estado = String(celda(r, 5)).trim().toLowerCase();
+            var q = String(celda(r, 16)).trim().toLowerCase();   // Q aviso_faltante_enviado
+            if (q === 'sí' || q === 'si') { hechos++; return; }
+            if (estado === 'modificado') { modificados++; pend++; }
+          });
+          return { pendientes: pend, avisados: hechos, modificados: modificados };
+        });
+      }
+
+      function pintarEstadoAvisos(a) {
+        var caja = $('estado-avisos');
+        if (!caja) return;
+        caja.style.display = 'block';
+        caja.style.background = ''; caja.style.borderLeftColor = ''; caja.style.color = '';
+        if (a.pendientes > 0) {
+          caja.innerHTML = '📬 <strong>' + a.pendientes + ' pedido' + (a.pendientes === 1 ? '' : 's') +
+            ' con recortes</strong> esperando el aviso' +
+            (a.avisados ? ' · ' + a.avisados + ' ya avisado' + (a.avisados === 1 ? '' : 's') : '') + '.';
+        } else if (a.avisados > 0) {
+          caja.innerHTML = '✅ <strong>Avisos enviados:</strong> ' + a.avisados + ' pedido' +
+            (a.avisados === 1 ? '' : 's') + ' con recortes ya ' + (a.avisados === 1 ? 'recibió' : 'recibieron') +
+            ' su correo.';
+        } else {
+          caja.innerHTML = 'Por ahora ningún pedido de esta edición tiene recortes.';
+        }
+      }
+
+      var avisosConfirmando = null;
+      $('btn-avisos').addEventListener('click', function () {
+        var caja = $('ok-avisos');
+        function aviso(msg, esError) {
+          caja.style.display = 'block';
+          caja.style.background = esError ? 'rgba(166, 64, 43, 0.10)' : '';
+          caja.style.borderLeftColor = esError ? '#A6402B' : '';
+          caja.style.color = esError ? '#A6402B' : '';
+          caja.innerHTML = msg;
+        }
+        var btn = $('btn-avisos');
+        if (btn.classList.contains('btn--off')) return;
+        var clave = $('clave-avisos').value.trim();
+        if (!clave) { aviso('Falta la clave de equipo.', true); return; }
+        guardarClave(clave);
+        if (WEBHOOK_D3B.indexOf('https://hook.') !== 0) {
+          aviso('🚫 Este botón todavía no está conectado (falta la dirección del escenario D3b).', true);
+          return;
+        }
+        if (!edicionVigente) { aviso('No encuentro la edición en curso.', true); return; }
+
+        // confirmación en dos toques: manda correos a consumidores
+        if (!avisosConfirmando) {
+          avisosConfirmando = setTimeout(function () {
+            avisosConfirmando = null;
+            btn.textContent = 'Avisar a los consumidores';
+          }, 8000);
+          btn.textContent = '¿Confirmás? Tocá de nuevo para enviar los correos';
+          aviso('Se van a mandar correos reales a los consumidores con recortes. ' +
+            'Si ya está todo recibido y repartido, volvé a tocar el botón.', false);
+          return;
+        }
+        clearTimeout(avisosConfirmando); avisosConfirmando = null;
+
+        btn.disabled = true;
+        btn.textContent = 'Enviando…';
+        fetch(WEBHOOK_D3B, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ tipo: 'avisos_ajuste', id_edicion: edicionVigente, clave: clave })
+        }).catch(function () {});
+        aviso('⏳ <strong>Mandando los avisos de ' + edicionVigente + '…</strong> ' +
+          'Esta pantalla avisa sola cuando queden marcados en la planilla.', false);
+
+        // verificación real: la columna Q se marca en cada pedido avisado
+        var intentos = 0, antes = null;
+        var timer = setInterval(function () {
+          intentos++;
+          if (intentos > 20) {
+            clearInterval(timer);
+            btn.disabled = false;
+            btn.textContent = 'Avisar a los consumidores';
+            aviso('⚠️ Los avisos no aparecen marcados en la planilla. Revisá que D3b esté ' +
+              'encendido en Make, que la clave sea la correcta y su History.', true);
+            return;
+          }
+          leerAvisos(edicionVigente).then(function (a) {
+            if (antes === null) antes = a.avisados;
+            if (a.pendientes > 0) return;   // D3b todavía trabajando
+            clearInterval(timer);
+            pintarEstadoAvisos(a);
+            btn.textContent = 'Avisos enviados ✓';
+            gate('btn-avisos', 'porque-avisos', false,
+              'Los avisos de ' + edicionVigente + ' ya se mandaron.');
+            aviso('✅ <strong>Avisos enviados.</strong> Cada consumidor con recortes recibió ' +
+              'por correo su pedido como quedó y el total final.', false);
+          }).catch(function () {});
+        }, 8000);
+      });
+
       $('btn-liquidacion').addEventListener('click', function () {
         var caja = $('ok-liq');
         function aviso(msg, esError) {
@@ -956,6 +1085,27 @@
         // Paso 6: galpón después de comandas / cierre
         gate('btn-paso6', 'porque-paso6', !cerrada && paso >= 5,
           'Se habilita después del cierre y las comandas.');
+
+        // Avisos de ajuste: desde el día de galpón, solo si hay pedidos con
+        // recortes sin avisar; una vez avisados, queda bloqueado.
+        gate('btn-avisos', 'porque-avisos', false,
+          !cerrada && paso >= 6 ? 'Leyendo la planilla…' : 'Se habilita el día de galpón.');
+        if (!cerrada && paso >= 6) {
+          leerAvisos(id).then(function (a) {
+            pintarEstadoAvisos(a);
+            if (a.pendientes > 0) {
+              gate('btn-avisos', 'porque-avisos', true, '');
+              $('btn-avisos').textContent = 'Avisar a los consumidores (' + a.pendientes + ')';
+            } else if (a.avisados > 0) {
+              gate('btn-avisos', 'porque-avisos', false, 'Los avisos de ' + id + ' ya se mandaron.');
+              $('btn-avisos').textContent = 'Avisos enviados ✓';
+            } else {
+              gate('btn-avisos', 'porque-avisos', false, 'No hay pedidos con recortes para avisar.');
+            }
+          }).catch(function () {
+            gate('btn-avisos', 'porque-avisos', false, 'No pude leer la planilla.');
+          });
+        }
 
         // Paso 7: cierre de prueba, desde el cierre de pedidos en adelante
         var btnCerrar = $('btn-cerrar-edicion');
