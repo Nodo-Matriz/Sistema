@@ -21,8 +21,8 @@
          ED2026-90              ej: ED2026-09
          90          ej: 9
          2026            ej: 2026
-         domingo, 27 de septiembre, 14:00 hs      ej: martes 14 de mayo, 12:00 hs
-         2026-09-27T14:00:00-03:00        ej: 2026-05-14T12:00:00-03:00
+         lunes, 28 de septiembre, 14:00 hs      ej: martes 14 de mayo, 12:00 hs
+         2026-09-28T14:00:00-03:00        ej: 2026-05-14T12:00:00-03:00
          https://hook.us2.make.com/2jxawiuq920ut1mcu6jvgbvkoq89kpgm             ej: https://hook.eu2.make.com/abc123
          15  ej: 10
          Viernes 02/10 de 11 a 15 hs · Sábado 03/10 de 11 a 13:30 hs            ej: Miércoles 17/09 de 11 a 15 hs
@@ -113,7 +113,7 @@
       </p>
 
       <div class="note note--info">
-        <strong>Cierre del formulario:</strong> domingo, 27 de septiembre, 14:00 hs.
+        <strong>Cierre del formulario:</strong> lunes, 28 de septiembre, 14:00 hs.
         Pasada esa hora, los pedidos no pueden modificarse ni agregarse.
       </div>
     </section>
@@ -465,7 +465,7 @@
       // el form se bloquea solo: oculta el wizard y muestra el aviso.
       // (B1 valida además del lado del servidor: esta es la cortesía
       // al usuario; aquella, la barrera real.)
-      var CIERRE_ISO = '2026-09-27T14:00:00-03:00';
+      var CIERRE_ISO = '2026-09-28T14:00:00-03:00';
       if (CIERRE_ISO && CIERRE_ISO.indexOf('{{') === -1) {
         var fechaCierre = new Date(CIERRE_ISO);
         if (!isNaN(fechaCierre.getTime()) && new Date() >= fechaCierre) {
@@ -476,7 +476,7 @@
           var aviso = document.createElement('div');
           aviso.className = 'note note--info';
           aviso.innerHTML = '<strong>Esta edición ya cerró.</strong> ' +
-            'El período de pedidos terminó el domingo, 27 de septiembre, 14:00 hs. ' +
+            'El período de pedidos terminó el lunes, 28 de septiembre, 14:00 hs. ' +
             '¡Gracias por sostener esta red! Nos vemos en la próxima edición.';
           var mainEl = document.querySelector('main.wrap') || document.body;
           var headerEl = mainEl.querySelector('header');
@@ -1673,7 +1673,7 @@
       if (!seccion) return;
 
       // si la edición ya cerró por fecha, el control no tiene sentido
-      var CIERRE_ISO = '2026-09-27T14:00:00-03:00';
+      var CIERRE_ISO = '2026-09-28T14:00:00-03:00';
       if (CIERRE_ISO && CIERRE_ISO.indexOf('{{') === -1) {
         var fc = new Date(CIERRE_ISO);
         if (!isNaN(fc.getTime()) && new Date() >= fc) {
