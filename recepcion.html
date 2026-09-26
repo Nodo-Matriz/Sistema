@@ -1250,8 +1250,18 @@
           gviz('sheet=Equipo&range=A1:E100&headers=1').catch(function () { return null; }),
           gviz('sheet=Recepciones&range=A1:L4000&headers=1').catch(function () { return null; }),
           // Productos!U conservacion (Frío / Ambiente): qué va al puesto de frío
-          gviz('sheet=Productos&range=A1:U800&headers=1').catch(function () { return null; })
+          gviz('sheet=Productos&range=A1:U800&headers=1').catch(function () { return null; }),
+          // Ediciones: para saber cuál es la edición en curso
+          gviz('sheet=Ediciones&range=A1:D300&headers=1').catch(function () { return null; })
         ]).then(function (res) {
+          // Edición en curso = última fila de Ediciones con id ED####-##
+          var edVigente = '';
+          if (res[11]) {
+            res[11].table.rows.forEach(function (r) {
+              var idE = String(celda(r, 0)).trim();
+              if (/^ED\d{4}-\d{2,3}$/.test(idE)) edVigente = idE;
+            });
+          }
           conservacion = {};
           if (res[10]) {
             res[10].table.rows.forEach(function (r) {
@@ -1282,6 +1292,27 @@
               linea: String(celda(r, 7)).trim()
             });
           });
+
+          // Las comandas son de otra edición (la anterior): todavía no se
+          // generaron las de la edición en curso. No se muestra nada viejo.
+          if (edVigente && idEdicion && edVigente !== idEdicion) {
+            $('estado-edicion').className = 'aviso rojo';
+            $('estado-edicion').innerHTML = '🚫 <strong>Todavía no hay comandas generadas para ' +
+              edVigente + '.</strong><br>Las últimas comandas son de ' + idEdicion +
+              ', que ya terminó. La app del galpón se usa después de generar las comandas ' +
+              'de la edición en curso.<br><br>' +
+              '<a href="comandas.html" class="btn btn--ghost btn--small">Ir a comandas a productores</a>';
+            var tabsV = document.querySelector('.tabs');
+            if (tabsV) tabsV.style.display = 'none';
+            VISTAS.forEach(function (v) {
+              var el = $('vista-' + v);
+              if (el) el.style.display = 'none';
+            });
+            var barraV = $('btn-refrescar-todo');
+            if (barraV && barraV.parentNode) barraV.parentNode.style.display = 'none';
+            idEdicion = '';   // que ningún refresco ni botón trabaje sobre la edición vieja
+            return;
+          }
 
           if (!idEdicion || !lineas.length) {
             // Sin comandas no hay nada que recibir: la app se cierra entera
@@ -1676,6 +1707,7 @@
 
       // ── envío ────────────────────────────────────────────────────
       $('btn-confirmar').addEventListener('click', function () {
+        if (bloqueadoPorRegistro || this.dataset.enviando) return;   // doble toque
         var idProd = $('card-items').dataset.idProd;
         var propias = lineas.filter(function (l) { return l.id_productor === idProd; });
         var divs = $('lista-items').querySelectorAll('.item');
@@ -1723,6 +1755,7 @@
 
         var btn = $('btn-confirmar');
         btn.disabled = true;
+        btn.dataset.enviando = '1';
         btn.textContent = 'Registrando…';
 
         fetch(WEBHOOK_D1, {
@@ -1733,13 +1766,15 @@
         }).then(fin).catch(fin);
 
         function fin() {
-          btn.textContent = 'Registrar recepción';
-          btn.disabled = false;
+          delete btn.dataset.enviando;
           $('ok-box').style.display = 'block';
           registrados[idProd] = true;
           recibidosVivo[idProd] = valorQuien('recibido-por');
           armarSelect();
           $('sel-productor').value = idProd;
+          // queda en modo consulta: botón "Ya registrada ✓" apagado y
+          // renglones bloqueados, igual que al volver a elegir el productor
+          actualizarAvisoDup(idProd);
           window.scrollTo(0, document.body.scrollHeight);
         }
       });
