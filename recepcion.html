@@ -637,6 +637,38 @@
     .chip-ped.pendiente { background: var(--c-crema-osc); color: var(--c-tierra); }
     .chip-ped.armado { background: var(--c-oliva-claro); color: var(--c-leche); }
     .chip-ped.entregado { background: var(--c-musgo); color: var(--c-crema); }
+    .chip-ped.parcial { background: var(--c-oliva-claro); color: var(--c-leche); }
+    .ped-card.parcial { background: rgba(110, 142, 85, 0.10); border-color: var(--c-oliva); }
+
+    /* bloque de refrigerados dentro del pedido */
+    .bloque-tit {
+      font-size: 0.74rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--c-tierra); margin: 12px 0 4px;
+    }
+    .bloque-tit.frio { color: #2f6b8f; }
+    .item-frio {
+      display: flex; align-items: center; gap: 8px; padding: 7px 10px; margin: 3px 0;
+      border-radius: 8px; background: rgba(47, 107, 143, 0.07); font-size: 0.95rem;
+    }
+    .item-frio.ok .txt { text-decoration: line-through; opacity: 0.55; }
+    .item-frio .ico { flex: 0 0 auto; }
+    .btn-accion.frio { background: #2f6b8f; border-color: #2f6b8f; }
+    .btn-accion.frio:hover { background: #245672; border-color: #245672; }
+    .acciones-2 { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .acciones-2 .btn-accion { flex: 1 1 200px; margin-top: 0; }
+
+    /* filtros de vista de la solapa Entrega */
+    .filtros-entrega { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 6px; }
+    .filtros-entrega button {
+      border: 1.5px solid var(--c-crema-osc); background: transparent; color: var(--c-corteza);
+      border-radius: 999px; padding: 6px 14px; font-size: 0.9rem; cursor: pointer;
+    }
+    .filtros-entrega button.activa { background: var(--c-oliva); border-color: var(--c-oliva); color: var(--c-leche); }
+    .resumen-frio {
+      background: rgba(47, 107, 143, 0.08); border-left: 4px solid #2f6b8f; border-radius: 8px;
+      padding: 10px 14px; margin: 8px 0 12px; font-size: 0.92rem;
+    }
+    .resumen-frio ul { margin: 6px 0 0 18px; padding: 0; }
 
     .ped-cuerpo {
       display: none;
@@ -886,11 +918,13 @@
       <div class="card-eq">
         <h2>Armado y entrega</h2>
         <p class="muted">
-          Tocá un pedido para <strong>abrir o cerrar</strong> su detalle e ir
-          tachando mientras armás el cajón. Con todo tachado aparece
-          <strong>“✓ Cajón armado”</strong>; cuando el consumidor lo retira,
-          tocá <strong>“Entregar pedido”</strong> (pide confirmación).
-          Cada registro se guarda al instante y los demás teléfonos lo ven solos.
+          Cada pedido tiene dos partes: el <strong>cajón</strong> (todo lo de
+          ambiente, que se arma el día anterior tachando producto por producto)
+          y los <strong>❄ refrigerados</strong>, que se sacan de la heladera y se
+          entregan en el puesto de frío cuando la persona retira. El pedido queda
+          <strong>entregado</strong> cuando se registraron las dos entregas, en el
+          orden que sea. Cada registro se guarda al instante y los demás teléfonos
+          lo ven solos.
         </p>
 
         <div class="campo">
@@ -918,11 +952,23 @@
             <span class="barra-num" id="num-entregados">—</span>
           </div>
           <div class="barra"><div class="barra-fill fill-entrega" id="barra-entregados"></div></div>
+          <div class="barra-linea">
+            <span class="barra-tit">❄ Refrigerados entregados</span>
+            <span class="barra-num" id="num-frio">—</span>
+          </div>
+          <div class="barra"><div class="barra-fill" id="barra-frio" style="background:#2f6b8f;"></div></div>
         </div>
 
+        <div class="filtros-entrega" id="filtros-entrega">
+          <button type="button" data-vista="todos" class="activa">Todos los pedidos</button>
+          <button type="button" data-vista="cajon">📦 Armado de cajones</button>
+          <button type="button" data-vista="frio">❄ Puesto de frío</button>
+        </div>
+        <div class="resumen-frio" id="resumen-frio" style="display:none;"></div>
+
         <div class="campo">
-          <label for="buscar-entrega">Buscar consumidor</label>
-          <input type="text" id="buscar-entrega" placeholder="Escribí parte del nombre…">
+          <label for="buscar-entrega">Buscar por nombre o N° de pedido</label>
+          <input type="text" id="buscar-entrega" placeholder="Escribí parte del nombre o el número…">
         </div>
 
         <div class="aviso rojo" id="aviso-entrega" style="display:none;"></div>
@@ -981,6 +1027,11 @@
       var consumidores = {};  // id -> nombre
       var contactos = {};     // id -> {tel, email}
       var propuestas = [];    // faltantes pendientes de la edición
+      var conservacion = {};  // id_producto -> 'Frío' | 'Ambiente' (Productos!U)
+      function esFrio(idProducto) {
+        var c = String(conservacion[idProducto] || '').toLowerCase();
+        return c.indexOf('fr') === 0 || c.indexOf('cong') === 0 || c.indexOf('refri') === 0;
+      }
       var itemsEd = [];       // ítems de los pedidos de la edición
 
       // ── Solapas ──────────────────────────────────────────────────
@@ -1197,8 +1248,17 @@
           gviz('sheet=Items&range=A1:M3000&headers=1'),
           // Las dos últimas no son críticas: si la hoja no existe, seguimos igual.
           gviz('sheet=Equipo&range=A1:E100&headers=1').catch(function () { return null; }),
-          gviz('sheet=Recepciones&range=A1:L4000&headers=1').catch(function () { return null; })
+          gviz('sheet=Recepciones&range=A1:L4000&headers=1').catch(function () { return null; }),
+          // Productos!U conservacion (Frío / Ambiente): qué va al puesto de frío
+          gviz('sheet=Productos&range=A1:U800&headers=1').catch(function () { return null; })
         ]).then(function (res) {
+          conservacion = {};
+          if (res[10]) {
+            res[10].table.rows.forEach(function (r) {
+              var idP = String(celda(r, 0)).trim();
+              if (idP) conservacion[idP] = String(celda(r, 20) || '').trim();
+            });
+          }
           var rowsK = res[0].table.rows;
           idEdicion = rowsK.length ? String(celda(rowsK[0], 0)).trim() : '';
 
@@ -1818,16 +1878,36 @@
       var overrides = {};    // id_pedido -> {estado} optimista hasta que la planilla confirme
       var LS_TICKS = 'nm_ticks_';  // tildes de control guardados en el navegador
 
-      function rango(e) { return e === 'Entregado' ? 2 : (e === 'Armado' ? 1 : 0); }
+      var ESTADOS_ENTREGA = ['Armado', 'Frío entregado', 'Cajón entregado', 'Entregado'];
+      function rango(e) { return e === 'Entregado' ? 2 : (e === 'Pendiente' ? 0 : 1); }
 
       function estadoDe(p) {
-        var base = (p.estado === 'Entregado' || p.estado === 'Armado') ? p.estado : 'Pendiente';
+        var base = ESTADOS_ENTREGA.indexOf(p.estado) !== -1 ? p.estado : 'Pendiente';
         var o = overrides[p.id_pedido];
         // Un registro recién hecho (incluso un "deshacer") manda sobre la
         // planilla hasta que ella lo confirme (~30 seg); después expira.
         if (o && (Date.now() - o.ts) < 180000) return o.estado;
         return base;
       }
+
+      // partes del pedido
+      function partesDe(idPed) {
+        var amb = [], frio = [];
+        itemsDePedido(idPed).forEach(function (it, k) {
+          if (it.efectiva <= 0) return;   // faltante: no va en ningún lado
+          (esFrio(it.id_producto) ? frio : amb).push({ it: it, k: k });
+        });
+        return { ambiente: amb, frio: frio };
+      }
+      function frioPendiente(p) {
+        var e = estadoDe(p);
+        return partesDe(p.id_pedido).frio.length > 0 && e !== 'Entregado' && e !== 'Frío entregado';
+      }
+      function cajonPendiente(p) {
+        var e = estadoDe(p);
+        return e !== 'Entregado' && e !== 'Cajón entregado';
+      }
+      var vistaEntrega = 'todos';   // 'todos' | 'cajon' | 'frio'
 
       function leerTicks(idPed) {
         try {
@@ -1842,87 +1922,205 @@
         } catch (e) {}
       }
 
+      function chipEstado(est) {
+        if (est === 'Pendiente') return 'pendiente';
+        if (est === 'Armado') return '✓ cajón armado';
+        if (est === 'Frío entregado') return '❄ frío entregado · falta el cajón';
+        if (est === 'Cajón entregado') return '📦 cajón entregado · faltan refrigerados';
+        return '✓✓ entregado';
+      }
+      function claseEstado(est) {
+        if (est === 'Pendiente') return 'pendiente';
+        if (est === 'Armado') return 'armado';
+        if (est === 'Entregado') return 'entregado';
+        return 'parcial';
+      }
+
+      function renderResumenFrio(lista) {
+        var caja = $('resumen-frio');
+        if (vistaEntrega !== 'frio') { caja.style.display = 'none'; return; }
+        var tot = {};
+        lista.forEach(function (p) {
+          partesDe(p.id_pedido).frio.forEach(function (x) {
+            var info = infoProducto(x.it.id_producto);
+            var k = x.it.id_producto;
+            if (!tot[k]) tot[k] = { nombre: info.nombre, unidad: info.unidad, cant: 0, pedidos: 0 };
+            tot[k].cant += x.it.efectiva;
+            tot[k].pedidos++;
+          });
+        });
+        var keys = Object.keys(tot).sort(function (a, b) { return tot[a].nombre < tot[b].nombre ? -1 : 1; });
+        caja.style.display = 'block';
+        if (!keys.length) {
+          caja.innerHTML = '❄ No queda ningún refrigerado por entregar.';
+          return;
+        }
+        caja.innerHTML = '<strong>❄ Para sacar de la heladera</strong> (' + lista.length + ' pedido' +
+          (lista.length === 1 ? '' : 's') + ' con refrigerados pendientes):<ul>' +
+          keys.map(function (k) {
+            var t = tot[k];
+            return '<li>' + t.nombre + ': <strong>' + numeroAmable(Math.round(t.cant * 100) / 100) +
+              (t.unidad ? ' ' + t.unidad : '') + '</strong> (' + t.pedidos + ' pedido' + (t.pedidos === 1 ? '' : 's') + ')</li>';
+          }).join('') + '</ul>';
+      }
+
       function renderEntrega() {
         var cont = $('lista-entrega');
         cont.innerHTML = '';
 
         if (!pedidos.length) {
           cont.innerHTML = '<p class="muted">No hay pedidos para esta edición.</p>';
+          $('resumen-frio').style.display = 'none';
           actualizarTablero();
           return;
         }
 
         var filtro = $('buscar-entrega').value.trim().toLowerCase();
 
-        pedidos.forEach(function (p, i) {
-          var nombre = nombreConsumidor(p);
-          if (filtro && nombre.toLowerCase().indexOf(filtro) === -1) return;
+        // qué pedidos entran en la vista elegida
+        var visibles = pedidos.filter(function (p) {
+          if (vistaEntrega === 'frio') return frioPendiente(p);
+          if (vistaEntrega === 'cajon') return cajonPendiente(p);
+          return true;
+        });
+        renderResumenFrio(visibles);
 
-          var est = estadoDe(p);   // 'Pendiente' | 'Armado' | 'Entregado'
+        if (!visibles.length) {
+          cont.innerHTML = '<p class="muted">' + (vistaEntrega === 'frio'
+            ? '❄ Todos los refrigerados ya se entregaron.'
+            : '📦 Todos los cajones ya se entregaron.') + '</p>';
+          actualizarTablero();
+          return;
+        }
+
+        visibles.forEach(function (p) {
+          var i = pedidos.indexOf(p);
+          var nombre = nombreConsumidor(p);
+          if (filtro && nombre.toLowerCase().indexOf(filtro) === -1 &&
+              String(p.correlativo) !== filtro.replace(/^n[°º]?\s*/, '')) return;
+
+          var est = estadoDe(p);
           var its = itemsDePedido(p.id_pedido);
+          var partes = partesDe(p.id_pedido);
           var ticks = leerTicks(p.id_pedido);
+          var frioListo = est === 'Frío entregado' || est === 'Entregado';
+          var cajonListo = est === 'Cajón entregado' || est === 'Entregado';
 
           var card = document.createElement('div');
-          card.className = 'ped-card ' + est.toLowerCase() +
+          card.className = 'ped-card ' + claseEstado(est) +
             (pedAbierto === p.id_pedido ? ' abierto' : '');
           card.dataset.idx = String(i);
           card.innerHTML =
             '<div class="ped-head">' +
               '<span class="caret">▶</span>' +
               '<span class="ped-nombre"></span>' +
-              '<span class="chip-ped ' + est.toLowerCase() + '">' +
-                (est === 'Pendiente' ? 'pendiente'
-                  : est === 'Armado' ? '✓ armado' : '✓✓ entregado') +
-              '</span>' +
+              '<span class="chip-ped ' + claseEstado(est) + '">' + chipEstado(est) + '</span>' +
             '</div>' +
             '<div class="ped-cuerpo"></div>';
           card.querySelector('.ped-nombre').textContent =
             'N° ' + p.correlativo + ' · ' + nombre +
-            ' — $' + Math.round(p.total).toLocaleString('es-AR');
+            ' — $' + Math.round(p.total).toLocaleString('es-AR') +
+            (partes.frio.length ? ' · ❄' + partes.frio.length : '');
 
           var cuerpo = card.querySelector('.ped-cuerpo');
 
-          if (its.length) {
-            its.forEach(function (it, k) {
-              var noVa = it.efectiva <= 0;
-              var marcado = noVa || est !== 'Pendiente' || ticks.indexOf(k) !== -1;
-              var fila = document.createElement('label');
-              fila.className = 'item-ped' + (noVa ? ' no-va' : (marcado ? ' ok' : ''));
-              fila.innerHTML = '<input type="checkbox" class="chk-item" data-k="' + k + '"' +
-                ((noVa || est !== 'Pendiente') ? ' disabled' : '') +
-                (marcado ? ' checked' : '') + '><span class="txt"></span>';
-              fila.querySelector('.txt').textContent = textoItem(it);
-              // de qué cajón sale: el productor, al lado de cada ítem
-              var idProdIt = it.id_productor || productorDeProducto(it.id_producto);
-              if (idProdIt) {
-                var tag = document.createElement('span');
-                tag.className = 'tag-productor';
-                tag.textContent = productores[idProdIt] || idProdIt;
-                fila.querySelector('.txt').appendChild(tag);
-              }
-              cuerpo.appendChild(fila);
-            });
-            var prog = document.createElement('div');
-            prog.className = 'prog-control';
-            cuerpo.appendChild(prog);
-          } else {
+          if (!its.length) {
             cuerpo.insertAdjacentHTML('beforeend',
               '<p class="muted" style="margin-top:var(--s-3);">Este pedido no tiene ítems cargados.</p>');
           }
 
+          // ── Cajón (ambiente): se tacha al armar ──
+          if (its.length) {
+            cuerpo.insertAdjacentHTML('beforeend', '<div class="bloque-tit">📦 Cajón' +
+              (cajonListo ? ' · entregado' : (est !== 'Pendiente' ? ' · armado' : '')) + '</div>');
+          }
+          if (its.length && !partes.ambiente.length) {
+            cuerpo.insertAdjacentHTML('beforeend', '<p class="muted" style="font-size:0.9rem;">Este pedido es todo refrigerado: no hay cajón que armar.</p>');
+          }
+          partes.ambiente.forEach(function (x) {
+            var it = x.it, k = x.k;
+            var marcado = est !== 'Pendiente' || ticks.indexOf(k) !== -1;
+            var fila = document.createElement('label');
+            fila.className = 'item-ped' + (marcado ? ' ok' : '');
+            fila.innerHTML = '<input type="checkbox" class="chk-item" data-k="' + k + '"' +
+              (est !== 'Pendiente' ? ' disabled' : '') +
+              (marcado ? ' checked' : '') + '><span class="txt"></span>';
+            fila.querySelector('.txt').textContent = textoItem(it);
+            var idProdIt = it.id_productor || productorDeProducto(it.id_producto);
+            if (idProdIt) {
+              var tag = document.createElement('span');
+              tag.className = 'tag-productor';
+              tag.textContent = productores[idProdIt] || idProdIt;
+              fila.querySelector('.txt').appendChild(tag);
+            }
+            cuerpo.appendChild(fila);
+          });
+          // faltantes (no van): informativos
+          its.forEach(function (it) {
+            if (it.efectiva > 0) return;
+            var f = document.createElement('div');
+            f.className = 'item-ped no-va';
+            f.innerHTML = '<span class="txt"></span>';
+            f.querySelector('.txt').textContent = textoItem(it);
+            cuerpo.appendChild(f);
+          });
+          if (partes.ambiente.length) {
+            var prog = document.createElement('div');
+            prog.className = 'prog-control';
+            cuerpo.appendChild(prog);
+          }
+
+          // ── Refrigerados: se entregan en el puesto de frío ──
+          if (partes.frio.length) {
+            cuerpo.insertAdjacentHTML('beforeend', '<div class="bloque-tit frio">❄ Refrigerados · puesto de frío' +
+              (frioListo ? ' · entregados' : '') + '</div>');
+            partes.frio.forEach(function (x) {
+              var it = x.it;
+              var fila = document.createElement('div');
+              fila.className = 'item-frio' + (frioListo ? ' ok' : '');
+              fila.innerHTML = '<span class="ico">' + (frioListo ? '✓' : '❄') + '</span><span class="txt"></span>';
+              fila.querySelector('.txt').textContent = textoItem(it);
+              var idProdF = it.id_productor || productorDeProducto(it.id_producto);
+              if (idProdF) {
+                var tagF = document.createElement('span');
+                tagF.className = 'tag-productor';
+                tagF.textContent = productores[idProdF] || idProdF;
+                fila.querySelector('.txt').appendChild(tagF);
+              }
+              cuerpo.appendChild(fila);
+            });
+          }
+
+          // ── Botones según estado ──
           if (est === 'Pendiente') {
             var b = document.createElement('button');
             b.type = 'button';
             b.className = 'btn-accion armar';
-            b.textContent = '✓ Cajón armado';
+            b.textContent = partes.ambiente.length ? '✓ Cajón armado' : '✓ Listo (sin cajón, todo refrigerado)';
             cuerpo.appendChild(b);
-          } else if (est === 'Armado') {
-            var b2 = document.createElement('button');
-            b2.type = 'button';
-            b2.className = 'btn-accion';
-            b2.textContent = 'Entregar pedido';
-            cuerpo.appendChild(b2);
-          } else if (est === 'Entregado') {
+          } else if (est !== 'Entregado') {
+            var acc = document.createElement('div');
+            acc.className = 'acciones-2';
+            if (partes.frio.length && !frioListo) {
+              var bf = document.createElement('button');
+              bf.type = 'button';
+              bf.className = 'btn-accion frio entregar';
+              bf.dataset.accion = 'frio';
+              bf.dataset.txt = '❄ Refrigerados entregados';
+              bf.textContent = bf.dataset.txt;
+              acc.appendChild(bf);
+            }
+            if (!cajonListo) {
+              var bc = document.createElement('button');
+              bc.type = 'button';
+              bc.className = 'btn-accion entregar';
+              bc.dataset.accion = 'cajon';
+              bc.dataset.txt = partes.frio.length ? '📦 Cajón entregado' : '📦 Cajón entregado (pedido completo)';
+              bc.textContent = bc.dataset.txt;
+              acc.appendChild(bc);
+            }
+            cuerpo.appendChild(acc);
+          } else {
             var b3 = document.createElement('button');
             b3.type = 'button';
             b3.className = 'btn-deshacer';
@@ -1947,19 +2145,34 @@
 
       function actualizarTablero() {
         var tot = pedidos.length;
-        var arm = 0, ent = 0;
+        var arm = 0, ent = 0, conFrio = 0, frioOk = 0;
         pedidos.forEach(function (p) {
           var e = estadoDe(p);
-          if (e === 'Armado' || e === 'Entregado') arm++;
+          if (e !== 'Pendiente') arm++;
           if (e === 'Entregado') ent++;
+          if (partesDe(p.id_pedido).frio.length) {
+            conFrio++;
+            if (e === 'Entregado' || e === 'Frío entregado') frioOk++;
+          }
         });
         $('num-armados').textContent = arm + ' de ' + tot;
         $('num-entregados').textContent = ent + ' de ' + tot;
+        $('num-frio').textContent = conFrio ? frioOk + ' de ' + conFrio : 'sin refrigerados';
         $('barra-armados').style.width = tot ? (arm / tot * 100) + '%' : '0%';
         $('barra-entregados').style.width = tot ? (ent / tot * 100) + '%' : '0%';
+        $('barra-frio').style.width = conFrio ? (frioOk / conFrio * 100) + '%' : '0%';
       }
 
       $('buscar-entrega').addEventListener('input', renderEntrega);
+      $('filtros-entrega').addEventListener('click', function (e) {
+        var b = e.target.closest('button[data-vista]');
+        if (!b) return;
+        vistaEntrega = b.dataset.vista;
+        Array.prototype.forEach.call($('filtros-entrega').querySelectorAll('button'), function (x) {
+          x.classList.toggle('activa', x === b);
+        });
+        renderEntrega();
+      });
 
       // Tocar la tarjeta la despliega; tocar el botón registra la acción
       $('lista-entrega').addEventListener('click', function (e) {
@@ -1979,21 +2192,21 @@
             registrarAccion(p, 'armado', btn);
             return;
           }
-          // Entregar pide confirmación: dos toques seguidos
+          // Entregar (frío o cajón) pide confirmación: dos toques seguidos
           if (!btn.dataset.conf) {
             btn.dataset.conf = '1';
             btn.classList.add('confirmar');
-            btn.textContent = '¿Confirmás la entrega? Tocá de nuevo';
+            btn.textContent = '¿Confirmás? Tocá de nuevo';
             setTimeout(function () {
               if (!btn.isConnected || !btn.dataset.conf) return;
               delete btn.dataset.conf;
               btn.classList.remove('confirmar');
-              btn.textContent = 'Entregar pedido';
+              btn.textContent = btn.dataset.txt || 'Entregar';
             }, 4000);
             return;
           }
           delete btn.dataset.conf;
-          registrarAccion(p, 'entrega', btn);
+          registrarAccion(p, btn.dataset.accion || 'entrega', btn);
           return;
         }
         var head = e.target.closest('.ped-head');
@@ -2032,6 +2245,21 @@
         if (!quien) { avisoEntrega('Antes de registrar, elegí tu nombre arriba de todo.'); return; }
         if (!clave) { avisoEntrega('Falta la clave de equipo (arriba de todo).'); return; }
 
+        // 'frio' y 'cajon' son medias entregas: si la otra mitad ya está (o no
+        // existe), el pedido queda Entregado directamente. Si no, D4 guarda
+        // la mitad y, si al llegar la otra ya estaba, lo cierra él.
+        var partes = partesDe(p.id_pedido), est = estadoDe(p);
+        var estadoNuevo;
+        if (accion === 'frio') {
+          if (est === 'Cajón entregado' || !partes.ambiente.length) { accion = 'entrega'; estadoNuevo = 'Entregado'; }
+          else estadoNuevo = 'Frío entregado';
+        } else if (accion === 'cajon') {
+          if (est === 'Frío entregado' || !partes.frio.length) { accion = 'entrega'; estadoNuevo = 'Entregado'; }
+          else estadoNuevo = 'Cajón entregado';
+        } else {
+          estadoNuevo = accion === 'armado' ? 'Armado' : 'Entregado';
+        }
+
         btn.disabled = true;
         btn.textContent = 'Guardando…';
 
@@ -2041,7 +2269,7 @@
           headers: { 'Content-Type': 'text/plain' },
           body: JSON.stringify({
             tipo: 'retiro',      // el escenario de Make espera este valor: no cambiar
-            accion: accion,      // 'armado' | 'entrega'
+            accion: accion,      // 'armado' | 'frio' | 'cajon' | 'entrega'
             id_edicion: idEdicion,
             entregado_por: quien,
             clave: clave,
@@ -2050,10 +2278,7 @@
         }).then(fin).catch(fin);
 
         function fin() {
-          overrides[p.id_pedido] = {
-            estado: accion === 'armado' ? 'Armado' : 'Entregado',
-            ts: Date.now()
-          };
+          overrides[p.id_pedido] = { estado: estadoNuevo, ts: Date.now() };
           if (accion === 'armado') guardarTicks(p.id_pedido, []);
           if (accion === 'entrega') {
             pedAbierto = '';
@@ -2089,8 +2314,26 @@
       function refrescarPedidos() {
         if (!idEdicion) return;
         gviz('sheet=Pedidos&range=A1:U3000&headers=1')
-          .then(function (res) { parsePedidos(res); renderEntrega(); })
+          .then(function (res) { parsePedidos(res); renderEntrega(); chequearTodoEntregado(); })
           .catch(function () {});
+      }
+      // Si el último pedido lo cerró D4 (la otra mitad ya estaba), ningún
+      // teléfono mandó el aviso a A5: se detecta al refrescar y se manda una vez.
+      var vistoPendiente = null, liqAvisada = false;
+      function chequearTodoEntregado() {
+        if (!pedidos.length) return;
+        var todos = pedidos.every(function (p2) { return estadoDe(p2) === 'Entregado'; });
+        if (vistoPendiente === null) { vistoPendiente = !todos; return; }
+        if (todos && vistoPendiente && !liqAvisada && WEBHOOK_A5.indexOf('https://hook.') === 0) {
+          liqAvisada = true;
+          var clave = $('clave-entrega').value.trim();
+          if (!clave) return;
+          fetch(WEBHOOK_A5, {
+            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({ tipo: 'iniciar_liquidacion', clave: clave })
+          }).catch(function () {});
+        }
+        if (!todos) vistoPendiente = true;
       }
       setInterval(function () {
         if ($('vista-entrega').style.display === 'none') return;
