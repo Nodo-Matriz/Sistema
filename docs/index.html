@@ -691,8 +691,51 @@
       // cobra a la persona) no coincide con lo que suman sus ítems, acá aparece
       // y la liquidación no se genera hasta corregirlo.
       var totalesConDiferencia = null;   // null = no se pudo controlar
+      // Control de ÍTEMS: cada ítem de la edición tiene que tener un subtotal
+      // numérico y la columna control_subtotal (Items!S) en "ok". Si algún
+      // subtotal quedó vacío, con texto o NaN, el total del pedido sale mal
+      // sin que nadie se entere: esto lo detecta y frena avisos y liquidación.
+      var itemsConProblemas = null;   // null = no se pudo controlar
+      function controlarItems(id) {
+        return gviz('sheet=Items&range=A1:S6000&headers=1').then(function (res) {
+          var malos = [];
+          res.table.rows.forEach(function (r) {
+            var idPed = String(celda(r, 1)).trim();
+            if (idPed.indexOf(id + '-') === -1) return;
+            var idItem = String(celda(r, 0)).trim();
+            if (!idItem) return;
+            var h = r.c[7] ? r.c[7].v : null;                 // H subtotal
+            var ctrl = String(celda(r, 18)).trim().toLowerCase();   // S control_subtotal
+            var hOk = typeof h === 'number' && isFinite(h);
+            if (!hOk || ctrl !== 'ok') {
+              malos.push({
+                item: idItem.replace(/^PED-/, ''),
+                producto: String(celda(r, 2)).trim(),
+                motivo: !hOk ? 'subtotal vacío o inválido' : ('control: ' + (ctrl || 'error'))
+              });
+            }
+          });
+          itemsConProblemas = malos;
+          return malos;
+        });
+      }
+
+      function htmlProblemasItems(malos) {
+        return '⛔ <strong>' + malos.length + ' ítem' + (malos.length === 1 ? '' : 's') +
+          ' con el subtotal mal</strong> en la hoja Items. Los totales de esos pedidos no son ' +
+          'confiables: no se puede avisar a los consumidores ni liquidar hasta corregirlo.' +
+          '<ul style="margin:6px 0 0 18px;">' +
+          malos.slice(0, 12).map(function (m) {
+            return '<li>' + m.item + ' (' + m.producto + '): ' + m.motivo + '</li>';
+          }).join('') + (malos.length > 12 ? '<li>… y ' + (malos.length - 12) + ' más</li>' : '') + '</ul>';
+      }
+
       function controlarTotales(id) {
-        return gviz('sheet=Pedidos&range=A1:Z2000&headers=1').then(function (res) {
+        return Promise.all([
+          gviz('sheet=Pedidos&range=A1:Z2000&headers=1'),
+          controlarItems(id).catch(function () { itemsConProblemas = null; return null; })
+        ]).then(function (both) {
+          var res = both[0], malosItems = both[1];
           var malos = [], hayControl = false, total = 0;
           var colCalc = -1, colDif = -1;
           (res.table.cols || []).forEach(function (c, i) {
@@ -728,6 +771,26 @@
               'Hasta que estén, nadie verifica que lo que se cobra coincida con los ítems.';
             return malos;
           }
+          if (malosItems === null) {
+            // no se pudo leer Items: no se da por controlado
+            totalesConDiferencia = null;
+            caja.style.display = 'block';
+            caja.style.background = 'rgba(166, 64, 43, 0.10)';
+            caja.style.borderLeftColor = '#A6402B';
+            caja.style.color = '#A6402B';
+            caja.innerHTML = '⚠️ <strong>No pude leer la hoja Items</strong> para controlar los ' +
+              'subtotales. Recargá la página antes de liquidar.';
+            return [{ correlativo: '?', cobrado: 0, calculado: 0 }];
+          }
+          if (malosItems.length) {
+            totalesConDiferencia = malosItems.length + malos.length;
+            caja.style.display = 'block';
+            caja.style.background = 'rgba(166, 64, 43, 0.10)';
+            caja.style.borderLeftColor = '#A6402B';
+            caja.style.color = '#A6402B';
+            caja.innerHTML = htmlProblemasItems(malosItems);
+            return malosItems.concat(malos);
+          }
           totalesConDiferencia = malos.length;
           caja.style.display = 'block';
           if (!malos.length) {
@@ -735,7 +798,7 @@
             caja.style.borderLeftColor = '';
             caja.style.color = '';
             caja.innerHTML = '✅ <strong>Totales controlados:</strong> los ' + total +
-              ' pedidos de ' + id + ' coinciden con sus ítems.';
+              ' pedidos de ' + id + ' coinciden con sus ítems, y todos los subtotales de los ítems están bien.';
           } else {
             caja.style.background = 'rgba(166, 64, 43, 0.10)';
             caja.style.borderLeftColor = '#A6402B';
@@ -874,6 +937,11 @@
           return;
         }
         if (!edicionVigente) { aviso('No encuentro la edición en curso.', true); return; }
+        if (itemsConProblemas === null || itemsConProblemas.length) {
+          aviso('⛔ Los subtotales de los ítems no están controlados o hay errores: ' +
+            'los correos saldrían con totales incorrectos. Corregilo y recargá la página.', true);
+          return;
+        }
 
         // confirmación en dos toques: manda correos a consumidores
         if (!avisosConfirmando) {
@@ -945,9 +1013,9 @@
           return;
         }
         if (!edicionVigente) { aviso('No encuentro la edición en curso.', true); return; }
-        if (totalesConDiferencia) {
-          aviso('⛔ Hay pedidos con el total desparejo respecto de sus ítems (ver arriba). ' +
-            'Corregilos en la planilla y recargá esta página antes de liquidar.', true);
+        if (totalesConDiferencia || itemsConProblemas === null) {
+          aviso('⛔ Los totales no están controlados o hay diferencias (ver arriba). ' +
+            'Corregilo en la planilla y recargá esta página antes de liquidar.', true);
           return;
         }
 
@@ -1102,9 +1170,18 @@
         gate('btn-avisos', 'porque-avisos', false,
           !cerrada && paso >= 6 ? 'Leyendo la planilla…' : 'Se habilita el día de galpón.');
         if (!cerrada && paso >= 6) {
-          leerAvisos(id).then(function (a) {
+          Promise.all([leerAvisos(id), controlarItems(id)]).then(function (both) {
+            var a = both[0], malosIt = both[1];
             pintarEstadoAvisos(a);
-            if (a.pendientes > 0) {
+            if (a.pendientes > 0 && malosIt.length) {
+              gate('btn-avisos', 'porque-avisos', false,
+                'Hay ítems con el subtotal mal: los mails saldrían con totales incorrectos.');
+              var ca = $('estado-avisos');
+              ca.style.background = 'rgba(166, 64, 43, 0.10)';
+              ca.style.borderLeftColor = '#A6402B';
+              ca.style.color = '#A6402B';
+              ca.innerHTML = htmlProblemasItems(malosIt);
+            } else if (a.pendientes > 0) {
               gate('btn-avisos', 'porque-avisos', true, '');
               $('btn-avisos').textContent = 'Avisar a los consumidores (' + a.pendientes + ')';
             } else if (a.avisados > 0) {
