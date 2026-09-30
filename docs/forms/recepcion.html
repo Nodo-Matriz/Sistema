@@ -1213,7 +1213,9 @@
             cantidad: parseFloat(celda(r, 4)) || 0,
             fraccion: String(celda(r, 5)).trim(),
             precio: parseFloat(celda(r, 6)) || 0,
-            efectiva: parseFloat(celda(r, 10)) || 0
+            estado: String(celda(r, 8) || '').trim(),
+            efectiva: parseFloat(celda(r, 10)) || 0,
+            quien: String(celda(r, 11) || '').trim()
           });
         });
       }
@@ -1804,6 +1806,8 @@
             ? (aNumero(div.querySelector('.cant').value) || 0) : 0;
           var recibidaEf = l.fraccion ? recibidaMostrada * factor : recibidaMostrada;
           recibidaEf = Math.round(recibidaEf * 1000) / 1000;
+          // tildado pero con 0: es un faltante completo, no "Calidad OK"
+          if (tildado && recibidaEf <= 0 && calidad !== 'Rechazado') calidad = 'No llegó';
 
           var obs = tildado ? div.querySelector('.obs').value.trim() : 'No recibido';
           if (calidad === 'Rechazado') {
@@ -1861,33 +1865,128 @@
       });
 
       // ── Fraccionamiento ──────────────────────────────────────────
+      // Plan_Fraccionamiento se escribe al generar las comandas y no cambia.
+      // Lo que hay que armar HOY sale de Items (ya con los recortes de
+      // Ajustes) y se cruza con lo recibido: nunca se tilda como preparado
+      // algo que no llegó, que se recortó o cuya recepción falta registrar.
+      var EPS = 0.0005;
+      var fraccVista = [];   // renglones que se muestran (con su estado de hoy)
+
+      function redondear3(n) { return Math.round(n * 1000) / 1000; }
+      function porc(n) { return numeroAmable(n) + (Math.abs(n - 1) < EPS ? ' porción' : ' porciones'); }
+
+      function calcularFraccVista() {
+        var dem = {}, totProd = {};
+        itemsEd.forEach(function (it) {
+          totProd[it.id_producto] = (totProd[it.id_producto] || 0) + it.efectiva;
+          if (it.quien !== 'Galpón' || !it.fraccion) return;
+          var k = it.id_producto + '|' + it.fraccion;
+          if (!dem[k]) dem[k] = { porciones: 0, unidades: 0 };
+          dem[k].porciones += it.cantidad;
+          dem[k].unidades += it.efectiva;
+        });
+
+        var vistos = {};
+        var out = planFracc.map(function (p) {
+          var k = p.id_producto + '|' + p.fraccion;
+          vistos[k] = true;
+          var ahora = dem[k] || { porciones: 0, unidades: 0 };
+          var plan = parseFloat(String(p.porciones).replace(',', '.')) || 0;
+          var rec = recepPorProducto[p.id_producto];
+          var total = redondear3(totProd[p.id_producto] || 0);
+          var r = {
+            p: p, plan: plan,
+            ahora: redondear3(ahora.porciones), unidades: redondear3(ahora.unidades),
+            preparado: p.estado === 'Preparado',
+            estado: 'ok', msg: '', alerta: ''
+          };
+          if (recepCorruptas[p.id_producto]) {
+            r.estado = 'bloq';
+            r.msg = 'La recepción de este producto tiene un número ilegible en la planilla: revisala antes de armar.';
+          } else if (!rec) {
+            r.estado = 'bloq';
+            r.msg = 'Todavía no se registró la recepción de este producto.';
+          } else if (rec.recibida < total - EPS) {
+            r.estado = 'bloq';
+            r.msg = 'Llegaron ' + numeroAmable(redondear3(rec.recibida)) + ' y los pedidos suman ' +
+              numeroAmable(total) + ': aplicá primero el recorte en Ajustes.';
+          } else if (r.ahora <= EPS) {
+            r.estado = 'cero';
+            r.msg = 'No hay que armar: no llegó o se recortó todo.';
+          } else if (Math.abs(r.ahora - plan) > EPS) {
+            r.estado = 'cambio';
+            r.msg = (r.ahora < plan ? 'Se recortó: ' : 'Cambió el pedido: ') +
+              'eran ' + porc(plan) + ', ahora van ' + numeroAmable(r.ahora) + '.';
+          }
+          if (r.preparado && r.estado !== 'bloq' && r.ahora < plan - EPS) {
+            var sobran = redondear3(plan - r.ahora);
+            r.alerta = '⚠ Figura preparado con ' + porc(plan) + ' y van ' +
+              numeroAmable(r.ahora) + ': separá ' + porc(sobran) + ' aparte: no se entregan, quedan como sobrante.';
+          }
+          if (r.preparado && r.estado === 'bloq') {
+            r.alerta = '⚠ Figura preparado, pero ' + r.msg.charAt(0).toLowerCase() + r.msg.slice(1);
+          }
+          if (r.preparado && r.ahora > plan + EPS) {
+            r.alerta = '⚠ Figura preparado con ' + porc(plan) + ', pero ahora van ' +
+              numeroAmable(r.ahora) + ': armá ' + numeroAmable(redondear3(r.ahora - plan)) + ' más.';
+          }
+          return r;
+        });
+
+        // Fracciones que piden los pedidos y no están en el plan
+        Object.keys(dem).forEach(function (k) {
+          if (vistos[k] || dem[k].porciones <= EPS) return;
+          var partes = k.split('|');
+          out.push({
+            p: { id_plan: '', id_producto: partes[0], nombre: nombreProducto(partes[0]), fraccion: partes[1] },
+            plan: 0, ahora: redondear3(dem[k].porciones), unidades: redondear3(dem[k].unidades),
+            preparado: false, estado: 'bloq',
+            msg: 'No está en el plan de fraccionamiento: armalo igual y avisá para que se agregue.',
+            alerta: ''
+          });
+        });
+        return out;
+      }
+
       function renderFracc() {
         var cont = $('lista-fracc');
         cont.innerHTML = '';
+        fraccVista = calcularFraccVista();
 
-        if (!planFracc.length) {
+        if (!fraccVista.length) {
           cont.innerHTML = '<p class="muted">No hay fracciones pendientes para esta edición 🎉</p>';
           $('progreso-fracc').textContent = '';
+          validarFracc();
           return;
         }
 
-        planFracc.forEach(function (p, i) {
-          var yaPreparado = (p.estado === 'Preparado');
+        fraccVista.forEach(function (r, i) {
+          var p = r.p;
+          var habilitado = !r.preparado && (r.estado === 'ok' || r.estado === 'cambio') && !!p.id_plan;
           var div = document.createElement('div');
-          div.className = 'item' + (yaPreparado ? ' preparado' : ' no-llego');
+          div.className = 'item' +
+            (r.preparado ? ' preparado' : (habilitado ? ' no-llego' : '')) +
+            (r.estado === 'cero' || r.estado === 'bloq' ? ' nada' : '') +
+            (r.estado === 'cambio' && !r.preparado ? ' parcial' : '') +
+            (r.alerta ? ' nada' : '');
+          if (r.alerta) div.style.opacity = '1';
           div.dataset.idx = String(i);
           div.innerHTML =
             '<input type="checkbox" class="chk-f" aria-label="Preparado"' +
-              (yaPreparado ? ' checked disabled' : '') + '>' +
+              (r.preparado ? ' checked disabled' : (habilitado ? '' : ' disabled')) + '>' +
             '<div class="cuerpo">' +
               '<div class="linea-nombre"></div>' +
               '<div class="quien"></div>' +
+              '<div class="nota-novedad"></div>' +
             '</div>';
-          div.querySelector('.linea-nombre').textContent =
-            'Armar ' + p.porciones + ' porciones de ' + p.fraccion +
-            ' — ' + (p.nombre || p.id_producto) + ' (= ' + p.unidades + ' en total)';
+          var nombre = p.nombre || p.id_producto;
+          div.querySelector('.linea-nombre').textContent = (r.ahora <= EPS)
+            ? nombre + ' · ' + p.fraccion + ' — no se arma'
+            : 'Armar ' + porc(r.ahora) + ' de ' + p.fraccion + ' — ' + nombre +
+              ' (= ' + numeroAmable(r.unidades) + ' en total)';
           div.querySelector('.quien').textContent =
-            yaPreparado ? '✓ Preparado' + (p.preparado_por ? ' por ' + p.preparado_por : '') : '';
+            r.preparado ? '✓ Preparado' + (p.preparado_por ? ' por ' + p.preparado_por : '') : '';
+          div.querySelector('.nota-novedad').textContent = r.alerta || r.msg;
           cont.appendChild(div);
         });
         actualizarProgresoFracc();
@@ -1902,9 +2001,15 @@
       });
 
       function actualizarProgresoFracc() {
-        var hechas = planFracc.filter(function (p) { return p.estado === 'Preparado'; }).length;
+        var aArmar = fraccVista.filter(function (r) { return r.ahora > EPS; });
+        var hechas = aArmar.filter(function (r) { return r.preparado; }).length;
+        var bloq = aArmar.filter(function (r) { return !r.preparado && r.estado === 'bloq'; }).length;
+        var alertas = fraccVista.filter(function (r) { return !!r.alerta; }).length;
         var nuevas = $('lista-fracc').querySelectorAll('.chk-f:checked:not(:disabled)').length;
-        $('progreso-fracc').textContent = hechas + ' ya preparadas · ' + nuevas + ' por registrar ahora';
+        $('progreso-fracc').textContent = hechas + ' de ' + aArmar.length + ' ya preparadas · ' +
+          nuevas + ' por registrar ahora' +
+          (bloq ? ' · ' + bloq + ' esperando recepción o ajuste' : '') +
+          (alertas ? ' · ⚠ ' + alertas + ' para revisar' : '');
         validarFracc();
       }
 
@@ -1916,14 +2021,28 @@
       }
       $('clave-fracc').addEventListener('input', validarFracc);
 
+      // al entrar a la solapa, traer lo último (recepciones, ítems y plan)
+      document.getElementById('tab-fracc').addEventListener('click', function () {
+        refrescoVivo(false);
+      });
+
       $('btn-fracc').addEventListener('click', function () {
         var divs = $('lista-fracc').querySelectorAll('.item');
-        var items = [];
-        planFracc.forEach(function (p, i) {
-          var chk = divs[i].querySelector('.chk-f');
-          if (chk.checked && !chk.disabled) items.push({ id_plan: p.id_plan });
+        var marcadas = [];
+        fraccVista.forEach(function (r, i) {
+          var chk = divs[i] && divs[i].querySelector('.chk-f');
+          if (chk && chk.checked && !chk.disabled && r.p.id_plan &&
+              (r.estado === 'ok' || r.estado === 'cambio')) marcadas.push(r);
         });
-        if (!items.length) return;
+        if (!marcadas.length) return;
+        var items = marcadas.map(function (r) {
+          return {
+            id_plan: r.p.id_plan,
+            // lo que se armó de verdad (puede ser menos que el plan original)
+            porciones_armadas: numPlanilla(r.ahora),
+            unidades_armadas: numPlanilla(r.unidades)
+          };
+        });
 
         var payload = {
           tipo: 'fraccionamiento',
@@ -1948,12 +2067,10 @@
           btn.textContent = 'Registrar fracciones preparadas';
           $('ok-fracc').style.display = 'block';
           // Marcar localmente como preparadas
-          planFracc.forEach(function (p, i) {
-            var chk = divs[i].querySelector('.chk-f');
-            if (chk.checked && !chk.disabled) {
-              p.estado = 'Preparado';
-              p.preparado_por = valorQuien('preparado-por');
-            }
+          marcadas.forEach(function (r) {
+            r.p.estado = 'Preparado';
+            r.p.preparado_por = valorQuien('preparado-por');
+            r.p.porciones = r.ahora;
           });
           renderFracc();
         }
@@ -2655,6 +2772,7 @@
           if (res[1]) parseItems(res[1]);
           calcularFaltantes();
           renderAjustes();
+          if (!$('lista-fracc').querySelectorAll('.chk-f:checked:not(:disabled)').length) renderFracc();
         }).catch(function () {});
       }
 
