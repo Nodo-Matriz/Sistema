@@ -169,6 +169,8 @@
 
       <div class="alerta" id="alerta-existentes"></div>
 
+      <div class="alerta" id="alerta-items"></div>
+
       <div class="preview" id="preview-com">Completá edición, fecha de entrega y clave…</div>
 
       <button type="button" class="btn btn--primary" id="btn-comandas" disabled style="width:100%;">
@@ -222,12 +224,12 @@
 
       // ── Precargar número y año desde la edición en curso ─────────
       (function precargarEdicion() {
-        gviz('sheet=Ediciones&range=A1:N100&headers=1').then(function (res) {
+        gviz('sheet=Ediciones&range=A1:N1000&headers=1').then(function (res) {
           var fila = null;
           res.table.rows.forEach(function (r) {
             var c = r.c[0];
             var id = c && c.v ? String(c.v).trim() : '';
-            if (/^ED\d{4}-\d{2}$/.test(id)) fila = r;
+            if (/^ED\d{4}-\d{2,}$/.test(id)) fila = r;
           });
           var pista = $('pista-edicion');
           if (!fila) {
@@ -255,6 +257,7 @@
           if (abierta) $('alerta-abierta').style.display = 'block';
           refrescar();
           contarComandas();   // ya sabemos la edición: contar lo generado
+          controlarItems();
         }).catch(function () {
           $('ed-display').textContent = '—';
           $('campos-manual').hidden = false;
@@ -309,6 +312,72 @@
           'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':00' + OFFSET;
       }
 
+      // Comanda de esta edición: A = "CMD<id>-<productor>" o B = <id> (exacto;
+      // "ED2026-10" no tiene que contar las comandas de "ED2026-100").
+      function esComandaDe(r, id) {
+        var a = r.c[0] && r.c[0].v ? String(r.c[0].v).trim() : '';
+        var b = r.c[1] && r.c[1].v ? String(r.c[1].v).trim() : '';
+        return b === id || a.indexOf('CMD' + id + '-') === 0;
+      }
+
+      // ── Control de ítems antes de generar comandas ───────────────
+      // Las cantidades que se les piden a los productores salen de Items!K.
+      // Si un dato de entrada quedó mal (una fracción que la planilla
+      // calcula distinto que el formulario, una cantidad convertida en
+      // fecha), las comandas pedirían otra cosa. Se revisa antes de enviar.
+      var itemsMalos = null;   // null = todavía no controlado
+      function factorFormulario(f) {
+        f = String(f || '').trim();
+        if (!f) return 1;
+        var m = f.match(/^(\d+(?:[.,]\d+)?)\s*(g|gr|grs|gramos?|ml|cc)\.?$/i);
+        if (m) { var n = parseFloat(m[1].replace(',', '.')); return n ? n / 1000 : null; }
+        if (f.indexOf('/') !== -1) {
+          var p = f.split('/'), x = parseFloat(p[0]), y = parseFloat(p[1]);
+          return (x > 0 && y > 0) ? x / y : null;
+        }
+        return null;
+      }
+      function controlarItems() {
+        var id = idEdicion();
+        if (!id) { itemsMalos = null; refrescar(); return; }
+        gviz('sheet=Items&range=A1:S50000&headers=1').then(function (res) {
+          var malos = [];
+          function num(r, i) { var c = r.c[i]; return (c && typeof c.v === 'number' && isFinite(c.v)) ? c.v : null; }
+          res.table.rows.forEach(function (r) {
+            var idPed = r.c[1] && r.c[1].v ? String(r.c[1].v).trim() : '';
+            if (idPed.indexOf('PED-' + id + '-') !== 0) return;
+            var e = num(r, 4), k = num(r, 10), g = num(r, 6);
+            var fc = r.c[5], f = (fc && fc.v !== null && fc.v !== undefined) ? fc.v : '';
+            var fac = (typeof f === 'string') ? factorFormulario(f) : null;
+            var mot = '';
+            if (e === null || e < 0 || e > 1000 || e % 1 !== 0) mot = 'cantidad (E) inválida';
+            else if (f !== '' && fac === null) mot = 'fracción (F) inválida';
+            else if (g === null || g < 50 || g > 10000000) mot = 'precio (G) inválido';
+            else if (k === null || Math.abs(k - e * fac) > 0.0005) mot = 'la planilla calcula otra cantidad que el formulario';
+            if (mot) malos.push((r.c[0] && r.c[0].v ? String(r.c[0].v).replace(/^PED-/, '') : '?') + ': ' + mot);
+          });
+          itemsMalos = malos;
+          var caja = $('alerta-items');
+          if (malos.length) {
+            caja.style.display = 'block';
+            caja.innerHTML = '⛔ <strong>' + malos.length + ' ítem' + (malos.length === 1 ? '' : 's') +
+              ' con datos inválidos</strong> en la hoja Items: las comandas pedirían cantidades ' +
+              'equivocadas. Corregilo en la planilla y recargá esta página.<ul style="margin:6px 0 0 18px;">' +
+              malos.slice(0, 12).map(function (m) { return '<li>' + m + '</li>'; }).join('') +
+              (malos.length > 12 ? '<li>… y ' + (malos.length - 12) + ' más</li>' : '') + '</ul>';
+          } else {
+            caja.style.display = 'none';
+          }
+          refrescar();
+        }).catch(function () {
+          itemsMalos = null;
+          var caja = $('alerta-items');
+          caja.style.display = 'block';
+          caja.textContent = '⚠️ No pude leer la hoja Items para controlarla. Recargá la página.';
+          refrescar();
+        });
+      }
+
       // ── Protección contra el doble envío ─────────────────────────
       // Las comandas ya generadas se cuentan en la planilla. Mientras
       // existan, el botón queda bloqueado: generar de nuevo duplica todo.
@@ -317,13 +386,10 @@
       function contarComandas(cb) {
         var id = idEdicion();
         if (!id) { if (cb) cb(); return; }
-        gviz('sheet=Comandas&range=A1:C3000&headers=1').then(function (res) {
+        gviz('sheet=Comandas&range=A1:C20000&headers=1').then(function (res) {
           var n = 0;
           res.table.rows.forEach(function (r) {
-            for (var i = 0; i < 3; i++) {
-              var vv = r.c[i] && r.c[i].v ? String(r.c[i].v) : '';
-              if (vv.indexOf(id) !== -1) { n++; break; }
-            }
+            if (esComandaDe(r, id)) n++;
           });
           yaGeneradas = n;
           refrescar();
@@ -364,13 +430,15 @@
 
         }
 
-        $('btn-comandas').disabled = !completos || bloqueado || yaGeneradas === -1;
+        var itemsNoOk = !bloqueado && (itemsMalos === null || itemsMalos.length > 0);
+        $('btn-comandas').disabled = !completos || bloqueado || yaGeneradas === -1 || itemsNoOk;
         $('btn-comandas').textContent = bloqueado
           ? 'Comandas ya generadas'
           : 'Generar comandas de la edición';
       }
 
       campos.forEach(function (c) { $(c).addEventListener('input', refrescar); });
+      ['numero', 'anio'].forEach(function (c) { $(c).addEventListener('change', controlarItems); });
       ['entrega-hasta', 'entrega2', 'entrega2-hasta'].forEach(function (c) {
         $(c).addEventListener('input', refrescar);
       });
@@ -382,6 +450,7 @@
         if (!id || !v) return;
         var d = new Date(v);
         if (yaGeneradas > 0) return;   // nunca dos veces
+        if (itemsMalos === null || itemsMalos.length) return;   // ítems sin controlar o con errores
 
         try { sessionStorage.setItem(CLAVE_KEY, $('clave').value.trim()); } catch (e) {}
 
@@ -425,13 +494,10 @@
               'de C2 en Make.';
             return;
           }
-          gviz('sheet=Comandas&range=A1:C3000&headers=1').then(function (res) {
+          gviz('sheet=Comandas&range=A1:C20000&headers=1').then(function (res) {
             var n = 0;
             res.table.rows.forEach(function (r) {
-              for (var i = 0; i < 3; i++) {
-                var vv = r.c[i] && r.c[i].v ? String(r.c[i].v) : '';
-                if (vv.indexOf(id) !== -1) { n++; break; }
-              }
+              if (esComandaDe(r, id)) n++;
             });
             if (n <= 0) return;               // todavía no aparece ninguna
             if (n > ultimo) {                 // siguen entrando comandas: actualizo
@@ -479,7 +545,7 @@
       // y revisar de nuevo al volver a la pestaña: si otra persona las generó
       // desde otro teléfono, el botón se bloquea solo
       document.addEventListener('visibilitychange', function () {
-        if (!document.hidden) contarComandas();
+        if (!document.hidden) { contarComandas(); controlarItems(); }
       });
       window.addEventListener('focus', function () { contarComandas(); });
       setInterval(function () { if (!document.hidden) contarComandas(); }, 20000);
