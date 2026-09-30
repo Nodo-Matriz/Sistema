@@ -696,22 +696,64 @@
       // subtotal quedó vacío, con texto o NaN, el total del pedido sale mal
       // sin que nadie se entere: esto lo detecta y frena avisos y liquidación.
       var itemsConProblemas = null;   // null = no se pudo controlar
+      // Por pedido: cuántos ítems tiene y si alguno fue recortado (para el
+      // control de pedidos sin ítems y del total que vio el consumidor).
+      var itemsPorPedido = {};
+
+      // Multiplicador de una fracción, calculado EXACTAMENTE como lo calcula
+      // el formulario de pedidos (templates/pedidos.template.html) cuando el
+      // consumidor ve su total. Si la planilla (Items!K) calcula otra cosa,
+      // el consumidor pagó un monto y la planilla cobra/liquida otro.
+      // Devuelve null si la fracción no es una que el formulario pueda mandar.
+      function factorFormulario(f) {
+        f = String(f || '').trim();
+        if (!f) return 1;
+        var m = f.match(/^(\d+(?:[.,]\d+)?)\s*(g|gr|grs|gramos?|ml|cc)\.?$/i);
+        if (m) {
+          var n = parseFloat(m[1].replace(',', '.'));
+          return n ? n / 1000 : null;
+        }
+        if (f.indexOf('/') !== -1) {
+          var p = f.split('/'), a = parseFloat(p[0]), b = parseFloat(p[1]);
+          return (a > 0 && b > 0) ? a / b : null;
+        }
+        return null;   // "1.5", "½", texto suelto: el formulario no manda eso en F
+      }
+
       function controlarItems(id) {
-        return gviz('sheet=Items&range=A1:S6000&headers=1').then(function (res) {
+        return gviz('sheet=Items&range=A1:S50000&headers=1').then(function (res) {
           var malos = [];
+          itemsPorPedido = {};
+          function num(r, i) { var c = r.c[i]; return (c && typeof c.v === 'number' && isFinite(c.v)) ? c.v : null; }
           res.table.rows.forEach(function (r) {
             var idPed = String(celda(r, 1)).trim();
-            if (idPed.indexOf(id + '-') === -1) return;
+            if (idPed.indexOf('PED-' + id + '-') !== 0) return;   // exacto
             var idItem = String(celda(r, 0)).trim();
             if (!idItem) return;
-            var h = r.c[7] ? r.c[7].v : null;                 // H subtotal
+            var e = num(r, 4), g = num(r, 6), h = num(r, 7), k = num(r, 10);
+            var fc = r.c[5], f = (fc && fc.v !== null && fc.v !== undefined) ? fc.v : '';
             var ctrl = String(celda(r, 18)).trim().toLowerCase();   // S control_subtotal
-            var hOk = typeof h === 'number' && isFinite(h);
-            if (!hOk || ctrl !== 'ok') {
+            var est = String(celda(r, 8)).trim().toLowerCase();       // I estado_item
+            var st = itemsPorPedido[idPed] || (itemsPorPedido[idPed] = { n: 0, recortado: false });
+            st.n++;
+            if (est === 'descontado' || est === 'faltante' || String(celda(r, 13)).trim() !== '') st.recortado = true;
+            var fac = (typeof f === 'string') ? factorFormulario(f) : null;
+            var motivo = '';
+            // cada dato de entrada tiene que ser lo que se espera; si no, la
+            // planilla lo interpretó mal (fechas, textos) y el monto no sirve
+            if (e === null || e < 0 || e > 1000 || e % 1 !== 0) motivo = 'cantidad (E) inválida: ' + celda(r, 4);
+            else if (f !== '' && fac === null) motivo = 'fracción (F) «' + celda(r, 5) + '» inválida (¿se convirtió en fecha o es un formato que el formulario no usa?)';
+            else if (g === null || g < 50 || g > 10000000) motivo = 'precio (G) inválido: ' + celda(r, 6);
+            else if (k === null || k < 0) motivo = 'cantidad efectiva (K) inválida';
+            else if (Math.abs(k - e * fac) > 0.0005) motivo = 'la planilla calcula ' + k + ' unidades y el formulario ' +
+              (Math.round(e * fac * 1000) / 1000) + ' (fracción «' + f + '»): el monto cobrado no coincide';
+            else if (h === null) motivo = 'subtotal (H) vacío o inválido';
+            else if (ctrl !== 'ok') motivo = 'control: ' + (ctrl || 'error');
+            if (motivo) {
               malos.push({
                 item: idItem.replace(/^PED-/, ''),
                 producto: String(celda(r, 2)).trim(),
-                motivo: !hOk ? 'subtotal vacío o inválido' : ('control: ' + (ctrl || 'error'))
+                motivo: motivo
               });
             }
           });
@@ -722,7 +764,7 @@
 
       function htmlProblemasItems(malos) {
         return '⛔ <strong>' + malos.length + ' ítem' + (malos.length === 1 ? '' : 's') +
-          ' con el subtotal mal</strong> en la hoja Items. Los totales de esos pedidos no son ' +
+          ' con datos inválidos</strong> en la hoja Items. Los totales de esos pedidos no son ' +
           'confiables: no se puede avisar a los consumidores ni liquidar hasta corregirlo.' +
           '<ul style="margin:6px 0 0 18px;">' +
           malos.slice(0, 12).map(function (m) {
@@ -732,20 +774,59 @@
 
       function controlarTotales(id) {
         return Promise.all([
-          gviz('sheet=Pedidos&range=A1:Z2000&headers=1'),
+          gviz('sheet=Pedidos&range=A1:Z20000&headers=1'),
           controlarItems(id).catch(function () { itemsConProblemas = null; return null; })
         ]).then(function (both) {
           var res = both[0], malosItems = both[1];
           var malos = [], hayControl = false, total = 0;
-          var colCalc = -1, colDif = -1;
+          var colCalc = -1, colDif = -1, colForm = -1;
           (res.table.cols || []).forEach(function (c, i) {
             var lab = String(c.label || '').trim().toLowerCase();
             if (lab === 'total_calc') colCalc = i;
             if (lab === 'diferencia') colDif = i;
+            if (lab === 'total_form') colForm = i;   // lo que el formulario le mostró al consumidor (B1)
           });
           res.table.rows.forEach(function (r) {
             if (String(celda(r, 1)).trim() !== id) return;
             total++;
+            var idPed = String(celda(r, 0)).trim();
+            var st = malosItems ? itemsPorPedido[idPed] : null;
+            // un pedido sin ítems suma 0 y "cuadra" consigo mismo: hay que verlo
+            if (malosItems && !st) {
+              hayControl = true;
+              malos.push({
+                correlativo: String(celda(r, 3)).trim(),
+                texto: 'no tiene ningún ítem cargado en la hoja Items (¿falló la carga del pedido?)'
+              });
+              return;
+            }
+            // total que vio y confirmó el consumidor vs. lo que calcula la planilla
+            // (solo si no hubo recortes: después de un recorte cambia a propósito)
+            if (colForm >= 0 && st && !st.recortado) {
+              var tf = r.c[colForm], tfv = (tf && typeof tf.v === 'number') ? tf.v : null;
+              var kc = r.c[10], kv = (kc && typeof kc.v === 'number') ? kc.v : null;
+              if (tfv !== null && (kv === null || Math.abs(kv - tfv) > 1)) {
+                hayControl = true;
+                malos.push({
+                  correlativo: String(celda(r, 3)).trim(),
+                  texto: 'el formulario le mostró $ ' + tfv.toLocaleString('es-AR') +
+                    ' y la planilla calcula $ ' + (kv === null ? '?' : kv.toLocaleString('es-AR'))
+                });
+                return;
+              }
+            }
+            // porcentaje de aporte: entero entre 0 y 100. Un "17.5" guardado
+            // como fecha daría 46.159 % y el control de abajo no lo vería
+            var hc = r.c[7], hp = (hc && typeof hc.v === 'number') ? hc.v : null;
+            if (hp === null || hp < 0 || hp > 100) {
+              hayControl = true;
+              malos.push({
+                correlativo: String(celda(r, 3)).trim() + ' (aporte inválido: ' + celda(r, 7) + ')',
+                cobrado: parseFloat(celda(r, 10)) || 0,
+                calculado: 0
+              });
+              return;
+            }
             if (colDif < 0) return;
             var ctrl = String(celda(r, colDif)).trim();
             if (ctrl !== '') hayControl = true;
@@ -804,11 +885,12 @@
             caja.style.borderLeftColor = '#A6402B';
             caja.style.color = '#A6402B';
             caja.innerHTML = '⛔ <strong>' + malos.length + ' pedido' + (malos.length === 1 ? '' : 's') +
-              ' con el total desparejo</strong> respecto de sus ítems. Hay que corregirlo en la ' +
+              ' con problemas en el total</strong>. Hay que corregirlo en la ' +
               'planilla antes de liquidar:<ul style="margin:6px 0 0 18px;">' +
               malos.map(function (m) {
-                return '<li>N° ' + m.correlativo + ': se cobra $ ' + m.cobrado.toLocaleString('es-AR') +
-                  ', los ítems suman $ ' + m.calculado.toLocaleString('es-AR') + '</li>';
+                if (m.texto) return '<li>N° ' + m.correlativo + ': ' + m.texto + '</li>';
+                return '<li>N° ' + m.correlativo + ': se cobra $ ' + (m.cobrado || 0).toLocaleString('es-AR') +
+                  ', los ítems suman $ ' + (m.calculado || 0).toLocaleString('es-AR') + '</li>';
               }).join('') + '</ul>';
           }
           return malos;
@@ -817,8 +899,8 @@
 
       function leerLiquidacion(id) {
         return Promise.all([
-          gviz('sheet=Pagos_productor&range=A1:J2000&headers=1'),
-          gviz('sheet=Productores&range=A1:F300&headers=1').catch(function () { return null; })
+          gviz('sheet=Pagos_productor&range=A1:J20000&headers=1'),
+          gviz('sheet=Productores&range=A1:F2000&headers=1').catch(function () { return null; })
         ]).then(function (res) {
           if (res[1]) {
             res[1].table.rows.forEach(function (r) {
@@ -877,13 +959,13 @@
       // Entregado). Pendientes = con recortes y Q ≠ Sí; avisados = Q = Sí.
       function leerAvisos(id) {
         return Promise.all([
-          gviz('sheet=Pedidos&range=A1:Z2000&headers=1'),
-          gviz('sheet=Items&range=A1:S5000&headers=1')
+          gviz('sheet=Pedidos&range=A1:Z20000&headers=1'),
+          gviz('sheet=Items&range=A1:S50000&headers=1')
         ]).then(function (res) {
           var conRecortes = {};
           res[1].table.rows.forEach(function (r) {
             var idPed = String(celda(r, 1)).trim();
-            if (idPed.indexOf(id) === -1) return;
+            if (idPed.indexOf('PED-' + id + '-') !== 0) return;   // exacto
             var est = String(celda(r, 8)).trim().toLowerCase();   // I estado_item
             if (est === 'descontado' || est === 'faltante') conRecortes[idPed] = true;
           });
@@ -937,8 +1019,9 @@
           return;
         }
         if (!edicionVigente) { aviso('No encuentro la edición en curso.', true); return; }
-        if (itemsConProblemas === null || itemsConProblemas.length) {
-          aviso('⛔ Los subtotales de los ítems no están controlados o hay errores: ' +
+        if (itemsConProblemas === null || itemsConProblemas.length ||
+            totalesConDiferencia === null || totalesConDiferencia) {
+          aviso('⛔ Los ítems o los totales de los pedidos no están controlados o hay errores: ' +
             'los correos saldrían con totales incorrectos. Corregilo y recargá la página.', true);
           return;
         }
@@ -1056,13 +1139,13 @@
         }, 8000);
       });
 
-      gviz('sheet=Ediciones&range=A1:L100&headers=1').then(function (res) {
+      gviz('sheet=Ediciones&range=A1:L1000&headers=1').then(function (res) {
         // última fila cuyo id tenga formato de edición (ED2026-11);
         // así se saltean las filas de anotaciones de la hoja
         var vigente = null;
         res.table.rows.forEach(function (r) {
           var id = String(celda(r, 0)).trim();
-          if (/^ED\d{4}-\d{2}$/.test(id)) vigente = r;
+          if (/^ED\d{4}-\d{2,}$/.test(id)) vigente = r;
         });
 
         if (!vigente) {
@@ -1142,7 +1225,7 @@
           controlarTotales(id).then(function (malos) {
             if (malos.length) {
               gate('btn-liquidacion', 'porque-liq', false,
-                'Hay ' + malos.length + ' pedido(s) con el total desparejo: corregilos antes de liquidar.');
+                'Hay ' + malos.length + ' problema(s) en ítems o totales: corregilos antes de liquidar.');
             }
           }).catch(function () {});
           leerLiquidacion(id).then(function (n) {
@@ -1170,17 +1253,22 @@
         gate('btn-avisos', 'porque-avisos', false,
           !cerrada && paso >= 6 ? 'Leyendo la planilla…' : 'Se habilita el día de galpón.');
         if (!cerrada && paso >= 6) {
-          Promise.all([leerAvisos(id), controlarItems(id)]).then(function (both) {
-            var a = both[0], malosIt = both[1];
+          // control completo (ítems + pedidos: aporte, pedidos sin ítems, total
+          // que vio el consumidor): los correos llevan los totales de Pedidos
+          Promise.all([leerAvisos(id), controlarTotales(id)]).then(function (both) {
+            var a = both[0], malosTot = both[1];
             pintarEstadoAvisos(a);
-            if (a.pendientes > 0 && malosIt.length) {
+            var sinControl = (itemsConProblemas === null || totalesConDiferencia === null);
+            if (a.pendientes > 0 && (malosTot.length || sinControl)) {
               gate('btn-avisos', 'porque-avisos', false,
-                'Hay ítems con el subtotal mal: los mails saldrían con totales incorrectos.');
+                'Hay datos inválidos o sin controlar: los mails saldrían con totales incorrectos.');
               var ca = $('estado-avisos');
               ca.style.background = 'rgba(166, 64, 43, 0.10)';
               ca.style.borderLeftColor = '#A6402B';
               ca.style.color = '#A6402B';
-              ca.innerHTML = htmlProblemasItems(malosIt);
+              var ct = $('control-totales');
+              ca.innerHTML = (itemsConProblemas && itemsConProblemas.length) ? htmlProblemasItems(itemsConProblemas)
+                : (ct && ct.innerHTML ? ct.innerHTML : '⛔ No pude controlar los totales. Recargá la página.');
             } else if (a.pendientes > 0) {
               gate('btn-avisos', 'porque-avisos', true, '');
               $('btn-avisos').textContent = 'Avisar a los consumidores (' + a.pendientes + ')';
