@@ -494,7 +494,7 @@
       var ESTADOS_ABIERTOS = ['form abierto'];
       function leerEstadoEdicion() {
         var url = 'https://docs.google.com/spreadsheets/d/1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg' +
-          '/gviz/tq?tqx=out:json&sheet=Ediciones&range=A1:D100&headers=1&_=' + Date.now();
+          '/gviz/tq?tqx=out:json&sheet=Ediciones&range=A1:D1000&headers=1&_=' + Date.now();
         return fetch(url, { cache: 'no-store' })
           .then(function (r) { return r.text(); })
           .then(function (t) {
@@ -1302,7 +1302,7 @@
               unidad: p.unidad,
               cantidad: s.cantidad,
               fraccion: s.fraccion,
-              precio_unitario: p.precio,
+              precio_unitario: Math.round(p.precio || 0),
               subtotal: subtotalItem,
               detalleVisual: detalleItem(p, s),
             });
@@ -1363,7 +1363,8 @@
 
       function actualizarTotales(subtotal) {
         var aportePorc = getAportePorc();
-        var aporte = Math.round(subtotal * (aportePorc / 100));
+        // misma cuenta y mismo orden que la planilla: REDONDEAR(I × H / 100)
+        var aporte = Math.round(subtotal * aportePorc / 100);
         var total = subtotal + aporte;
 
         document.getElementById('subtotal').textContent = formatMoney(subtotal);
@@ -1469,11 +1470,14 @@
       function getAportePorc() {
         var checked = document.querySelector('input[name="aporte_porcent"]:checked');
         if (!checked) return APORTE_MIN;
+        // Siempre un porcentaje ENTERO entre el mínimo y 100: la planilla está
+        // en español y un "17.5" lo guardaría como fecha (17 de mayo).
         if (checked.value === 'otro') {
-          var v = parseFloat(aporteInputCustom.value);
-          return (isNaN(v) || v < APORTE_MIN) ? APORTE_MIN : v;
+          var v = Math.round(parseFloat(String(aporteInputCustom.value).replace(',', '.')));
+          if (isNaN(v) || v < APORTE_MIN) return APORTE_MIN;
+          return v > 100 ? 100 : v;
         }
-        return parseFloat(checked.value) || APORTE_MIN;
+        return Math.round(parseFloat(checked.value)) || APORTE_MIN;
       }
 
       function avisarAporteMinimo() {
