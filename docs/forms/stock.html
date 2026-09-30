@@ -774,6 +774,20 @@
     // ── Construir payload y enviar ─────────────────────────────────
     // Se envían TODOS los productos con su estado final (tildado o no),
     // así la hoja queda exactamente como el productor dejó la pantalla.
+    // La planilla está en español: "1.5" la guarda como fecha. Precios: pesos
+    // enteros. Otras cantidades: con coma si tienen decimales.
+    function precioEntero(v) {
+      // el campo es type=number: llega como "1500" o "1500.5" (punto decimal)
+      var n = Math.round(parseFloat(String(v || '').replace(',', '.')));
+      return isFinite(n) && n > 0 ? n : null;
+    }
+    function numPlanilla(v) {
+      var n = parseFloat(String(v || '').replace(',', '.'));
+      if (!isFinite(n)) return null;
+      n = Math.round(n * 1000) / 1000;
+      return (n % 1 === 0) ? n : String(n).replace('.', ',');
+    }
+
     function buildPayload() {
       var tbody = document.getElementById('tbody-stock');
       var productos = [];
@@ -789,8 +803,8 @@
           id_producto:    id,
           nombre:         cols[COL.nombre],
           unidad:         cols[COL.unidad_venta],
-          precio:         parseFloat(tr.querySelector('[data-campo="precio"]').value) || null,
-          stock_estimado: (STOCK_ACTIVO && elStock) ? (parseFloat(elStock.value) || null) : null,
+          precio:         precioEntero(tr.querySelector('[data-campo="precio"]').value),
+          stock_estimado: (STOCK_ACTIVO && elStock) ? numPlanilla(elStock.value) : null,
           disponible:     tr.querySelector('[data-campo="disponible"]').checked,
           es_oferta:      tr.querySelector('[data-campo="es_oferta"]').checked,
           accion:         'actualizar',
@@ -808,8 +822,8 @@
           id_producto:    null,  // Make genera el ID
           nombre:         nombre,
           unidad:         tr.querySelector('[data-campo="unidad"]').value,
-          precio:         parseFloat(tr.querySelector('[data-campo="precio"]').value) || null,
-          stock_estimado: (STOCK_ACTIVO && elStockN) ? (parseFloat(elStockN.value) || null) : null,
+          precio:         precioEntero(tr.querySelector('[data-campo="precio"]').value),
+          stock_estimado: (STOCK_ACTIVO && elStockN) ? numPlanilla(elStockN.value) : null,
           descripcion:    (elDesc ? elDesc.value.trim() : '') || null,
           disponible:     tr.querySelector('[data-campo="disponible"]').checked,
           es_oferta:      tr.querySelector('[data-campo="es_oferta"]').checked,
@@ -819,6 +833,17 @@
 
       if (productos.length === 0) {
         alert('No hay productos para enviar.');
+        return null;
+      }
+
+      // Un producto tildado tiene que tener un precio creíble: si no, saldría
+      // en el formulario a $ 0 o a $ 2 (por ejemplo, un "1.500" pegado con punto).
+      var sinPrecio = productos.filter(function (p) {
+        return p.disponible && (p.precio === null || p.precio < 50);
+      }).map(function (p) { return p.nombre; });
+      if (sinPrecio.length) {
+        alert('Revisá el precio de: ' + sinPrecio.join(', ') +
+          '.\nEscribilo en pesos, sin puntos ni comas (ej.: 1500).');
         return null;
       }
 
