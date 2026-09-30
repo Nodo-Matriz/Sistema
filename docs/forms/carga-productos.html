@@ -345,10 +345,10 @@
 
       function cargar() {
         Promise.all([
-          gviz('sheet=Productores&range=A1:N300&headers=1&_=' + Date.now()),
-          gviz('sheet=Log_Cambios_Stock&range=A1:N10000&headers=1&_=' + Date.now()),
-          gviz('sheet=Productos&range=A1:AZ1000&headers=1&_=' + Date.now()),
-          gviz('sheet=Ediciones&range=A1:L100&headers=1&_=' + Date.now())
+          gviz('sheet=Productores&range=A1:N2000&headers=1&_=' + Date.now()),
+          gviz('sheet=Log_Cambios_Stock&range=A1:N300000&headers=1&_=' + Date.now()),
+          gviz('sheet=Productos&range=A1:AZ5000&headers=1&_=' + Date.now()),
+          gviz('sheet=Ediciones&range=A1:L1000&headers=1&_=' + Date.now())
         ]).then(function (res) {
           parseEdicion(res[3]);
           productores = [];
@@ -405,7 +405,7 @@
         if (!res) return;
         var fila = null;
         res.table.rows.forEach(function (r) {
-          if (/^ED\d{4}-\d{2}$/.test(String(celda(r, 0)).trim())) fila = r;
+          if (/^ED\d{4}-\d{2,}$/.test(String(celda(r, 0)).trim())) fila = r;
         });
         if (!fila) return;
         idEdicion = String(celda(fila, 0)).trim();

@@ -296,7 +296,7 @@
       // (la misma regla que usan la guía y el tablero de carga).
       (function precargarEdicion() {
         var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
-          '/gviz/tq?tqx=out:json&sheet=Ediciones&range=A1:N100&headers=1&_=' + Date.now();
+          '/gviz/tq?tqx=out:json&sheet=Ediciones&range=A1:N1000&headers=1&_=' + Date.now();
         fetch(url, { cache: 'no-store' })
           .then(function (r) { return r.text(); })
           .then(function (text) {
@@ -307,7 +307,7 @@
             res.table.rows.forEach(function (r) {
               var c = r.c[0];
               var id = c && c.v ? String(c.v).trim() : '';
-              if (/^ED\d{4}-\d{2,3}$/.test(id)) fila = r;
+              if (/^ED\d{4}-\d{2,}$/.test(id)) fila = r;
             });
             var pista = $('pista-edicion');
             if (!fila) {
@@ -381,7 +381,7 @@
         // rango explícito + cache-buster: sin rango, gviz a veces devuelve
         // una porción vieja de la hoja y faltan categorías
         var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
-          '/gviz/tq?tqx=out:json&sheet=Productos&range=A1:S2000&headers=1&_=' + Date.now();
+          '/gviz/tq?tqx=out:json&sheet=Productos&range=A1:S5000&headers=1&_=' + Date.now();
 
         fetch(url, { cache: 'no-store' })
           .then(function (r) { return r.text(); })
@@ -698,7 +698,7 @@
             return;
           }
           var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
-            '/gviz/tq?tqx=out:json&sheet=Ediciones&range=A1:L100&headers=1&_=' + Date.now();
+            '/gviz/tq?tqx=out:json&sheet=Ediciones&range=A1:L1000&headers=1&_=' + Date.now();
           fetch(url, { cache: 'no-store' })
             .then(function (r) { return r.text(); })
             .then(function (text) {

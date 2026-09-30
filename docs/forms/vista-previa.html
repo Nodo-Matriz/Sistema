@@ -478,11 +478,16 @@
         $('estado').className = 'aviso';
         $('estado').textContent = 'Leyendo la planilla…';
 
-        gviz('sheet=Productos&range=A1:S1000&headers=1&_=' + Date.now())
+        gviz('sheet=Productos&range=A1:T5000&headers=1&_=' + Date.now())
           .then(function (res) {
             var disponibles = [];
             var pendientes = [];
             var fuera = [];
+            var sinConfirmar = [];
+            // Productos!T confirmado_edicion: "Sí" = disponible Y confirmado en
+            // la edición en curso. Es lo mismo que filtra A3 para el formulario.
+            var colT = res.table.cols && res.table.cols[19] ? String(res.table.cols[19].label || '').trim().toLowerCase() : '';
+            hayConfirmacion = colT.indexOf('confirmado') !== -1;
             var aCorregir = [];
             var sets = { unidad: {}, origen: {}, categoria: {}, fracciones: {} };
 
@@ -508,7 +513,8 @@
                 es_oferta: siNo(celda(r, 11)),
                 descripcion: String(celda(r, 15) || '').trim(),
                 productor: String(celda(r, 16)).trim(),
-                quien_fracciona: String(celda(r, 18) || '').trim()
+                quien_fracciona: String(celda(r, 18) || '').trim(),
+                confirmado: String(celda(r, 19) || '').trim() === 'Sí'
               };
               if (p.unidad) sets.unidad[p.unidad] = true;
               if (p.origen) sets.origen[p.origen] = true;
@@ -517,6 +523,10 @@
 
               if (!p.categoria) {
                 pendientes.push(p);          // curaduría pendiente (productos nuevos)
+              } else if (p.disponible && hayConfirmacion && !p.confirmado) {
+                // quedó en Sí de la edición anterior, pero en esta todavía
+                // nadie lo confirmó: NO va al formulario
+                sinConfirmar.push(p);
               } else if (p.disponible) {
                 // publicado, pero si sus datos no se entienden va a la tabla
                 // de corrección (arriba) además de aparecer en el catálogo
@@ -533,7 +543,7 @@
                 .sort(function (a, b) { return a.localeCompare(b, 'es'); });
             });
 
-            render(disponibles, pendientes, fuera, aCorregir);
+            render(disponibles, pendientes, fuera, aCorregir, sinConfirmar);
           })
           .catch(function () {
             $('estado').className = 'aviso rojo';
@@ -810,13 +820,15 @@
       }
 
 
-      function render(disponibles, pendientes, fuera, aCorregir) {
+      var hayConfirmacion = false;
+      function render(disponibles, pendientes, fuera, aCorregir, sinConfirmar) {
+        sinConfirmar = sinConfirmar || [];
         renderPendientes(pendientes, aCorregir || []);
 
         var cont = $('catalogo');
         cont.innerHTML = '';
 
-        if (!disponibles.length && !pendientes.length && !(fuera && fuera.length)) {
+        if (!disponibles.length && !pendientes.length && !(fuera && fuera.length) && !sinConfirmar.length) {
           $('estado').className = 'aviso rojo';
           $('estado').textContent = 'No hay productos marcados como disponibles para la edición. ' +
             'Primero hay que hacer la carga de productos.';
@@ -841,6 +853,28 @@
           cont.appendChild(card);
         });
 
+        // Sin confirmar en esta edición: quedaron disponibles de la anterior,
+        // pero el productor todavía no mandó su carga. No salen en el form.
+        if (sinConfirmar.length) {
+          var cardS = document.createElement('div');
+          cardS.className = 'card cat-card';
+          var hs = '<details open><summary style="cursor:pointer; font-weight:700; color:#A6402B;">' +
+            '⏳ Sin confirmar en esta edición (' + sinConfirmar.length + ') — NO salen en el formulario</summary>';
+          hs += '<p class="resumen" style="margin-top:var(--s-2);">Estaban disponibles en la edición anterior, ' +
+            'pero en esta el productor todavía no envió su carga de productos. Entran al formulario cuando ' +
+            'el productor la envía, o si la equipa lo confirma acá: ✏️ Editar → Disponible en Sí → Guardar.</p>';
+          var porProd = {};
+          sinConfirmar.forEach(function (p) { (porProd[p.productor || p.id_productor] = porProd[p.productor || p.id_productor] || []).push(p); });
+          hs += '<p class="resumen"><strong>Productores que faltan confirmar:</strong> ' +
+            Object.keys(porProd).sort().map(function (k) { return escapeHtml(k) + ' (' + porProd[k].length + ')'; }).join(' · ') + '</p>';
+          hs += '<div class="product-list mt-3">';
+          sinConfirmar.sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); })
+            .forEach(function (p) { hs += renderProductCard(p, true); });
+          hs += '</div></details>';
+          cardS.innerHTML = hs;
+          cont.appendChild(cardS);
+        }
+
         // Fuera de esta edición: rechazados y despublicados, para no perderlos de vista
         if (fuera && fuera.length) {
           var cardF = document.createElement('div');
@@ -857,14 +891,18 @@
           cont.appendChild(cardF);
         }
 
-        $('estado').className = 'aviso';
-        $('estado').innerHTML = 'Catálogo con los datos <strong>actuales</strong> de la planilla. ' +
+        $('estado').className = hayConfirmacion ? 'aviso' : 'aviso rojo';
+        $('estado').innerHTML = (hayConfirmacion ? '' :
+          '⚠️ <strong>La hoja Productos no tiene la columna T <code>confirmado_edicion</code>.</strong> ' +
+          'Sin ella se muestra como publicado todo lo que quedó disponible de la edición anterior. ') +
+          'Catálogo con los datos <strong>actuales</strong> de la planilla. ' +
           'Todo lo que guardes acá cambia la planilla de verdad (pide la clave de equipo). ' +
           'El orden de las categorías es el elegido en Generar edición' +
           (localStorage.getItem(LS_KEY) ? '' : ' (todavía no se eligió: se muestra alfabético)') + '.';
 
         $('resumen').textContent = orden.length + ' categorías · ' +
-          disponibles.length + ' productos publicados' +
+          disponibles.length + ' productos publicados (van al formulario)' +
+          (sinConfirmar.length ? ' · ' + sinConfirmar.length + ' sin confirmar' : '') +
           (pendientes.length ? ' · ' + pendientes.length + ' esperando curaduría' : '') +
           (fuera && fuera.length ? ' · ' + fuera.length + ' fuera de la edición' : '');
 
@@ -906,6 +944,29 @@
           hint.textContent = '⚠️ Marcaste fraccionable: elegí o escribí las fracciones.';
           return;
         }
+        // Precio en pesos enteros y creíble: un "1.500" tipeado con punto de
+        // miles llega como 1,5 y el producto saldría a $ 2 en el formulario.
+        var precioNum = Math.round(parseFloat(String(val('precio')).replace(',', '.')));
+        if (disponible === 'Sí' && !(precioNum >= 50)) {
+          hint.textContent = '⚠️ El precio (' + (val('precio') || 'vacío') + ') no parece correcto. ' +
+            'Escribilo en pesos, sin puntos ni comas (ej.: 1500).';
+          return;
+        }
+        // Fracciones: solo las que el formulario y la planilla calculan igual
+        // (1/2, 1/4, 200g, 500ml, 2…). Cualquier otra cosa ("1.5", "½", "medio")
+        // haría que el consumidor vea un precio y la planilla cobre otro.
+        var frRaw = val('fracciones');
+        if (frRaw) {
+          var frMalas = frRaw.split(',').map(function (x) { return x.trim(); }).filter(function (x) {
+            return x && !/^\d+$/.test(x) && !/^\d+\/\d+$/.test(x) &&
+              !/^\d+\s*(g|gr|grs|gramos|ml|cc)$/i.test(x);
+          });
+          if (frMalas.length) {
+            hint.textContent = '⚠️ Fracción no válida: «' + frMalas.join('», «') + '». ' +
+              'Usá 1/2, 1/4, 200g, 500ml o enteros, separados por coma.';
+            return;
+          }
+        }
 
         var payload = {
           tipo: 'curaduria',
@@ -913,7 +974,8 @@
           id_producto: id,
           nombre: val('nombre'),
           unidad: val('unidad'),
-          precio: parseFloat(val('precio')) || 0,
+          // pesos enteros (la planilla en español toma "1500.5" como fecha)
+          precio: precioNum || 0,
           origen: val('origen'),
           categoria: categoria,
           fraccionable: val('fraccionable'),
@@ -921,7 +983,7 @@
           quien_fracciona: val('quien'),
           es_oferta: val('oferta'),
           disponible: disponible,
-          stock: val('stock'),
+          stock: String(val('stock')).replace('.', ','),
           descripcion: val('descripcion')
         };
 
@@ -966,6 +1028,12 @@
       $('btn-refrescar').addEventListener('click', cargar);
       cargar();
     })();
+    // El precio solo acepta dígitos: un "." de miles lo convertiría en decimal.
+    document.addEventListener('keydown', function (e) {
+      var t = e.target;
+      if (t && t.id && t.id.indexOf('precio-') === 0 &&
+          ['e', 'E', '+', '-', '.', ','].indexOf(e.key) !== -1) e.preventDefault();
+    });
   </script>
   <a href="../" title="Volver a la guía de la edición"
      style="position:fixed; right:18px; bottom:18px; z-index:9999;
