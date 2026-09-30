@@ -821,7 +821,10 @@
       <button type="button" class="btn-conf" id="btn-confirmar" disabled>Registrar recepción</button>
 
       <div class="ok-box" id="ok-box">
-        ✅ Recepción registrada. Podés elegir el próximo productor que llegue.
+        ✅ Recepción registrada.
+        <button type="button" class="btn-conf" id="btn-otro-productor" style="margin-top:12px;">
+          ↑ Recibir de otro productor
+        </button>
       </div>
     </div>
 
@@ -1171,13 +1174,37 @@
       // Lo recibido por producto en esta edición (suma de Recepciones):
       // es la fuente de los faltantes de la solapa Ajustes.
       var recepPorProducto = {};
+      var recepCorruptas = {};   // id_producto -> motivo (cantidades ilegibles en la planilla)
+
+      // La planilla está en español: "1.5" la toma como FECHA (1 de mayo) y
+      // "0.5" como texto. Por eso los decimales se mandan con coma ("1,5"),
+      // que la planilla sí entiende como número. Los enteros van tal cual.
+      function numPlanilla(n) {
+        var x = Math.round((Number(n) || 0) * 1000) / 1000;
+        return (x % 1 === 0) ? x : String(x).replace('.', ',');
+      }
+
+      // Lee una cantidad de Recepciones y dice si es confiable. Vacía, texto
+      // que no es número, o un número enorme (una fecha: 46143 = 1 de mayo)
+      // es un dato roto: no se usa para calcular faltantes.
+      var CANT_MAX_CREIBLE = 20000;
+      function leerCantidad(r, i) {
+        var c = r.c[i];
+        if (!c || c.v === null || c.v === undefined || c.v === '') return { ok: false, val: 0 };
+        var v = c.v;
+        if (typeof v === 'string') v = parseFloat(v.replace(',', '.'));
+        if (typeof v !== 'number' || !isFinite(v)) return { ok: false, val: 0 };
+        if (Math.abs(v) > CANT_MAX_CREIBLE) return { ok: false, val: v };
+        return { ok: true, val: v };
+      }
 
       function parseItems(res) {
         itemsEd = [];
         if (!res) return;
         res.table.rows.forEach(function (r) {
           var idPed = String(celda(r, 1)).trim();
-          if (idPed.indexOf(idEdicion) === -1) return;
+          // exacto: "PED-ED2026-9-" no debe tomar ítems de la ED2026-91
+          if (idPed.indexOf('PED-' + idEdicion + '-') !== 0) return;
           itemsEd.push({
             id_item: String(celda(r, 0)).trim(),
             id_pedido: idPed,
@@ -1195,10 +1222,21 @@
         recibidosVivo = {};
         recepDetalle = {};
         recepPorProducto = {};
+        recepCorruptas = {};
         if (!res) return;
         try {
-          res.table.rows.forEach(function (r) {
+          // Si una recepción quedó registrada dos veces (mismo id_recepcion:
+          // doble envío, reintento de Make), se cuenta UNA sola vez, la última.
+          // Sumarlas duplicaría lo pedido y lo recibido, y el faltante.
+          var ultimaFila = {};
+          res.table.rows.forEach(function (r, i) {
+            var idR = String(celda(r, 0)).trim();
+            if (idR) ultimaFila[idR] = i;
+          });
+          res.table.rows.forEach(function (r, i) {
             if (String(celda(r, 1)).trim() !== idEdicion) return;
+            var idR0 = String(celda(r, 0)).trim();
+            if (idR0 && ultimaFila[idR0] !== i) return;   // repetida: vale la última
             var idP = String(celda(r, 2)).trim();
             if (idP && !recibidosVivo[idP]) {
               recibidosVivo[idP] = String(celda(r, 4)).trim();
@@ -1207,8 +1245,17 @@
             if (idProdRec) {
               var acc = recepPorProducto[idProdRec];
               if (!acc) acc = recepPorProducto[idProdRec] = { id_producto: idProdRec, id_productor: idP, pedida: 0, recibida: 0 };
-              acc.pedida += parseFloat(celda(r, 6)) || 0;
-              acc.recibida += parseFloat(celda(r, 7)) || 0;
+              var cp = leerCantidad(r, 6), cr = leerCantidad(r, 7);
+              if (!cp.ok || !cr.ok) {
+                recepCorruptas[idProdRec] = {
+                  id_recepcion: String(celda(r, 0)).trim(),
+                  id_productor: idP,
+                  que: (!cp.ok ? 'cantidad_pedida (G)' : '') + (!cp.ok && !cr.ok ? ' y ' : '') +
+                       (!cr.ok ? 'cantidad_recibida (H)' : '')
+                };
+              }
+              acc.pedida += cp.val;
+              acc.recibida += cr.val;
             }
             var idRec = String(celda(r, 0)).trim();
             if (!idRec) return;
@@ -1227,7 +1274,7 @@
               obs: obs
             };
           });
-        } catch (e) { recibidosVivo = {}; recepDetalle = {}; recepPorProducto = {}; }
+        } catch (e) { recibidosVivo = {}; recepDetalle = {}; recepPorProducto = {}; recepCorruptas = {}; }
       }
 
       function idRecepcionDe(idProd, l) {
@@ -1239,19 +1286,29 @@
         // Edición vigente (Comandas_Calc!K1) + tabla de comandas + nombres
         Promise.all([
           gviz('sheet=Comandas_Calc&range=K1&headers=0'),
-          gviz('sheet=Comandas_Calc&range=A1:H500&headers=1'),
-          gviz('sheet=Productores&range=A1:B300&headers=1'),
-          gviz('sheet=Plan_Fraccionamiento&range=A1:L500&headers=1'),
-          gviz('sheet=Pedidos&range=A1:U3000&headers=1'),
-          gviz('sheet=Consumidores&range=A1:D2000&headers=1'),
+          gviz('sheet=Comandas_Calc&range=A1:H5000&headers=1'),
+          gviz('sheet=Productores&range=A1:B2000&headers=1'),
+          gviz('sheet=Plan_Fraccionamiento&range=A1:L20000&headers=1'),
+          gviz('sheet=Pedidos&range=A1:U20000&headers=1'),
+          gviz('sheet=Consumidores&range=A1:D20000&headers=1'),
           Promise.resolve(null),   // (libre: antes Propuestas_Ajuste)
-          gviz('sheet=Items&range=A1:M3000&headers=1'),
+          gviz('sheet=Items&range=A1:M50000&headers=1'),
           // Las dos últimas no son críticas: si la hoja no existe, seguimos igual.
           gviz('sheet=Equipo&range=A1:E100&headers=1').catch(function () { return null; }),
-          gviz('sheet=Recepciones&range=A1:L4000&headers=1').catch(function () { return null; }),
+          gviz('sheet=Recepciones&range=A1:L50000&headers=1').catch(function () { return null; }),
           // Productos!U conservacion (Frío / Ambiente): qué va al puesto de frío
-          gviz('sheet=Productos&range=A1:U800&headers=1').catch(function () { return null; })
+          gviz('sheet=Productos&range=A1:U5000&headers=1').catch(function () { return null; }),
+          // Ediciones: para saber cuál es la edición en curso
+          gviz('sheet=Ediciones&range=A1:D1000&headers=1').catch(function () { return null; })
         ]).then(function (res) {
+          // Edición en curso = última fila de Ediciones con id ED####-##
+          var edVigente = '';
+          if (res[11]) {
+            res[11].table.rows.forEach(function (r) {
+              var idE = String(celda(r, 0)).trim();
+              if (/^ED\d{4}-\d{2,}$/.test(idE)) edVigente = idE;
+            });
+          }
           conservacion = {};
           if (res[10]) {
             res[10].table.rows.forEach(function (r) {
@@ -1282,6 +1339,27 @@
               linea: String(celda(r, 7)).trim()
             });
           });
+
+          // Las comandas son de otra edición (la anterior): todavía no se
+          // generaron las de la edición en curso. No se muestra nada viejo.
+          if (edVigente && idEdicion && edVigente !== idEdicion) {
+            $('estado-edicion').className = 'aviso rojo';
+            $('estado-edicion').innerHTML = '🚫 <strong>Todavía no hay comandas generadas para ' +
+              edVigente + '.</strong><br>Las últimas comandas son de ' + idEdicion +
+              ', que ya terminó. La app del galpón se usa después de generar las comandas ' +
+              'de la edición en curso.<br><br>' +
+              '<a href="comandas.html" class="btn btn--ghost btn--small">Ir a comandas a productores</a>';
+            var tabsV = document.querySelector('.tabs');
+            if (tabsV) tabsV.style.display = 'none';
+            VISTAS.forEach(function (v) {
+              var el = $('vista-' + v);
+              if (el) el.style.display = 'none';
+            });
+            var barraV = $('btn-refrescar-todo');
+            if (barraV && barraV.parentNode) barraV.parentNode.style.display = 'none';
+            idEdicion = '';   // que ningún refresco ni botón trabaje sobre la edición vieja
+            return;
+          }
 
           if (!idEdicion || !lineas.length) {
             // Sin comandas no hay nada que recibir: la app se cierra entera
@@ -1345,6 +1423,7 @@
             '</strong> · ' + contarProductores() + ' productores · ' +
             planFracc.length + ' fracciones · ' + pedidos.length + ' pedidos';
           armarSelectsEquipo();
+          restaurarQuienRecibe();
           armarSelect();
           renderFracc();
           renderAjustes();
@@ -1421,7 +1500,7 @@
         var b = $('btn-refrescar');
         b.disabled = true;
         b.textContent = 'Actualizando…';
-        gviz('sheet=Recepciones&range=A1:L4000&headers=1&_=' + Date.now())
+        gviz('sheet=Recepciones&range=A1:L50000&headers=1&_=' + Date.now())
           .then(function (res) { parseRecepciones(res); })
           .catch(function () {})
           .then(function () {
@@ -1674,8 +1753,41 @@
         validarEntrega();
       }
 
+      // ── "Recibir de otro productor": arriba de todo y recarga completa,
+      // para arrancar el próximo con la planilla recién leída.
+      var K_QUIEN = 'nm_recibe_quien';
+      $('btn-otro-productor').addEventListener('click', function () {
+        try {
+          sessionStorage.setItem(K_QUIEN, JSON.stringify({
+            sel: $('recibido-por').value, otro: $('recibido-por-otro').value
+          }));
+          sessionStorage.setItem('nm_volver_arriba', '1');
+        } catch (e) {}
+        try { history.scrollRestoration = 'manual'; } catch (e) {}
+        window.scrollTo(0, 0);
+        location.reload();
+      });
+      function restaurarQuienRecibe() {
+        try {
+          var q = JSON.parse(sessionStorage.getItem(K_QUIEN) || 'null');
+          if (!q) return;
+          var sel = $('recibido-por');
+          if (q.sel && Array.prototype.some.call(sel.options, function (o) { return o.value === q.sel; })) {
+            sel.value = q.sel;
+            if (q.sel === '__otro__') { $('recibido-por-otro').style.display = 'block'; $('recibido-por-otro').value = q.otro || ''; }
+          } else if (q.otro) {
+            $('recibido-por-otro').value = q.otro;
+          }
+          if (sessionStorage.getItem('nm_volver_arriba')) {
+            sessionStorage.removeItem('nm_volver_arriba');
+            window.scrollTo(0, 0);
+          }
+        } catch (e) {}
+      }
+
       // ── envío ────────────────────────────────────────────────────
       $('btn-confirmar').addEventListener('click', function () {
+        if (bloqueadoPorRegistro || this.dataset.enviando) return;   // doble toque
         var idProd = $('card-items').dataset.idProd;
         var propias = lineas.filter(function (l) { return l.id_productor === idProd; });
         var divs = $('lista-items').querySelectorAll('.item');
@@ -1705,9 +1817,10 @@
             id_recepcion: 'REC' + idEdicion + '-' + idProd + '-' + l.id_producto + (l.fraccion ? '-' + l.fraccion : ''),
             id_producto: l.id_producto,
             producto: l.producto,
-            cantidad_pedida: pedidaEf,
-            cantidad_recibida: recibidaEf,
-            diferencia: Math.round((recibidaEf - pedidaEf) * 1000) / 1000,
+            // decimales con coma: ver numPlanilla (evita que 1.5 se grabe como fecha)
+            cantidad_pedida: numPlanilla(pedidaEf),
+            cantidad_recibida: numPlanilla(recibidaEf),
+            diferencia: numPlanilla(Math.round((recibidaEf - pedidaEf) * 1000) / 1000),
             calidad: calidad,
             observaciones: obs
           });
@@ -1723,6 +1836,7 @@
 
         var btn = $('btn-confirmar');
         btn.disabled = true;
+        btn.dataset.enviando = '1';
         btn.textContent = 'Registrando…';
 
         fetch(WEBHOOK_D1, {
@@ -1733,13 +1847,15 @@
         }).then(fin).catch(fin);
 
         function fin() {
-          btn.textContent = 'Registrar recepción';
-          btn.disabled = false;
+          delete btn.dataset.enviando;
           $('ok-box').style.display = 'block';
           registrados[idProd] = true;
           recibidosVivo[idProd] = valorQuien('recibido-por');
           armarSelect();
           $('sel-productor').value = idProd;
+          // queda en modo consulta: botón "Ya registrada ✓" apagado y
+          // renglones bloqueados, igual que al volver a elegir el productor
+          actualizarAvisoDup(idProd);
           window.scrollTo(0, document.body.scrollHeight);
         }
       });
@@ -2313,7 +2429,7 @@
       // (leer la planilla no gasta operaciones de Make)
       function refrescarPedidos() {
         if (!idEdicion) return;
-        gviz('sheet=Pedidos&range=A1:U3000&headers=1')
+        gviz('sheet=Pedidos&range=A1:U20000&headers=1')
           .then(function (res) { parsePedidos(res); renderEntrega(); chequearTodoEntregado(); })
           .catch(function () {});
       }
@@ -2383,10 +2499,10 @@
         if (manual && btn) { btn.disabled = true; btn.textContent = 'Actualizando…'; }
 
         Promise.all([
-          gviz('sheet=Recepciones&range=A1:L4000&headers=1').catch(function () { return null; }),
-          gviz('sheet=Pedidos&range=A1:U3000&headers=1').catch(function () { return null; }),
-          gviz('sheet=Items&range=A1:M3000&headers=1').catch(function () { return null; }),
-          gviz('sheet=Plan_Fraccionamiento&range=A1:L500&headers=1').catch(function () { return null; })
+          gviz('sheet=Recepciones&range=A1:L50000&headers=1').catch(function () { return null; }),
+          gviz('sheet=Pedidos&range=A1:U20000&headers=1').catch(function () { return null; }),
+          gviz('sheet=Items&range=A1:M50000&headers=1').catch(function () { return null; }),
+          gviz('sheet=Plan_Fraccionamiento&range=A1:L20000&headers=1').catch(function () { return null; })
         ]).then(function (res) {
           var ocupado = hayTrabajoSinGuardar();
 
@@ -2488,7 +2604,9 @@
       // aparecen en cuanto se registra una recepción. El faltante REAL se
       // termina de calcular en renderAjustes contra los ítems vivos.
       function calcularFaltantes() {
-        propuestas = Object.keys(recepPorProducto).map(function (k) {
+        propuestas = Object.keys(recepPorProducto).filter(function (k) {
+          return !recepCorruptas[k];   // con datos rotos no se propone ningún recorte
+        }).map(function (k) {
           var a = recepPorProducto[k];
           return {
             id_producto: a.id_producto,
@@ -2530,8 +2648,8 @@
         // no pisar recortes que alguien está cargando (salvo tras aplicarlos)
         if (!forzar && hayTrabajoSinGuardar()) return;
         Promise.all([
-          gviz('sheet=Recepciones&range=A1:L4000&headers=1&_=' + Date.now()).catch(function () { return null; }),
-          gviz('sheet=Items&range=A1:M3000&headers=1&_=' + Date.now()).catch(function () { return null; })
+          gviz('sheet=Recepciones&range=A1:L50000&headers=1&_=' + Date.now()).catch(function () { return null; }),
+          gviz('sheet=Items&range=A1:M50000&headers=1&_=' + Date.now()).catch(function () { return null; })
         ]).then(function (res) {
           if (res[0]) parseRecepciones(res[0]);
           if (res[1]) parseItems(res[1]);
@@ -2558,14 +2676,25 @@
         cont.innerHTML = '';
         var sinRec = productoresSinRecepcion();
         var avisoSin = $('aviso-sin-recepcion');
+        var rotas = Object.keys(recepCorruptas);
         if (avisoSin) {
-          if (sinRec.length) {
-            avisoSin.style.display = 'block';
-            avisoSin.innerHTML = 'Todavía no se registró la recepción de: <strong>' + sinRec.join(', ') +
-              '</strong>. Sus faltantes van a aparecer acá cuando se registren.';
-          } else {
-            avisoSin.style.display = 'none';
+          var htmlAv = '';
+          if (rotas.length) {
+            htmlAv += '⛔ <strong>' + rotas.length + ' recepción' + (rotas.length === 1 ? '' : 'es') +
+              ' con cantidades ilegibles en la planilla</strong> (hoja Recepciones). Hasta corregirlas, ' +
+              'esos productos no se reparten: el faltante que mostraría sería falso.<ul style="margin:6px 0 0 18px;">' +
+              rotas.map(function (k) {
+                var x = recepCorruptas[k];
+                return '<li>' + nombreProducto(k) + ' · ' + (productores[x.id_productor] || x.id_productor) +
+                  ' — revisar ' + x.que + ' en la fila <code>' + x.id_recepcion + '</code></li>';
+              }).join('') + '</ul>';
           }
+          if (sinRec.length) {
+            htmlAv += (htmlAv ? '<br>' : '') + 'Todavía no se registró la recepción de: <strong>' + sinRec.join(', ') +
+              '</strong>. Sus faltantes van a aparecer acá cuando se registren.';
+          }
+          avisoSin.style.display = htmlAv ? 'block' : 'none';
+          avisoSin.innerHTML = htmlAv;
         }
         if (!propuestas.length) {
           cont.innerHTML = '<p class="muted">Todavía no hay ninguna recepción registrada en esta edición. ' +
@@ -2786,7 +2915,7 @@
         // Se manda SOLO el recorte (delta) de cada ítem. Los valores nuevos
         // los calcula Make leyendo la fila viva de la planilla, así dos
         // personas pueden ajustar a la vez sin pisarse.
-        var itemsOut = [], tocados = {};
+        var itemsOut = [], tocados = {}, cantidadRara = false;
         Object.keys(recortes).forEach(function (k) {
           var idx = parseInt(k, 10), it = itemsEd[idx], v = recortes[idx];
           var factor = factorFraccion(it.fraccion) || 1;
@@ -2803,6 +2932,14 @@
             // resultado es el mismo y no se descuenta de más.
             cantidad_antes: it.cantidad,
             cantidad_nueva: Math.max(0, Math.round((it.cantidad - recorteCant) * 10000) / 10000),
+            _chequeo: (function () {
+              // la cantidad de un ítem es siempre un número entero de unidades
+              // vendibles (paquetes, kilos enteros, maples…). Si el recorte deja
+              // un decimal, algo está mal y no se manda nada.
+              var cn = Math.round((it.cantidad - recorteCant) * 10000) / 10000;
+              if (cn % 1 !== 0 || it.cantidad % 1 !== 0) cantidadRara = true;
+              return undefined;
+            })(),
             cantidad_efectiva_antes: it.efectiva,
             cantidad_efectiva_nueva: Math.max(0, Math.round((it.efectiva - v) * 10000) / 10000),
             precio: it.precio,
@@ -2842,6 +2979,14 @@
         // Ya no hay filas de Propuestas_Ajuste que marcar (los faltantes se
         // calculan en la app): la ruta 3 de D3 no recibe nada.
         var propuestasOut = [];
+
+        if (cantidadRara) {
+          errorA('⛔ Uno de los recortes deja una cantidad con decimales (media unidad de venta). ' +
+            'Eso no se puede entregar ni cobrar bien: revisá los recortes (tienen que ser de unidades ' +
+            'enteras) y volvé a intentar. No se envió nada.');
+          return;
+        }
+        itemsOut.forEach(function (x) { delete x._chequeo; });
 
         var btn = $('btn-ajustes');
         btn.disabled = true;
@@ -2886,7 +3031,7 @@
                 'Lo cargado acá sigue en pantalla: cuando D3 esté bien, volvé a tocar ENVIAR.');
               return;
             }
-            gviz('sheet=Items&range=A1:M3000&headers=1&_=' + Date.now())
+            gviz('sheet=Items&range=A1:M50000&headers=1&_=' + Date.now())
               .then(function (res) {
                 var pendientes = 0;
                 res.table.rows.forEach(function (r) {
