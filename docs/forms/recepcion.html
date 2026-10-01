@@ -903,11 +903,13 @@
         </div>
 
         <button type="button" class="btn-conf" id="btn-ajustes" disabled>
-          ENVIAR PEDIDOS ACTUALIZADOS
+          APLICAR RECORTES
         </button>
         <p class="muted" style="font-size:0.85rem; margin-top:8px;">
-          Aplica los recortes en la planilla y le manda a cada consumidor
-          afectado el detalle nuevo de su pedido y el total actualizado.
+          Aplica los recortes en la planilla (cantidades y totales de cada
+          pedido). <strong>No manda correos:</strong> el aviso a los consumidores
+          se envía una sola vez desde la guía, cuando estén todas las
+          recepciones registradas.
         </p>
 
         <div class="ok-box" id="ok-ajustes">
@@ -2999,8 +3001,8 @@
         caja.style.color = '';
         caja.innerHTML = resumen.length
           ? '✂️ <strong>Recorte propuesto por orden de llegada.</strong> Mirá abajo cómo ' +
-            'queda cada pedido: se puede retocar a mano antes de enviar. Cuando esté bien, ' +
-            'tocá <strong>ENVIAR PEDIDOS ACTUALIZADOS</strong>.'
+            'queda cada pedido: se puede retocar a mano antes de aplicar. Cuando esté bien, ' +
+            'tocá <strong>APLICAR RECORTES</strong>.'
           : '⚠️ No se pudo repartir automáticamente: revisá los faltantes a mano.';
         $('lista-ajustes').scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
@@ -3142,7 +3144,7 @@
             if (intentos > 20) {   // ~2,5 minutos
               clearInterval(timer);
               btn.disabled = false;
-              btn.textContent = 'ENVIAR PEDIDOS ACTUALIZADOS';
+              btn.textContent = 'APLICAR RECORTES';
               errorA('⚠️ Los recortes NO quedaron aplicados: en la planilla (hoja Items) las ' +
                 'cantidades siguen como antes. El escenario D3 de Make no los procesó (revisá ' +
                 'que esté encendido, que la clave sea la correcta y el History de D3). ' +
@@ -3160,10 +3162,13 @@
                 });
                 if (pendientes > 0) return;   // D3 todavía trabajando
                 clearInterval(timer);
-                btn.textContent = 'Pedidos actualizados ✓';
-                caja.innerHTML = '✅ <strong>Recortes aplicados y confirmados en la planilla.</strong> ' +
-                  'A cada consumidor afectado le llega por correo el detalle nuevo de su ' +
-                  'pedido con el total actualizado.';
+                btn.textContent = 'Recortes aplicados ✓';
+                caja.innerHTML = '✅ <strong>Recortes aplicados y confirmados en la planilla.</strong><br>' +
+                  '📧 <strong>Todavía no se avisó a nadie.</strong> Cuando estén registradas ' +
+                  '<strong>todas</strong> las recepciones y repartidos todos los faltantes, ' +
+                  'mandá los correos desde la <a href="../#paso-6">guía → paso 6 · Recepción, ajustes ' +
+                  'y entrega → «Avisar a los consumidores»</a>. Cada consumidor con recortes ' +
+                  'recibe un solo correo con su pedido final.';
                 // releer recepciones e ítems (cantidades ya recortadas)
                 refrescarPropuestas(true);
               })
