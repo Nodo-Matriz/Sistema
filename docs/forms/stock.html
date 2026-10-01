@@ -377,15 +377,9 @@
         </small></p>
       </div>
 
-      <!-- Notas para el Nodo -->
-      <div class="card mt-4 fade-in" data-delay="4">
-        <h2>Comentarios para el Nodo</h2>
-        <div class="field">
-          <label class="field__label" for="notas">Notas opcionales</label>
-          <textarea class="textarea" id="notas" rows="3"
-            placeholder="Demoras, productos por volver, cambios de presentación, lo que necesitemos saber…"></textarea>
-        </div>
-      </div>
+      <!-- Comentarios para el Nodo: quitado el 01-10-2026 hasta que A2 los
+           guarde en algún lado (hoy solo los escribe en productos nuevos).
+           El payload sigue mandando notas: "" para no cambiar la estructura. -->
 
       <div class="mt-4 center fade-in" data-delay="4">
         <button id="btn-enviar-bottom" class="btn btn--primary" disabled>
@@ -851,7 +845,7 @@
         id_productor: idProductor,
         enviado_en:   new Date().toISOString(),
         productos:    productos,
-        notas:        document.getElementById('notas').value.trim(),
+        notas:        '',
       };
     }
 
