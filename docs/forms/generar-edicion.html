@@ -271,7 +271,8 @@
       // ============================================================
       var WEBHOOK_A3     = 'https://hook.us2.make.com/qqx2z7g17eq2ihpq2euvr7gqmpm0uhq3';
       var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
-      var BASE_FORMS     = 'https://nodo-matriz.github.io/Sistema/forms/';
+      // Link público que se comparte (dominio propio).
+      var BASE_FORMS     = 'https://sistema.nodomatriz.ar/forms/';
       var OFFSET         = '-03:00'; // Argentina
       var LS_KEY         = 'nm_orden_categorias';
 
@@ -750,7 +751,11 @@
             }
             return;
           }
-          fetch(urlForm + '?_=' + Date.now(), { cache: 'no-store' })
+          // Se consulta en el MISMO sitio donde está abierta esta página
+          // (archivo vecino en forms/): un dominio distinto pasa por una
+          // redirección que el navegador bloquea y nunca avisaba.
+          var urlLocal = new URL('pedidos-' + id + '.html', location.href).href;
+          fetch(urlLocal + '?_=' + Date.now(), { cache: 'no-store' })
             .then(function (r) { return r.ok ? r.text() : ''; })
             .then(function (html) {
               if (!html || html.indexOf(id) === -1) return;   // todavía no
