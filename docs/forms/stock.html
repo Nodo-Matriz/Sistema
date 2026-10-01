@@ -479,6 +479,43 @@
         });
     }
 
+    // ── Unidades de venta ──────────────────────────────────────────
+    // Misma lista que _Listas_Validacion!D (unidad_venta). Se lee de la
+    // planilla al abrir; si falla, queda esta copia. Así el productor solo
+    // puede elegir unidades que el sistema conoce.
+    var UNIDADES = ['unidad', 'kg', 'atado', 'atadito', 'docena', 'pack', 'bandeja',
+                    'bolsa', 'botella', 'frasco', 'litro', 'maple'];
+    function opcionesUnidad() {
+      return UNIDADES.map(function (u) {
+        return '<option value="' + escH(u) + '">por ' + escH(u) + '</option>';
+      }).join('');
+    }
+    function cargarUnidades() {
+      var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
+        '/gviz/tq?tqx=out:json&sheet=_Listas_Validacion&range=D2:D60&headers=1&_=' + Date.now();
+      fetch(url, { cache: 'no-store' })
+        .then(function (r) { return r.text(); })
+        .then(function (text) {
+          var match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+          if (!match) return;
+          var rows = JSON.parse(match[1]).table.rows || [];
+          var lista = rows.map(function (row) {
+            return row.c && row.c[0] && row.c[0].v != null ? String(row.c[0].v).trim() : '';
+          }).filter(function (u) { return u; });
+          if (lista.length >= 3) {
+            UNIDADES = lista;
+            // refrescar los selects de productos nuevos que ya estén abiertos
+            document.querySelectorAll('select[data-campo="unidad"]').forEach(function (sel) {
+              var actual = sel.value;
+              sel.innerHTML = opcionesUnidad();
+              if (UNIDADES.indexOf(actual) !== -1) sel.value = actual;
+            });
+          }
+        })
+        .catch(function (err) { console.warn('No se pudo leer la lista de unidades:', err); });
+    }
+    cargarUnidades();
+
     // ── Cargar datos desde gviz ────────────────────────────────────
     function cargarProductos() {
       var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
@@ -718,18 +755,7 @@
           '<input class="celda-editable" type="text" placeholder="Nombre del producto *" ' +
             'data-campo="nombre" style="min-width: 160px; margin-bottom: 4px;" required>' +
           '<select class="celda-editable" data-campo="unidad" title="Unidad de venta" style="max-width:140px;">' +
-            '<option value="unidad">por unidad</option>' +
-            '<option value="kg">por kg</option>' +
-            '<option value="gr">por gramos</option>' +
-            '<option value="atado">por atado</option>' +
-            '<option value="docena">por docena</option>' +
-            '<option value="bolsa">por bolsa</option>' +
-            '<option value="botella">por botella</option>' +
-            '<option value="frasco">por frasco</option>' +
-            '<option value="litro">por litro</option>' +
-            '<option value="maple">por maple</option>' +
-            '<option value="pack">por paq.</option>' +
-            '<option value="ramito">por ramito</option>' +
+            opcionesUnidad() +
           '</select>' +
           '<textarea class="celda-editable" data-campo="descripcion" rows="2" ' +
             'style="width:100%; box-sizing:border-box; min-width:160px; margin-top:4px; resize:vertical;" ' +
