@@ -478,7 +478,20 @@
         $('estado').className = 'aviso';
         $('estado').textContent = 'Leyendo la planilla…';
 
-        gviz('sheet=Productos&range=A1:T5000&headers=1&_=' + Date.now())
+        // Nombres de productores (para los productos nuevos, que llegan sin
+        // nombre_productor en la columna Q). Si falla, se sigue con el id.
+        var nombresProductor = {};
+        gviz('sheet=Productores_API&range=A1:B2000&headers=1&_=' + Date.now())
+          .then(function (rp) {
+            (rp.table.rows || []).forEach(function (r) {
+              var id = String(celda(r, 0)).trim();
+              if (id) nombresProductor[id] = String(celda(r, 1)).trim();
+            });
+          })
+          .catch(function () {})
+          .then(function () {
+            return gviz('sheet=Productos&range=A1:T5000&headers=1&_=' + Date.now());
+          })
           .then(function (res) {
             var disponibles = [];
             var pendientes = [];
@@ -512,7 +525,7 @@
                 stock: String(celda(r, 10) || '').trim(),
                 es_oferta: siNo(celda(r, 11)),
                 descripcion: String(celda(r, 15) || '').trim(),
-                productor: String(celda(r, 16)).trim(),
+                productor: String(celda(r, 16)).trim() || nombresProductor[String(celda(r, 1)).trim()] || '',
                 quien_fracciona: String(celda(r, 18) || '').trim(),
                 confirmado: String(celda(r, 19) || '').trim() === 'Sí'
               };
@@ -625,6 +638,7 @@
           '<td class="col-nombre">' +
           '  <input class="input" id="nombre-' + i + '" value="' + escapeHtml(p.nombre) + '">' +
           '  <div class="quien-carga">' + escapeHtml(p.productor || p.id_productor) +
+          (p.productor ? ' <span style="opacity:.6">(' + escapeHtml(p.id_productor) + ')</span>' : '') +
           '     · ' + formatMoney(p.precio) + '</div>' +
           motivos +
           '  <span class="hint-fila" id="hint-' + i + '"></span>' +
