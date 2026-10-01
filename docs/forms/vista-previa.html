@@ -360,6 +360,7 @@
 
       // valores existentes en la planilla, para los desplegables
       var listas = { unidad: [], origen: [], categoria: [], fracciones: [] };
+      var maestras = { unidad: {}, origen: {}, categoria: {} };
 
       try {
         var claveGuardada = sessionStorage.getItem('nm_clave_equipo');
@@ -490,6 +491,24 @@
           })
           .catch(function () {})
           .then(function () {
+            // Listas maestras: orígenes desde Distancias!A (lo que tiene km) y
+            // unidades/categorías desde _Listas_Validacion (D y E). Se suman a
+            // lo que ya existe en Productos, así un origen nuevo aparece en el
+            // desplegable apenas se agrega a Distancias.
+            return Promise.all([
+              gviz('sheet=Distancias&range=A1:A200&headers=1&_=' + Date.now()).catch(function () { return null; }),
+              gviz('sheet=_Listas_Validacion&range=D2:E80&headers=1&_=' + Date.now()).catch(function () { return null; })
+            ]).then(function (rs) {
+              if (rs[0] && rs[0].table) rs[0].table.rows.forEach(function (r) {
+                var v = String(celda(r, 0) || '').trim(); if (v) maestras.origen[v] = true;
+              });
+              if (rs[1] && rs[1].table) rs[1].table.rows.forEach(function (r) {
+                var u = String(celda(r, 0) || '').trim(); if (u) maestras.unidad[u] = true;
+                var c = String(celda(r, 1) || '').trim(); if (c) maestras.categoria[c] = true;
+              });
+            });
+          })
+          .then(function () {
             return gviz('sheet=Productos&range=A1:T5000&headers=1&_=' + Date.now());
           })
           .then(function (res) {
@@ -552,7 +571,10 @@
             });
 
             Object.keys(sets).forEach(function (k) {
-              listas[k] = Object.keys(sets[k])
+              var union = {};
+              Object.keys(sets[k]).forEach(function (v) { union[v] = true; });
+              if (maestras[k]) Object.keys(maestras[k]).forEach(function (v) { union[v] = true; });
+              listas[k] = Object.keys(union)
                 .sort(function (a, b) { return a.localeCompare(b, 'es'); });
             });
 
