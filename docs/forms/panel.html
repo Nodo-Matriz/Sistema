@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="robots" content="noindex">
+  <title>Panel de pedidos · Nodo Matríz (equipo)</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+  <link rel="icon" type="image/png" href="../assets/favicon-nodo.png">
+  <style>
+    .wrap { max-width: 760px; }
+    .aviso {
+      background: rgba(110, 142, 85, 0.10); border-left: 4px solid var(--c-oliva);
+      border-radius: 14px; padding: var(--s-3) var(--s-4); margin: var(--s-4) 0;
+      font-size: 0.92rem; line-height: 1.5; color: var(--c-corteza);
+    }
+    .aviso.rojo { background: rgba(166, 64, 43, 0.10); border-left-color: var(--c-rojo); }
+    .kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: var(--s-4); }
+    @media (min-width: 560px) { .kpis { grid-template-columns: repeat(4, 1fr); } .barra .n { flex-basis: 260px; } }
+    .kpi {
+      background: var(--c-leche); border: 1px solid rgba(74, 107, 58, 0.14);
+      border-radius: 14px; padding: 12px 14px; box-shadow: var(--sh-suave);
+    }
+    .kpi .v { font-size: 1.7rem; font-weight: 700; color: var(--c-musgo); line-height: 1.1; }
+    .kpi .l { font-size: 0.8rem; color: var(--c-tierra); margin-top: 4px; }
+    .card-eq {
+      background: var(--c-leche); border: 1px solid rgba(74, 107, 58, 0.14);
+      border-radius: var(--r-card); padding: var(--s-4) var(--s-5); margin-top: var(--s-4);
+      box-shadow: var(--sh-suave);
+    }
+    .card-eq h2 { font-size: 1.25rem; margin: 0 0 var(--s-2); }
+    .barra { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 0.92rem; }
+    .barra .n { flex: 0 0 150px; color: var(--c-corteza); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .barra .b { flex: 1; height: 14px; background: rgba(110, 142, 85, 0.15); border-radius: 7px; overflow: hidden; }
+    .barra .b i { display: block; height: 100%; background: var(--c-oliva); border-radius: 7px; }
+    .barra .c { flex: 0 0 90px; text-align: right; color: var(--c-tierra); font-variant-numeric: tabular-nums; }
+    table.lista { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-top: var(--s-2); }
+    table.lista th, table.lista td { text-align: left; padding: 6px 6px; border-bottom: 1px solid rgba(74, 107, 58, 0.12); vertical-align: top; }
+    table.lista th { color: var(--c-tierra); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: .03em; }
+    table.lista td.num, table.lista th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .meta { font-size: 0.82rem; color: var(--c-tierra); font-style: italic; }
+    .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.75rem; background: rgba(110,142,85,.15); color: var(--c-musgo); }
+    .pill.dom { background: rgba(201, 150, 60, .18); color: #7a5a1e; }
+    .fila-sel select { padding: 4px 8px; border-radius: 8px; border: 1px solid rgba(74,107,58,.3); font: inherit; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+
+    <header class="site-header fade-in">
+      <a class="site-mark" href="../">
+        <img src="../assets/logo-nodo-verde.png" alt="Nodo Matríz" style="width:48px; height:48px;">
+        <span>
+          <span class="site-mark__name">Nodo Matríz</span>
+          <span class="site-mark__sub">panel de pedidos · equipo</span>
+        </span>
+      </a>
+    </header>
+
+    <section class="fade-in" data-delay="1">
+      <p><a href="../" class="btn btn--ghost btn--small">← Volver a la guía</a></p>
+      <h1>Panel de pedidos</h1>
+      <p class="lead">
+        Cómo viene la toma de pedidos de la edición, en vivo. Se actualiza solo
+        cada minuto; también podés tocar «Actualizar».
+      </p>
+      <p class="fila-sel">
+        <label>Edición: <select id="sel-edicion"></select></label>
+        <button type="button" class="btn btn--ghost btn--small" id="btn-refrescar" style="margin-left:8px;">↻ Actualizar</button>
+        <span class="meta" id="ultima-act"></span>
+      </p>
+    </section>
+
+    <div class="aviso" id="estado">Leyendo la planilla…</div>
+
+    <div id="contenido" style="display:none;">
+      <div class="kpis fade-in" data-delay="2">
+        <div class="kpi"><div class="v" id="k-pedidos">–</div><div class="l">pedidos</div></div>
+        <div class="kpi"><div class="v" id="k-total">–</div><div class="l">total a abonar</div></div>
+        <div class="kpi"><div class="v" id="k-promedio">–</div><div class="l">promedio por pedido</div></div>
+        <div class="kpi"><div class="v" id="k-aporte">–</div><div class="l">aporte solidario (promedio <span id="k-aporte-porc">–</span>)</div></div>
+      </div>
+
+      <div class="card-eq fade-in" data-delay="2">
+        <h2>Entrega</h2>
+        <div id="entrega"></div>
+      </div>
+
+      <div class="card-eq fade-in" data-delay="3">
+        <h2>Consumidores</h2>
+        <div id="consumidores"></div>
+      </div>
+
+      <div class="card-eq fade-in" data-delay="3">
+        <h2>Ritmo de pedidos</h2>
+        <p class="meta">Pedidos por día desde que se abrió el formulario.</p>
+        <div id="ritmo"></div>
+      </div>
+
+      <div class="card-eq fade-in" data-delay="3">
+        <h2>Productos más pedidos</h2>
+        <p class="meta">Por cantidad de pedidos en los que aparecen.</p>
+        <div id="productos"></div>
+      </div>
+
+      <div class="card-eq fade-in" data-delay="3">
+        <h2>Productores</h2>
+        <p class="meta">Cuánto se le va a pedir a cada uno (subtotal de ítems).</p>
+        <div id="productores"></div>
+      </div>
+
+      <div class="card-eq fade-in" data-delay="4">
+        <h2>Lista de pedidos</h2>
+        <table class="lista">
+          <thead><tr><th>#</th><th>Consumidor</th><th>Entrega</th><th class="num">Total</th><th>Hora</th></tr></thead>
+          <tbody id="lista-pedidos"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <footer class="site-footer fade-in" data-delay="4">
+      Nodo Matríz Agroecológico · uso interno de la equipa
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
+      var REFRESCO_MS = 60 * 1000;
+
+      function $(id) { return document.getElementById(id); }
+      function gviz(params) {
+        var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID +
+          '/gviz/tq?tqx=out:json&' + params + '&_=' + Date.now();
+        return fetch(url, { cache: 'no-store' })
+          .then(function (r) { return r.text(); })
+          .then(function (t) {
+            var m = t.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+            if (!m) throw new Error('gviz');
+            return JSON.parse(m[1]);
+          });
+      }
+      function celda(row, i) {
+        var c = row.c[i];
+        if (!c || c.v === null || c.v === undefined) return '';
+        return c.v;
+      }
+      function num(v) {
+        if (typeof v === 'number') return v;
+        var n = parseFloat(String(v).replace(/\./g, '').replace(',', '.'));
+        return isFinite(n) ? n : 0;
+      }
+      function parseFecha(v) {
+        if (v instanceof Date) return v;
+        if (v === '' || v === null || v === undefined) return null;
+        var s = String(v).trim();
+        var m = s.match(/^Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+)(?:,(\d+))?)?\)$/);
+        if (m) return new Date(+m[1], +m[2], +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0));
+        var d = new Date(s);
+        return isNaN(d.getTime()) ? null : d;
+      }
+      function money(n) { return '$ ' + Math.round(n).toLocaleString('es-AR'); }
+      function esc(s) {
+        return String(s).replace(/[&<>"']/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+      }
+      function idx(res, regex) {
+        var cols = (res && res.table && res.table.cols) || [];
+        for (var i = 0; i < cols.length; i++) if (regex.test(String(cols[i].label || ''))) return i;
+        return -1;
+      }
+      function hora(d) {
+        if (!d) return '';
+        var dias = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+        return dias[d.getDay()] + ' ' + ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2) +
+          ' ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+      }
+      function barras(cont, filas, fmt) {
+        // filas: [{nombre, valor, extra}] ordenadas
+        var max = 0; filas.forEach(function (f) { if (f.valor > max) max = f.valor; });
+        if (!filas.length) { cont.innerHTML = '<p class="meta">Todavía nada.</p>'; return; }
+        cont.innerHTML = filas.map(function (f) {
+          var w = max ? Math.round(f.valor / max * 100) : 0;
+          return '<div class="barra"><span class="n" title="' + esc(f.nombre) + '">' + esc(f.nombre) + '</span>' +
+            '<span class="b"><i style="width:' + w + '%"></i></span>' +
+            '<span class="c">' + esc(fmt ? fmt(f) : f.valor) + '</span></div>';
+        }).join('');
+      }
+
+      var ediciones = [];        // [{id, estado, cierre}]
+      var edicionActual = '';
+      var timer = null;
+
+      function cargarEdiciones() {
+        return gviz('sheet=Ediciones&range=A1:L1000&headers=1').then(function (res) {
+          ediciones = [];
+          res.table.rows.forEach(function (r) {
+            var id = String(celda(r, 0)).trim();
+            if (!/^ED\d{4}-\d{2,}$/.test(id)) return;
+            ediciones.push({ id: id, estado: String(celda(r, 3)).trim(), cierre: parseFecha(celda(r, 7)) });
+          });
+          ediciones.sort(function (a, b) { return a.id < b.id ? 1 : -1; });
+          var sel = $('sel-edicion');
+          sel.innerHTML = ediciones.map(function (e) {
+            return '<option value="' + esc(e.id) + '">' + esc(e.id) + ' · ' + esc(e.estado || '–') + '</option>';
+          }).join('');
+          // por defecto la edición en curso (la más nueva que no esté Cerrada), si no la última
+          var enCurso = ediciones.filter(function (e) { return e.estado.toLowerCase() !== 'cerrada'; })[0];
+          edicionActual = (enCurso || ediciones[0] || {}).id || '';
+          if (edicionActual) sel.value = edicionActual;
+        });
+      }
+
+      function cargar() {
+        if (!edicionActual) {
+          $('estado').className = 'aviso rojo';
+          $('estado').textContent = 'No hay ediciones en la planilla.';
+          return;
+        }
+        $('estado').className = 'aviso';
+        $('estado').textContent = 'Leyendo la planilla…';
+        Promise.all([
+          gviz('sheet=Pedidos&range=A1:Z5000&headers=1'),
+          gviz('sheet=Items&range=A1:P20000&headers=1'),
+          gviz('sheet=Consumidores&range=A1:D5000&headers=1'),
+          gviz('sheet=Productores&range=A1:B2000&headers=1')
+        ]).then(function (rs) {
+          pintar(rs[0], rs[1], rs[2], rs[3]);
+          $('ultima-act').textContent = 'actualizado ' + hora(new Date());
+        }).catch(function (err) {
+          console.error(err);
+          $('estado').className = 'aviso rojo';
+          $('estado').textContent = 'No se pudo leer la planilla. Probá «Actualizar» en un rato.';
+        });
+      }
+
+      function pintar(rp, ri, rc, rpr) {
+        var ed = ediciones.filter(function (e) { return e.id === edicionActual; })[0] || {};
+
+        // ── Pedidos de la edición ─────────────────────────────
+        var cEd = idx(rp, /^id_edicion$/i), cId = idx(rp, /^id_pedido$/i), cCons = idx(rp, /^id_consumidor$/i),
+            cCorr = idx(rp, /correlativo/i), cTs = idx(rp, /^timestamp/i), cEstado = idx(rp, /^estado$/i),
+            cPorc = idx(rp, /aporte_porcentaje/i), cSub = idx(rp, /^subtotal$/i), cAp = idx(rp, /^monto_aporte$/i),
+            cTot = idx(rp, /^total_a_abonar$/i), cObs = idx(rp, /^observaciones$/i), cDia = idx(rp, /dia_retiro/i);
+        var pedidos = [];
+        var consEnOtras = {};   // consumidores con pedidos en ediciones anteriores
+        rp.table.rows.forEach(function (r) {
+          var idp = String(celda(r, cId)).trim();
+          if (!idp) return;
+          var e = String(celda(r, cEd)).trim();
+          var cons = String(celda(r, cCons)).trim();
+          if (e !== edicionActual) { if (e < edicionActual) consEnOtras[cons] = true; return; }
+          var estado = String(celda(r, cEstado)).trim().toLowerCase();
+          if (estado === 'cancelado') return;
+          var obs = String(celda(r, cObs));
+          var mEnt = obs.match(/Entrega:\s*(galpon|galpón|domicilio)/i);
+          pedidos.push({
+            id: idp, cons: cons, corr: num(celda(r, cCorr)), ts: parseFecha(celda(r, cTs)),
+            porc: num(celda(r, cPorc)), sub: num(celda(r, cSub)), aporte: num(celda(r, cAp)), total: num(celda(r, cTot)),
+            entrega: mEnt ? (mEnt[1].toLowerCase().indexOf('dom') === 0 ? 'domicilio' : 'galpón') : '–',
+            dia: String(celda(r, cDia)).trim()
+          });
+        });
+        pedidos.sort(function (a, b) { return a.corr - b.corr; });
+
+        var n = pedidos.length;
+        var total = 0, aporte = 0, sub = 0, porcSum = 0;
+        pedidos.forEach(function (p) { total += p.total; aporte += p.aporte; sub += p.sub; porcSum += p.porc; });
+        $('k-pedidos').textContent = n;
+        $('k-total').textContent = money(total);
+        $('k-promedio').textContent = n ? money(total / n) : '–';
+        $('k-aporte').textContent = money(aporte);
+        $('k-aporte-porc').textContent = n ? (Math.round(porcSum / n * 10) / 10) + '%' : '–';
+
+        // ── Entrega ───────────────────────────────────────────
+        var galpon = pedidos.filter(function (p) { return p.entrega === 'galpón'; }).length;
+        var dom = pedidos.filter(function (p) { return p.entrega === 'domicilio'; }).length;
+        var porDia = {};
+        pedidos.forEach(function (p) { if (p.entrega === 'galpón') { var k = p.dia || 'sin día elegido'; porDia[k] = (porDia[k] || 0) + 1; } });
+        var filasEnt = [{ nombre: 'Retiro en el galpón', valor: galpon }, { nombre: 'Envío a domicilio', valor: dom }];
+        Object.keys(porDia).sort().forEach(function (k) { filasEnt.push({ nombre: '   ↳ ' + k, valor: porDia[k] }); });
+        barras($('entrega'), filasEnt, function (f) { return f.valor + (f.valor === 1 ? ' pedido' : ' pedidos'); });
+
+        // ── Consumidores ──────────────────────────────────────
+        var nombres = {};
+        var cCId = idx(rc, /^id_consumidor$/i), cCNom = idx(rc, /nombre/i);
+        rc.table.rows.forEach(function (r) { var id = String(celda(r, cCId)).trim(); if (id) nombres[id] = String(celda(r, cCNom)).trim(); });
+        var distintos = {}; pedidos.forEach(function (p) { distintos[p.cons] = (distintos[p.cons] || 0) + 1; });
+        var ids = Object.keys(distintos);
+        var nuevos = ids.filter(function (c) { return !consEnOtras[c]; }).length;
+        var repiten = ids.filter(function (c) { return distintos[c] > 1; }).length;
+        barras($('consumidores'), [
+          { nombre: 'Consumidores distintos', valor: ids.length },
+          { nombre: 'Nuevos (primer pedido en el Nodo)', valor: nuevos },
+          { nombre: 'Recurrentes (ya pidieron antes)', valor: ids.length - nuevos },
+          { nombre: 'Con más de un pedido en esta edición', valor: repiten }
+        ], function (f) { return String(f.valor); });
+
+        // ── Ritmo ─────────────────────────────────────────────
+        var porFecha = {};
+        pedidos.forEach(function (p) {
+          if (!p.ts) return;
+          var k = ('0' + p.ts.getDate()).slice(-2) + '/' + ('0' + (p.ts.getMonth() + 1)).slice(-2);
+          porFecha[k] = (porFecha[k] || 0) + 1;
+        });
+        var filasR = Object.keys(porFecha).map(function (k) { return { nombre: k, valor: porFecha[k], orden: k.slice(3) + k.slice(0, 2) }; })
+          .sort(function (a, b) { return a.orden < b.orden ? -1 : 1; });
+        barras($('ritmo'), filasR, function (f) { return f.valor + (f.valor === 1 ? ' pedido' : ' pedidos'); });
+
+        // ── Items: productos y productores ────────────────────
+        var iPed = idx(ri, /^id_pedido$/i), iProd = idx(ri, /^id_producto$/i), iPr = idx(ri, /^id_productor$/i),
+            iCant = idx(ri, /^cantidad$/i), iSub = idx(ri, /^subtotal$/i), iNom = idx(ri, /aux_nombre/i), iEst = idx(ri, /estado_item/i);
+        var enEd = {}; pedidos.forEach(function (p) { enEd[p.id] = true; });
+        var porProducto = {}, porProductor = {};
+        ri.table.rows.forEach(function (r) {
+          var idp = String(celda(r, iPed)).trim();
+          if (!enEd[idp]) return;
+          var est = String(celda(r, iEst)).trim().toLowerCase();
+          if (est === 'cancelado') return;
+          var prod = String(celda(r, iProd)).trim();
+          var nom = String(celda(r, iNom)).trim() || prod;
+          var s = num(celda(r, iSub));
+          if (!porProducto[prod]) porProducto[prod] = { nombre: nom, pedidos: 0, cant: 0, monto: 0 };
+          porProducto[prod].pedidos += 1; porProducto[prod].cant += num(celda(r, iCant)); porProducto[prod].monto += s;
+          var pr = String(celda(r, iPr)).trim();
+          porProductor[pr] = (porProductor[pr] || 0) + s;
+        });
+        var topP = Object.keys(porProducto).map(function (k) { return porProducto[k]; })
+          .sort(function (a, b) { return b.pedidos - a.pedidos || b.monto - a.monto; }).slice(0, 15)
+          .map(function (p) { return { nombre: p.nombre, valor: p.pedidos, monto: p.monto }; });
+        barras($('productos'), topP, function (f) { return f.valor + ' · ' + money(f.monto); });
+
+        var nomPr = {};
+        rpr.table.rows.forEach(function (r) { var id = String(celda(r, 0)).trim(); if (id) nomPr[id] = String(celda(r, 1)).trim(); });
+        var filasPr = Object.keys(porProductor).map(function (k) { return { nombre: nomPr[k] || k, valor: porProductor[k] }; })
+          .sort(function (a, b) { return b.valor - a.valor; });
+        barras($('productores'), filasPr, function (f) { return money(f.valor); });
+
+        // ── Lista ─────────────────────────────────────────────
+        $('lista-pedidos').innerHTML = pedidos.slice().reverse().map(function (p) {
+          return '<tr><td>' + esc(p.corr || '') + '</td><td>' + esc(nombres[p.cons] || p.cons) + '</td>' +
+            '<td><span class="pill' + (p.entrega === 'domicilio' ? ' dom' : '') + '">' + esc(p.entrega) + '</span>' +
+            (p.dia ? '<br><span class="meta">' + esc(p.dia) + '</span>' : '') + '</td>' +
+            '<td class="num">' + money(p.total) + '</td><td>' + esc(hora(p.ts)) + '</td></tr>';
+        }).join('') || '<tr><td colspan="5" class="meta">Todavía no hay pedidos.</td></tr>';
+
+        // ── Estado ────────────────────────────────────────────
+        var txt = '<strong>' + esc(edicionActual) + '</strong> · ' + esc(ed.estado || '');
+        if (ed.cierre) {
+          var faltan = ed.cierre.getTime() - Date.now();
+          txt += ' · cierre ' + hora(ed.cierre) + (faltan > 0 ? ' (faltan ' + Math.floor(faltan / 3600000) + ' h ' + Math.floor(faltan % 3600000 / 60000) + ' min)' : ' (cerrado)');
+        }
+        $('estado').className = 'aviso';
+        $('estado').innerHTML = txt;
+        $('contenido').style.display = '';
+      }
+
+      $('btn-refrescar').addEventListener('click', cargar);
+      $('sel-edicion').addEventListener('change', function () { edicionActual = this.value; cargar(); });
+
+      cargarEdiciones().then(cargar).catch(function () {
+        $('estado').className = 'aviso rojo';
+        $('estado').textContent = 'No se pudo leer la hoja Ediciones.';
+      });
+      timer = setInterval(function () { if (!document.hidden) cargar(); }, REFRESCO_MS);
+    })();
+  </script>
+</body>
+</html>
