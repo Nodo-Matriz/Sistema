@@ -84,6 +84,15 @@
       background: rgba(60, 82, 48, 0.10); font-weight: 700;
     }
     .aporte-grid .option--chip input { margin: 0; }
+    .aporte-box {
+      margin: var(--s-4, 16px) 0; padding: 12px 14px;
+      border: 1.5px dashed var(--c-salvia, #b7c4a8); border-radius: 12px;
+      background: rgba(183, 196, 168, 0.12);
+    }
+    .aporte-box__title { margin: 0 0 4px; font-size: 1.05rem; }
+    .aporte-box__texto { margin: 0 0 6px; font-size: 0.86rem; line-height: 1.35; }
+    .aporte-box .aporte-grid .option--chip { padding: 6px 10px; min-width: 58px; font-size: 0.95rem; }
+    .aporte-box .aporte-grid .option--chip input { width: 14px; height: 14px; }
 
     /* Día de retiro (dentro de la opción galpón) */
     #dias-retiro { margin: 8px 0 0 var(--s-6); display: flex; flex-direction: column; gap: 6px; }
@@ -169,19 +178,55 @@
         <ul class="summary__items" id="summary-items">
           <!-- Se llena por JS -->
         </ul>
+        <!-- Aporte solidario: se elige ANTES de ver los totales -->
+        <div class="aporte-box" id="aporte-box">
+          <h3 class="aporte-box__title">Aporte solidario</h3>
+          <p class="muted aporte-box__texto">
+            Los precios son los de cada productor, sin intermediarios. Gestionar los
+            pedidos, mover los alimentos, sostener el galpón y el tiempo de la equipa
+            se sostiene únicamente con este aporte. 15% es el mínimo; todo lo que sume
+            por encima vuelve al Nodo.
+          </p>
+          <div class="aporte-grid" role="radiogroup" aria-label="Porcentaje de aporte">
+            <label class="option option--chip">
+              <input type="radio" name="aporte_porcent" value="15" checked>
+              <span class="option__label">15%</span>
+            </label>
+            <label class="option option--chip">
+              <input type="radio" name="aporte_porcent" value="20">
+              <span class="option__label">20%</span>
+            </label>
+            <label class="option option--chip">
+              <input type="radio" name="aporte_porcent" value="25">
+              <span class="option__label">25%</span>
+            </label>
+            <label class="option option--chip">
+              <input type="radio" name="aporte_porcent" value="30">
+              <span class="option__label">30%</span>
+            </label>
+            <label class="option option--chip">
+              <input type="radio" name="aporte_porcent" value="otro" id="aporte-otro-radio">
+              <span class="option__label">Otro</span>
+            </label>
+          </div>
+          <div id="aporte-otro-campo" style="display:none; margin-top: var(--s-2); align-items:center; flex-wrap:wrap; gap:6px;">
+            <input class="input" type="number" id="aporte-input-custom"
+                   min="15" max="100" step="1" placeholder="Ej: 40"
+                   style="width: 110px;">
+            <span class="muted">%</span>
+            <span class="muted" id="aporte-otro-aviso" style="display:none; flex-basis:100%; color:#A6402B; font-size:0.85rem;">
+              El aporte no puede ser menor al 15%.
+            </span>
+          </div>
+        </div>
+
         <div class="summary__totals">
           <div class="summary__total-row">
             <span>Subtotal productos</span>
             <span id="subtotal">$ 0</span>
           </div>
           <div class="summary__total-row">
-            <span>
-              Aporte solidario (<span id="aporte-porc">{{aporte_default_porcent}}</span>%)
-              <br>
-              <small style="color: var(--c-tierra)">
-                Sostiene el funcionamiento del Nodo. Podés modificarlo.
-              </small>
-            </span>
+            <span>Aporte solidario (<span id="aporte-porc">{{aporte_default_porcent}}</span>%)</span>
             <span id="aporte-monto">$ 0</span>
           </div>
           <div class="summary__total-row summary__total-row--grand">
@@ -198,10 +243,17 @@
         <div class="card">
           <h2>Tus datos</h2>
 
-          <div class="field">
-            <label class="field__label" for="nombre">Nombre completo *</label>
-            <input class="input" type="text" id="nombre" name="nombre" required>
-            <span class="field__error">Necesitamos tu nombre completo.</span>
+          <div class="field" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div>
+              <label class="field__label" for="nombre">Nombre *</label>
+              <input class="input" type="text" id="nombre" name="nombre" autocomplete="given-name" required>
+              <span class="field__error">Necesitamos tu nombre.</span>
+            </div>
+            <div>
+              <label class="field__label" for="apellido">Apellido *</label>
+              <input class="input" type="text" id="apellido" name="apellido" autocomplete="family-name" required>
+              <span class="field__error">Necesitamos tu apellido.</span>
+            </div>
           </div>
 
           <div class="field">
@@ -244,90 +296,6 @@
               <input type="radio" name="en_grupo" value="no_prefiero_correo">
               <span class="option__label">No, prefiero recibir todo por correo</span>
             </label>
-          </div>
-        </div>
-
-        <div class="card mt-4">
-          <h2>Aporte solidario</h2>
-          <p class="muted">
-            Los precios que ves son los de cada productor, sin intermediarios:
-            llegan a tu mesa tal como salen de la huerta, el horno o el tambo.
-            Todo lo demás: gestionar los pedidos, mover los alimentos, sostener
-            el galpón y el tiempo de labor de la equipa, se sostiene únicamente
-            con este aporte de quienes eligen abastecerse a través del Nodo.
-          </p>
-          <div class="field">
-            <label class="field__label">Porcentaje de aporte</label>
-            <div class="aporte-grid">
-              <label class="option option--chip">
-                <input type="radio" name="aporte_porcent" value="15" checked>
-                <span class="option__label">15%</span>
-              </label>
-              <label class="option option--chip">
-                <input type="radio" name="aporte_porcent" value="16">
-                <span class="option__label">16%</span>
-              </label>
-              <label class="option option--chip">
-                <input type="radio" name="aporte_porcent" value="17">
-                <span class="option__label">17%</span>
-              </label>
-              <label class="option option--chip">
-                <input type="radio" name="aporte_porcent" value="18">
-                <span class="option__label">18%</span>
-              </label>
-              <label class="option option--chip">
-                <input type="radio" name="aporte_porcent" value="19">
-                <span class="option__label">19%</span>
-              </label>
-              <label class="option option--chip">
-                <input type="radio" name="aporte_porcent" value="20">
-                <span class="option__label">20%</span>
-              </label>
-              <label class="option option--chip">
-                <input type="radio" name="aporte_porcent" value="21">
-                <span class="option__label">21%</span>
-              </label>
-              <label class="option option--chip">
-                <input type="radio" name="aporte_porcent" value="22">
-                <span class="option__label">22%</span>
-              </label>
-              <label class="option option--chip">
-                <input type="radio" name="aporte_porcent" value="23">
-                <span class="option__label">23%</span>
-              </label>
-              <label class="option option--chip">
-                <input type="radio" name="aporte_porcent" value="24">
-                <span class="option__label">24%</span>
-              </label>
-              <label class="option option--chip">
-                <input type="radio" name="aporte_porcent" value="25">
-                <span class="option__label">25%</span>
-              </label>
-              <label class="option option--chip">
-                <input type="radio" name="aporte_porcent" value="30">
-                <span class="option__label">30%</span>
-              </label>
-              <label class="option option--chip">
-                <input type="radio" name="aporte_porcent" value="35">
-                <span class="option__label">35%</span>
-              </label>
-              <label class="option option--chip">
-                <input type="radio" name="aporte_porcent" value="otro" id="aporte-otro-radio">
-                <span class="option__label">Otro</span>
-              </label>
-            </div>
-            <p class="muted" style="margin-top:var(--s-2); font-size:0.85rem;">
-              15% es el mínimo. Todo lo que sume por encima vuelve al Nodo.
-            </p>
-            <div id="aporte-otro-campo" style="display:none; margin-top: var(--s-3); padding-left: var(--s-6); align-items:center; flex-wrap:wrap; gap:6px;">
-              <input class="input" type="number" id="aporte-input-custom"
-                     min="15" max="100" step="1" placeholder="Ej: 40"
-                     style="width: 130px;">
-              <span class="muted">%</span>
-              <span class="muted" id="aporte-otro-aviso" style="display:none; flex-basis:100%; color:#A6402B; font-size:0.85rem;">
-                El aporte no puede ser menor al 15%.
-              </span>
-            </div>
           </div>
         </div>
 
@@ -688,6 +656,50 @@
       function maxCantidadPara(v) {
         return Math.max(1, Math.floor(MAX_TOTAL_PRODUCTO / (v || 1) + 0.000001));
       }
+
+      // ── Orden dentro de cada categoría ─────────────────────────
+      // Alfabético por el nombre "sin tamaño", después por tamaño de menor
+      // a mayor (1/2 kg antes que 1 kg, 500 cc antes que 910 cc), y así las
+      // presentaciones de un mismo producto quedan juntas y ordenadas.
+      var RE_TAMANO = /(\d+\s*\/\s*\d+|\d+(?:[.,]\d+)?|[½¼¾])\s*(kg|kilo|kilos|g|gr|grs|gramos|cc|ml|l|lt|lts|litro|litros|u|un|unid|unidades|pieza|piezas|docena|pack|x)?\b/gi;
+      function tamanoEnBase(txt) {
+        // devuelve gramos/ml equivalentes (o unidades) del primer tamaño que encuentre; 0 si no hay
+        var m, mejor = 0;
+        var re = new RegExp(RE_TAMANO.source, 'gi');
+        while ((m = re.exec(txt)) !== null) {
+          var num = m[1].replace(',', '.');
+          var val;
+          if (num === '½') val = 0.5; else if (num === '¼') val = 0.25; else if (num === '¾') val = 0.75;
+          else if (num.indexOf('/') !== -1) { var f = num.split('/'); val = parseFloat(f[0]) / parseFloat(f[1]); }
+          else val = parseFloat(num);
+          if (!isFinite(val)) continue;
+          var u = (m[2] || '').toLowerCase();
+          if (u === 'kg' || u === 'kilo' || u === 'kilos' || u === 'l' || u === 'lt' || u === 'lts' || u === 'litro' || u === 'litros') val *= 1000;
+          if (!mejor) mejor = val;
+        }
+        if (/pieza entera|entero|entera/i.test(txt) && !mejor) mejor = 1000;
+        return mejor;
+      }
+      function nombreBase(txt) {
+        return String(txt || '')
+          .toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .replace(new RegExp(RE_TAMANO.source, 'gi'), ' ')
+          .replace(/\b(x|por|de|entera|entero|pieza)\b/g, ' ')
+          .replace(/[^a-z0-9 ]+/g, ' ')
+          .replace(/\s+/g, ' ').trim();
+      }
+      categorias.forEach(function (cat) {
+        cat.productos.forEach(function (p) {
+          p._base = nombreBase(p.nombre);
+          p._tam = tamanoEnBase(String(p.nombre || ''));
+        });
+        cat.productos.sort(function (a, b) {
+          if (a._base !== b._base) return a._base.localeCompare(b._base, 'es');
+          if (a._tam !== b._tam) return a._tam - b._tam;
+          return String(a.nombre).localeCompare(String(b.nombre), 'es');
+        });
+      });
 
       var productoPorId = {};   // id_producto → ficha del catálogo
       categorias.forEach(function (cat) {
@@ -1173,7 +1185,7 @@
       })();
 
       var CLAVE_BORRADOR = 'nm_pedido_{{id_edicion}}';
-      var CAMPOS_GUARDADOS = ['nombre', 'email', 'telefono', 'direccion',
+      var CAMPOS_GUARDADOS = ['nombre', 'apellido', 'email', 'telefono', 'direccion',
         'comentarios', 'aporte-input-custom'];
 
       var pedidoEnviado = false;   // después de enviar, no se guarda más nada
@@ -1405,9 +1417,19 @@
             var nombre = fila.c[1] ? fila.c[1].v : '';
             var tel    = fila.c[2] ? fila.c[2].v : '';
 
-            var nombreField = document.getElementById('nombre');
-            var telField    = document.getElementById('telefono');
-            if (nombreField && nombre && !nombreField.value) nombreField.value = nombre;
+            var nombreField   = document.getElementById('nombre');
+            var apellidoField = document.getElementById('apellido');
+            var telField      = document.getElementById('telefono');
+            // La planilla guarda "Nombre Apellido" junto: la última palabra va a apellido
+            if (nombreField && nombre && !nombreField.value && !(apellidoField && apellidoField.value)) {
+              var partesNombre = String(nombre).trim().split(/\s+/);
+              if (partesNombre.length > 1 && apellidoField) {
+                apellidoField.value = partesNombre.pop();
+                nombreField.value = partesNombre.join(' ');
+              } else {
+                nombreField.value = String(nombre).trim();
+              }
+            }
             if (telField && tel && !telField.value) telField.value = tel;
 
             // Marcar "No, ya pedí antes"
@@ -1542,14 +1564,18 @@
 
         // Validación: campos requeridos
         var nombre = document.getElementById('nombre');
+        var apellido = document.getElementById('apellido');
         var email = document.getElementById('email');
         var telefono = document.getElementById('telefono');
         var ok = true;
 
-        [nombre, email, telefono].forEach(NM.clearInvalid);
+        [nombre, apellido, email, telefono].forEach(NM.clearInvalid);
 
         if (!nombre.value.trim()) {
           NM.markInvalid(nombre); ok = false;
+        }
+        if (!apellido.value.trim()) {
+          NM.markInvalid(apellido); ok = false;
         }
         if (!NM.isValidEmail(email.value)) {
           NM.markInvalid(email); ok = false;
@@ -1581,7 +1607,7 @@
           id_edicion: '{{id_edicion}}',
           enviado_en: new Date().toISOString(),
           consumidor: {
-            nombre_completo: nombre.value.trim(),
+            nombre_completo: (nombre.value.trim() + ' ' + apellido.value.trim()).trim(),
             email: email.value.trim().toLowerCase(),
             telefono_whatsapp: telNorm,
             primera_vez: document.querySelector('[name="primera_vez"]:checked').value,
