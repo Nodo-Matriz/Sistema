@@ -1178,7 +1178,9 @@
           var urlForm = BASE_FORMS + 'pedidos-' + id + '.html';
           $('p3-boton').innerHTML =
             '<a href="' + urlForm + '" class="btn btn--ghost btn--small">' +
-            'Abrir el form de pedidos de ' + id + '</a>';
+            'Abrir el form de pedidos de ' + id + '</a> ' +
+            '<a href="forms/panel.html" class="btn btn--ghost btn--small">' +
+            '📊 Panel de pedidos en vivo</a>';
         }
 
         // pintar el recorrido: hechos ✓, actual "estamos acá", futuros vacíos
