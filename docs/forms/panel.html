@@ -44,6 +44,9 @@
     .meta { font-size: 0.82rem; color: var(--c-tierra); font-style: italic; }
     .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.75rem; background: rgba(110,142,85,.15); color: var(--c-musgo); }
     .pill.dom { background: rgba(201, 150, 60, .18); color: #7a5a1e; }
+    .coment { padding: 10px 12px; margin: 8px 0; background: rgba(201, 150, 60, .10); border-left: 3px solid #c9963c; border-radius: 8px; }
+    .coment .quien { font-size: 0.8rem; color: var(--c-tierra); margin-bottom: 3px; }
+    .coment .texto { white-space: pre-wrap; color: var(--c-corteza); }
     .fila-sel select { padding: 4px 8px; border-radius: 8px; border: 1px solid rgba(74,107,58,.3); font: inherit; }
   </style>
 </head>
@@ -118,6 +121,12 @@
           <thead><tr><th>#</th><th>Consumidor</th><th>Entrega</th><th class="num">Total</th><th>Hora</th></tr></thead>
           <tbody id="lista-pedidos"></tbody>
         </table>
+      </div>
+
+      <div class="card-eq fade-in" data-delay="4" id="card-comentarios">
+        <h2>💬 Comentarios de los consumidores</h2>
+        <p class="meta">Lo que escribieron en "Algo que quieras decirnos" al hacer el pedido. Para leer, no para contar.</p>
+        <div id="comentarios"></div>
       </div>
     </div>
 
@@ -258,11 +267,16 @@
           if (estado === 'cancelado') return;
           var obs = String(celda(r, cObs));
           var mEnt = obs.match(/Entrega:\s*(galpon|galpón|domicilio)/i);
+          // B1 guarda "Entrega: … · Pago: … · <comentario>" en observaciones:
+          // el comentario es lo que queda después de sacar esas dos partes.
+          var comentario = obs.split(/\s·\s/).map(function (t) { return t.trim(); })
+            .filter(function (t) { return t && !/^(Entrega|Pago)\s*:/i.test(t); }).join(' · ');
           pedidos.push({
             id: idp, cons: cons, corr: num(celda(r, cCorr)), ts: parseFecha(celda(r, cTs)),
             porc: num(celda(r, cPorc)), sub: num(celda(r, cSub)), aporte: num(celda(r, cAp)), total: num(celda(r, cTot)),
             entrega: mEnt ? (mEnt[1].toLowerCase().indexOf('dom') === 0 ? 'domicilio' : 'galpón') : '–',
-            dia: String(celda(r, cDia)).trim()
+            dia: String(celda(r, cDia)).trim(),
+            comentario: comentario
           });
         });
         pedidos.sort(function (a, b) { return a.corr - b.corr; });
@@ -347,6 +361,14 @@
             (p.dia ? '<br><span class="meta">' + esc(p.dia) + '</span>' : '') + '</td>' +
             '<td class="num">' + money(p.total) + '</td><td>' + esc(hora(p.ts)) + '</td></tr>';
         }).join('') || '<tr><td colspan="5" class="meta">Todavía no hay pedidos.</td></tr>';
+
+        // ── Comentarios ───────────────────────────────────────
+        var conComentario = pedidos.filter(function (p) { return p.comentario; }).reverse();
+        $('comentarios').innerHTML = conComentario.length ? conComentario.map(function (p) {
+          return '<div class="coment"><div class="quien">#' + esc(p.corr || '') + ' · ' +
+            esc(nombres[p.cons] || p.cons) + ' · ' + esc(p.entrega) + ' · ' + esc(hora(p.ts)) + '</div>' +
+            '<div class="texto">' + esc(p.comentario) + '</div></div>';
+        }).join('') : '<p class="meta">Ningún comentario por ahora.</p>';
 
         // ── Estado ────────────────────────────────────────────
         var txt = '<strong>' + esc(edicionActual) + '</strong> · ' + esc(ed.estado || '');
