@@ -68,7 +68,7 @@
     }
     .step-btn:active { background: var(--c-salvia, #b7c4a8); }
 
-    /* Aporte solidario: opciones compactas en grilla */
+    /* Aporte consciente: opciones compactas en grilla */
     .aporte-grid {
       display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px;
     }
@@ -115,7 +115,10 @@
     <section class="fade-in" data-delay="1">
       <h1>Pedido quincenal</h1>
       <p class="lead">
-        Una nueva edición es una invitación a recorrer juntxs todo lo que la trama proveedora nos oferta esta quincena.
+        Una nueva edición es una invitación a recorrer juntxs todo lo que la trama trae
+        esta quincena. Vas a poder recorrer todas las categoría antes de cerrar tu pedido:
+        a veces aparecen cosas nuevas, productos de estación, ofertas, productores
+        que vuelven después de un tiempo.
       </p>
 
       <div class="note note--info">
@@ -175,16 +178,26 @@
         <ul class="summary__items" id="summary-items">
           <!-- Se llena por JS -->
         </ul>
-        <!-- Aporte solidario: se elige ANTES de ver los totales -->
+        <!-- Aporte consciente: se elige ANTES de ver los totales -->
         <div class="aporte-box" id="aporte-box">
-          <h3 class="aporte-box__title">Aporte solidario</h3>
+          <h3 class="aporte-box__title">Aporte consciente</h3>
           <p class="muted aporte-box__texto">
-            Los precios son los de cada productor, sin intermediarios. Gestionar los
-            pedidos, mover los alimentos, sostener el galpón y el tiempo de la equipa
-            se sostiene únicamente con este aporte. 15% es el mínimo; todo lo que sume
-            por encima vuelve al Nodo.
+            Los precios son los que fija cada productor, sin intermediarios ni
+            remarques. Lo que sostiene el funcionamiento del Nodo (gestión,
+            logística, comunicación, planificación, tecnologías, movimiento y
+            distribución) es este aporte, proporcional a las posibilidades de cada
+            persona.
           </p>
-          <div class="aporte-grid" role="radiogroup" aria-label="Porcentaje de aporte">
+          <p class="muted aporte-box__texto">
+            <strong>Sugerimos un mínimo del 15% sobre tu pedido.</strong> Si podés
+            más, tu aporte ayuda a sostener y fortalecer el espacio, como también la
+            participación de quienes hoy pueden menos.
+          </p>
+          <p class="muted aporte-box__texto">
+            Si en este momento no podés aportar, escribinos: buscamos formas de
+            reciprocidad que contemplen las distintas realidades que habitamos.
+          </p>
+          <div class="aporte-grid" role="radiogroup" aria-label="Porcentaje de aporte consciente">
             <label class="option option--chip">
               <input type="radio" name="aporte_porcent" value="15" checked>
               <span class="option__label">15%</span>
@@ -223,7 +236,7 @@
             <span id="subtotal">$ 0</span>
           </div>
           <div class="summary__total-row">
-            <span>Aporte solidario (<span id="aporte-porc">{{aporte_default_porcent}}</span>%)</span>
+            <span>Aporte consciente (<span id="aporte-porc">{{aporte_default_porcent}}</span>%)</span>
             <span id="aporte-monto">$ 0</span>
           </div>
           <div class="summary__total-row summary__total-row--grand">
@@ -1475,7 +1488,7 @@
         }
       });
 
-      // Aporte solidario: opciones fijas + campo personalizado
+      // Aporte consciente: opciones fijas + campo personalizado
       var aporteRadios = document.querySelectorAll('input[name="aporte_porcent"]');
       var aporteOtroCampo = document.getElementById('aporte-otro-campo');
       var aporteInputCustom = document.getElementById('aporte-input-custom');
