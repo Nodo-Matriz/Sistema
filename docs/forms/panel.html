@@ -115,6 +115,25 @@
         <div id="productores"></div>
       </div>
 
+      <div class="card-eq fade-in" data-delay="3" id="card-precomanda">
+        <h2>Cantidades por productor</h2>
+        <p class="meta">Lo que se le pediría hoy a cada productor o proveedor, producto por producto, con lo que ya entró. Sirve para anticipar compras a proveedores antes del cierre; la comanda oficial sigue siendo la del paso 5.</p>
+        <p class="fila-sel">
+          <label>Productor: <select id="sel-productor"><option value="">— elegí uno —</option></select></label>
+          <input type="search" id="busca-producto" placeholder="filtrar producto…" style="padding:4px 8px; border-radius:8px; border:1px solid rgba(74,107,58,.3); font:inherit; margin-left:6px; max-width:180px;">
+          <button type="button" class="btn btn--ghost btn--small" id="btn-copiar" style="margin-left:6px;" disabled>Copiar lista</button>
+        </p>
+        <p class="fila-sel" id="fila-pronostico">
+          <label>Pronóstico al cierre, suponiendo <input type="number" id="pedidos-esperados" min="1" step="1" value="100" style="width:64px; padding:4px 6px; border-radius:8px; border:1px solid rgba(74,107,58,.3); font:inherit;"> pedidos en total</label>
+          <span class="meta" id="factor-pronostico"></span>
+        </p>
+        <p class="meta">El pronóstico multiplica lo pedido hasta ahora por (pedidos esperados ÷ pedidos que ya entraron). Es una regla de tres: sirve para anticipar la compra a un proveedor cuando hay que pedir antes del cierre. Ajustá el número de pedidos esperados según cómo venga la edición.</p>
+        <table class="lista" id="tabla-precomanda">
+          <thead><tr><th>Producto</th><th class="num">Hasta ahora</th><th class="num">Pedidos</th><th class="num">Pronóstico</th><th class="num">$</th></tr></thead>
+          <tbody id="precomanda"><tr><td colspan="5" class="meta">Elegí un productor.</td></tr></tbody>
+        </table>
+      </div>
+
       <div class="card-eq fade-in" data-delay="4">
         <h2>Lista de pedidos</h2>
         <table class="lista">
@@ -236,9 +255,10 @@
           gviz('sheet=Pedidos&range=A1:Z5000&headers=1'),
           gviz('sheet=Items&range=A1:P20000&headers=1'),
           gviz('sheet=Consumidores&range=A1:D5000&headers=1'),
-          gviz('sheet=Productores&range=A1:B2000&headers=1')
+          gviz('sheet=Productores&range=A1:B2000&headers=1'),
+          gviz('sheet=Productos&range=A1:D5000&headers=1').catch(function () { return null; })
         ]).then(function (rs) {
-          pintar(rs[0], rs[1], rs[2], rs[3]);
+          pintar(rs[0], rs[1], rs[2], rs[3], rs[4]);
           $('ultima-act').textContent = 'actualizado ' + hora(new Date());
         }).catch(function (err) {
           console.error(err);
@@ -247,7 +267,7 @@
         });
       }
 
-      function pintar(rp, ri, rc, rpr) {
+      function pintar(rp, ri, rc, rpr, rprod) {
         var ed = ediciones.filter(function (e) { return e.id === edicionActual; })[0] || {};
 
         // ── Pedidos de la edición ─────────────────────────────
@@ -282,6 +302,7 @@
         pedidos.sort(function (a, b) { return a.corr - b.corr; });
 
         var n = pedidos.length;
+        pedidosActuales = n;
         var total = 0, aporte = 0, sub = 0, porcSum = 0;
         pedidos.forEach(function (p) { total += p.total; aporte += p.aporte; sub += p.sub; porcSum += p.porc; });
         $('k-pedidos').textContent = n;
@@ -327,9 +348,15 @@
 
         // ── Items: productos y productores ────────────────────
         var iPed = idx(ri, /^id_pedido$/i), iProd = idx(ri, /^id_producto$/i), iPr = idx(ri, /^id_productor$/i),
-            iCant = idx(ri, /^cantidad$/i), iSub = idx(ri, /^subtotal$/i), iNom = idx(ri, /aux_nombre/i), iEst = idx(ri, /estado_item/i);
+            iCant = idx(ri, /^cantidad$/i), iSub = idx(ri, /^subtotal$/i), iNom = idx(ri, /aux_nombre/i), iEst = idx(ri, /estado_item/i),
+            iEfec = idx(ri, /cantidad_efectiva/i), iFrac = idx(ri, /^fraccion$/i);
+        var unidadDe = {};
+        if (rprod && rprod.table) rprod.table.rows.forEach(function (r) {
+          var id = String(celda(r, 0)).trim(); if (id) unidadDe[id] = String(celda(r, 3) || '').trim();
+        });
         var enEd = {}; pedidos.forEach(function (p) { enEd[p.id] = true; });
         var porProducto = {}, porProductor = {};
+        precomanda = {};   // id_productor -> { id_producto -> {nombre, unidad, cant, pedidos, monto} }
         ri.table.rows.forEach(function (r) {
           var idp = String(celda(r, iPed)).trim();
           if (!enEd[idp]) return;
@@ -342,6 +369,16 @@
           porProducto[prod].pedidos += 1; porProducto[prod].cant += num(celda(r, iCant)); porProducto[prod].monto += s;
           var pr = String(celda(r, iPr)).trim();
           porProductor[pr] = (porProductor[pr] || 0) + s;
+          // cantidad efectiva (K): ya convierte la fracción (½ kg = 0,5); si no está, cantidad × fracción
+          var ce = iEfec !== -1 ? num(celda(r, iEfec)) : 0;
+          if (!ce) {
+            var e = num(celda(r, iCant)), f = String(iFrac !== -1 ? celda(r, iFrac) : '').trim();
+            var fm = f.match(/^(\d+)\s*\/\s*(\d+)/);
+            ce = fm ? e * (+fm[1] / +fm[2]) : (f === '½' ? e * 0.5 : f === '¼' ? e * 0.25 : e);
+          }
+          if (!precomanda[pr]) precomanda[pr] = {};
+          if (!precomanda[pr][prod]) precomanda[pr][prod] = { nombre: nom, unidad: unidadDe[prod] || '', cant: 0, pedidos: 0, monto: 0 };
+          precomanda[pr][prod].cant += ce; precomanda[pr][prod].pedidos += 1; precomanda[pr][prod].monto += s;
         });
         var topP = Object.keys(porProducto).map(function (k) { return porProducto[k]; })
           .sort(function (a, b) { return b.pedidos - a.pedidos || b.monto - a.monto; }).slice(0, 15)
@@ -353,6 +390,16 @@
         var filasPr = Object.keys(porProductor).map(function (k) { return { nombre: nomPr[k] || k, valor: porProductor[k] }; })
           .sort(function (a, b) { return b.valor - a.valor; });
         barras($('productores'), filasPr, function (f) { return money(f.valor); });
+
+        nombresProductor = nomPr;
+        var selP = $('sel-productor');
+        var actual = selP.value;
+        selP.innerHTML = '<option value="">— elegí uno —</option>' +
+          Object.keys(precomanda).map(function (k) { return { id: k, nombre: nomPr[k] || k }; })
+            .sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); })
+            .map(function (x) { return '<option value="' + esc(x.id) + '">' + esc(x.nombre) + '</option>'; }).join('');
+        if (actual && precomanda[actual]) selP.value = actual;
+        pintarPrecomanda();
 
         // ── Lista ─────────────────────────────────────────────
         $('lista-pedidos').innerHTML = pedidos.slice().reverse().map(function (p) {
@@ -380,6 +427,81 @@
         $('estado').innerHTML = txt;
         $('contenido').style.display = '';
       }
+
+      var precomanda = {};
+      var nombresProductor = {};
+      var pedidosActuales = 0;
+      function pedidosEsperados() {
+        var v = parseInt($('pedidos-esperados').value, 10);
+        return isFinite(v) && v > 0 ? v : 0;
+      }
+      function factorPronostico() {
+        var esp = pedidosEsperados();
+        if (!pedidosActuales || !esp) return 0;
+        return Math.max(1, esp / pedidosActuales);
+      }
+      // redondeo útil para comprar: kg/litro a 0,5; el resto a unidades enteras, siempre hacia arriba
+      function redondeoCompra(n, unidad) {
+        var u = String(unidad || '').toLowerCase();
+        if (u === 'kg' || u === 'litro' || u === 'l' || u === 'lt') return Math.ceil(n * 2) / 2;
+        return Math.ceil(n - 1e-9);
+      }
+      try { var g = localStorage.getItem('nm_panel_pedidos_esperados'); if (g) $('pedidos-esperados').value = g; } catch (e) {}
+      function fmtCant(n) {
+        return (Math.round(n * 100) / 100).toLocaleString('es-AR');
+      }
+      function filasPrecomanda() {
+        var pr = $('sel-productor').value;
+        if (!pr || !precomanda[pr]) return [];
+        var q = $('busca-producto').value.trim().toLowerCase();
+        return Object.keys(precomanda[pr]).map(function (k) { return precomanda[pr][k]; })
+          .filter(function (x) { return !q || x.nombre.toLowerCase().indexOf(q) !== -1; })
+          .sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); });
+      }
+      function pintarPrecomanda() {
+        var pr = $('sel-productor').value;
+        var filas = filasPrecomanda();
+        var f = factorPronostico();
+        $('factor-pronostico').textContent = pedidosActuales
+          ? '· entraron ' + pedidosActuales + ' → factor ×' + (Math.round(f * 100) / 100).toLocaleString('es-AR')
+          : '· todavía no hay pedidos';
+        $('btn-copiar').disabled = !filas.length;
+        if (!pr) { $('precomanda').innerHTML = '<tr><td colspan="5" class="meta">Elegí un productor.</td></tr>'; return; }
+        if (!filas.length) { $('precomanda').innerHTML = '<tr><td colspan="5" class="meta">Nada que mostrar.</td></tr>'; return; }
+        var tp = 0, tm = 0;
+        $('precomanda').innerHTML = filas.map(function (x) {
+          tp += x.pedidos; tm += x.monto;
+          var pron = f ? redondeoCompra(x.cant * f, x.unidad) : 0;
+          return '<tr><td>' + esc(x.nombre) + '</td><td class="num">' + fmtCant(x.cant) + (x.unidad ? ' ' + esc(x.unidad) : '') + '</td>' +
+            '<td class="num">' + x.pedidos + '</td>' +
+            '<td class="num"><strong>' + (f ? fmtCant(pron) + (x.unidad ? ' ' + esc(x.unidad) : '') : '–') + '</strong></td>' +
+            '<td class="num">' + money(x.monto) + '</td></tr>';
+        }).join('') + '<tr><td><strong>Total</strong></td><td></td><td class="num"><strong>' + tp + '</strong></td><td></td><td class="num"><strong>' + money(tm) + '</strong></td></tr>';
+      }
+      function copiarPrecomanda() {
+        var pr = $('sel-productor').value;
+        var filas = filasPrecomanda();
+        if (!filas.length) return;
+        var f = factorPronostico();
+        var txt = 'Pedido Nodo Matríz · ' + edicionActual + ' · ' + (nombresProductor[pr] || pr) + '\n' +
+          filas.map(function (x) {
+            var pron = f ? redondeoCompra(x.cant * f, x.unidad) : x.cant;
+            return '• ' + x.nombre + ': ' + fmtCant(pron) + (x.unidad ? ' ' + x.unidad : '');
+          }).join('\n') +
+          (f && f > 1
+            ? '\n(pronóstico sobre ' + pedidosEsperados() + ' pedidos; hasta ahora ' + pedidosActuales + ' · ' + hora(new Date()) + ')'
+            : '\n(parcial al ' + hora(new Date()) + ')');
+        var done = function () { $('btn-copiar').textContent = 'Copiado ✓'; setTimeout(function () { $('btn-copiar').textContent = 'Copiar lista'; }, 1500); };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done).catch(function () { window.prompt('Copiá el texto:', txt); });
+        else window.prompt('Copiá el texto:', txt);
+      }
+      $('sel-productor').addEventListener('change', pintarPrecomanda);
+      $('pedidos-esperados').addEventListener('input', function () {
+        try { localStorage.setItem('nm_panel_pedidos_esperados', this.value); } catch (e) {}
+        pintarPrecomanda();
+      });
+      $('busca-producto').addEventListener('input', pintarPrecomanda);
+      $('btn-copiar').addEventListener('click', copiarPrecomanda);
 
       $('btn-refrescar').addEventListener('click', cargar);
       $('sel-edicion').addEventListener('change', function () { edicionActual = this.value; cargar(); });
