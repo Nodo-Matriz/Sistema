@@ -129,8 +129,8 @@
         </p>
         <p class="meta">El pronóstico multiplica lo pedido hasta ahora por (pedidos esperados ÷ pedidos que ya entraron). Es una regla de tres: sirve para anticipar la compra a un proveedor cuando hay que pedir antes del cierre. Ajustá el número de pedidos esperados según cómo venga la edición.</p>
         <table class="lista" id="tabla-precomanda">
-          <thead><tr><th>Producto</th><th class="num">Hasta ahora</th><th class="num">Pedidos</th><th class="num">Pronóstico</th><th class="num">$</th></tr></thead>
-          <tbody id="precomanda"><tr><td colspan="5" class="meta">Elegí un productor.</td></tr></tbody>
+          <thead><tr><th>Producto</th><th class="num">Pedidos</th><th class="num">Cantidad<br>hasta ahora</th><th class="num">$ hasta ahora</th><th class="num">Cantidad<br>pronóstico</th><th class="num">$ pronóstico</th></tr></thead>
+          <tbody id="precomanda"><tr><td colspan="6" class="meta">Elegí un productor.</td></tr></tbody>
         </table>
       </div>
 
@@ -466,21 +466,27 @@
           ? '· entraron ' + pedidosActuales + ' → factor ×' + (Math.round(f * 100) / 100).toLocaleString('es-AR')
           : '· todavía no hay pedidos';
         $('btn-copiar').disabled = !filas.length;
-        if (!pr) { $('precomanda').innerHTML = '<tr><td colspan="5" class="meta">Elegí un productor.</td></tr>'; return; }
-        if (!filas.length) { $('precomanda').innerHTML = '<tr><td colspan="5" class="meta">Nada que mostrar.</td></tr>'; return; }
-        var tp = 0, tm = 0;
+        if (!pr) { $('precomanda').innerHTML = '<tr><td colspan="6" class="meta">Elegí un productor.</td></tr>'; return; }
+        if (!filas.length) { $('precomanda').innerHTML = '<tr><td colspan="6" class="meta">Nada que mostrar.</td></tr>'; return; }
+        var tp = 0, tm = 0, tmp = 0;
         $('precomanda').innerHTML = filas.map(function (x) {
           tp += x.pedidos; tm += x.monto;
-          var pron = f ? redondeoCompra(x.cant * f, x.unidad) : 0;
-          return '<tr><td>' + esc(x.nombre) + '</td><td class="num">' + fmtCant(x.cant) + (x.unidad ? ' ' + esc(x.unidad) : '') + '</td>' +
+          var u = x.unidad ? ' ' + esc(x.unidad) : '';
+          var pron = f ? redondeoCompra(x.cant * f, x.unidad) : x.cant;
+          // $ pronóstico = cantidad pronosticada × precio por unidad (importe ÷ cantidad)
+          var montoPron = x.cant > 0 ? x.monto * (pron / x.cant) : 0;
+          tmp += montoPron;
+          return '<tr><td>' + esc(x.nombre) + '</td>' +
             '<td class="num">' + x.pedidos + '</td>' +
-            '<td class="num"><strong>' + (f ? fmtCant(pron) + (x.unidad ? ' ' + esc(x.unidad) : '') : '–') + '</strong></td>' +
-            '<td class="num">' + money(x.monto) + '</td></tr>';
+            '<td class="num">' + fmtCant(x.cant) + u + '</td>' +
+            '<td class="num">' + money(x.monto) + '</td>' +
+            '<td class="num"><strong>' + fmtCant(pron) + u + '</strong></td>' +
+            '<td class="num"><strong>' + money(montoPron) + '</strong></td></tr>';
         }).join('') +
-          '<tr><td><strong>Total hasta ahora</strong></td><td></td><td class="num"><strong>' + tp + '</strong></td><td></td><td class="num"><strong>' + money(tm) + '</strong></td></tr>' +
-          (f && f > 1
-            ? '<tr><td><strong>Pronóstico al cierre</strong></td><td></td><td class="num"><strong>≈ ' + Math.round(tp * f) + '</strong></td><td></td><td class="num"><strong>≈ ' + money(tm * f) + '</strong></td></tr>'
-            : '');
+          '<tr><td><strong>Total</strong></td>' +
+          '<td class="num"><strong>' + tp + '</strong></td><td></td>' +
+          '<td class="num"><strong>' + money(tm) + '</strong></td><td></td>' +
+          '<td class="num"><strong>' + money(tmp) + '</strong></td></tr>';
       }
       function copiarPrecomanda() {
         var pr = $('sel-productor').value;
