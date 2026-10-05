@@ -47,6 +47,12 @@
     .coment { padding: 10px 12px; margin: 8px 0; background: rgba(201, 150, 60, .10); border-left: 3px solid #c9963c; border-radius: 8px; }
     .coment .quien { font-size: 0.8rem; color: var(--c-tierra); margin-bottom: 3px; }
     .coment .texto { white-space: pre-wrap; color: var(--c-corteza); }
+    #tabla-precomanda tr.grupo th { text-align: center; font-size: 0.75rem; letter-spacing: .05em; padding-bottom: 2px; border-bottom: 2px solid; }
+    #tabla-precomanda th.g-actual { color: var(--c-tierra); border-color: rgba(74,107,58,.35); }
+    #tabla-precomanda th.g-pron { color: #7a5a1e; background: rgba(201,150,60,.16); border-color: #c9963c; border-radius: 8px 8px 0 0; }
+    #tabla-precomanda .pron { background: rgba(201,150,60,.10); color: #5a4214; }
+    #tabla-precomanda .pron-ini { border-left: 2px solid #c9963c; }
+    #tabla-precomanda tr.total td { border-top: 2px solid rgba(74,107,58,.35); }
     .fila-sel select { padding: 4px 8px; border-radius: 8px; border: 1px solid rgba(74,107,58,.3); font: inherit; }
   </style>
 </head>
@@ -128,10 +134,13 @@
           <span class="meta" id="factor-pronostico"></span>
         </p>
         <p class="meta">El pronóstico multiplica lo pedido hasta ahora por (pedidos esperados ÷ pedidos que ya entraron). Es una regla de tres: sirve para anticipar la compra a un proveedor cuando hay que pedir antes del cierre. Ajustá el número de pedidos esperados según cómo venga la edición.</p>
-        <table class="lista" id="tabla-precomanda">
-          <thead><tr><th>Producto</th><th class="num">Pedidos</th><th class="num">Cantidad<br>hasta ahora</th><th class="num">$ hasta ahora</th><th class="num">Cantidad<br>pronóstico</th><th class="num">$ pronóstico</th></tr></thead>
+        <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;"><table class="lista" id="tabla-precomanda" style="min-width:560px;">
+          <thead>
+            <tr class="grupo"><th></th><th colspan="3" class="g-actual">Hasta ahora</th><th colspan="2" class="g-pron">Pronóstico al cierre</th></tr>
+            <tr><th>Producto</th><th class="num">Pedidos</th><th class="num">Cantidad</th><th class="num">$</th><th class="num pron pron-ini">Cantidad</th><th class="num pron">$</th></tr>
+          </thead>
           <tbody id="precomanda"><tr><td colspan="6" class="meta">Elegí un productor.</td></tr></tbody>
-        </table>
+        </table></div>
       </div>
 
       <div class="card-eq fade-in" data-delay="4">
@@ -480,13 +489,14 @@
             '<td class="num">' + x.pedidos + '</td>' +
             '<td class="num">' + fmtCant(x.cant) + u + '</td>' +
             '<td class="num">' + money(x.monto) + '</td>' +
-            '<td class="num"><strong>' + fmtCant(pron) + u + '</strong></td>' +
-            '<td class="num"><strong>' + money(montoPron) + '</strong></td></tr>';
+            '<td class="num pron pron-ini"><strong>' + fmtCant(pron) + u + '</strong></td>' +
+            '<td class="num pron"><strong>' + money(montoPron) + '</strong></td></tr>';
         }).join('') +
-          '<tr><td><strong>Total</strong></td>' +
+          '<tr class="total"><td><strong>Total</strong></td>' +
           '<td class="num"><strong>' + tp + '</strong></td><td></td>' +
-          '<td class="num"><strong>' + money(tm) + '</strong></td><td></td>' +
-          '<td class="num"><strong>' + money(tmp) + '</strong></td></tr>';
+          '<td class="num"><strong>' + money(tm) + '</strong></td>' +
+          '<td class="num pron pron-ini"></td>' +
+          '<td class="num pron"><strong>' + money(tmp) + '</strong></td></tr>';
       }
       function copiarPrecomanda() {
         var pr = $('sel-productor').value;
