@@ -476,7 +476,11 @@
             '<td class="num">' + x.pedidos + '</td>' +
             '<td class="num"><strong>' + (f ? fmtCant(pron) + (x.unidad ? ' ' + esc(x.unidad) : '') : '–') + '</strong></td>' +
             '<td class="num">' + money(x.monto) + '</td></tr>';
-        }).join('') + '<tr><td><strong>Total</strong></td><td></td><td class="num"><strong>' + tp + '</strong></td><td></td><td class="num"><strong>' + money(tm) + '</strong></td></tr>';
+        }).join('') +
+          '<tr><td><strong>Total hasta ahora</strong></td><td></td><td class="num"><strong>' + tp + '</strong></td><td></td><td class="num"><strong>' + money(tm) + '</strong></td></tr>' +
+          (f && f > 1
+            ? '<tr><td><strong>Pronóstico al cierre</strong></td><td></td><td class="num"><strong>≈ ' + Math.round(tp * f) + '</strong></td><td></td><td class="num"><strong>≈ ' + money(tm * f) + '</strong></td></tr>'
+            : '');
       }
       function copiarPrecomanda() {
         var pr = $('sel-productor').value;
