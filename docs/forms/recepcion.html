@@ -1997,9 +1997,17 @@
         var dem = {}, totProd = {};
         itemsEd.forEach(function (it) {
           totProd[it.id_producto] = (totProd[it.id_producto] || 0) + it.efectiva;
-          if (it.quien !== 'Galpón' || !it.fraccion) return;
-          var k = it.id_producto + '|' + it.fraccion;
-          if (!dem[k]) dem[k] = { porciones: 0, unidades: 0 };
+          if (it.quien !== 'Galpón') return;
+          // Producto que fracciona el galpón pedido ENTERO (1 kg, 2 kg…): el
+          // productor lo manda a granel junto con lo demás, así que también hay
+          // que pesarlo y embolsarlo. No está en el plan (no es una fracción),
+          // pero se muestra para que no se olvide (ED19: 1 kg de coco rallado).
+          var entero = !it.fraccion;
+          // solo lo que se pesa (kg, litro); un maple entero no se arma
+          if (entero && !/^(kg|kilo|kilos|l|lt|litro|litros)$/i.test(String(unidadDeProducto(it.id_producto) || '').trim())) return;
+          var k = it.id_producto + '|' + (entero ? '1' : it.fraccion);
+          if (!dem[k]) dem[k] = { porciones: 0, unidades: 0, entero: entero, pedidos: 0 };
+          dem[k].pedidos++;
           dem[k].porciones += it.cantidad;
           dem[k].unidades += it.efectiva;
         });
@@ -2057,9 +2065,12 @@
           var partes = k.split('|');
           out.push({
             p: { id_plan: '', id_producto: partes[0], nombre: nombreProducto(partes[0]), fraccion: partes[1] },
+            pedidos: dem[k].pedidos,
             plan: 0, ahora: redondear3(dem[k].porciones), unidades: redondear3(dem[k].unidades),
-            preparado: false, estado: 'bloq',
-            msg: 'No está en el plan de fraccionamiento: armalo igual y avisá para que se agregue.',
+            preparado: false, estado: dem[k].entero ? 'entero' : 'bloq',
+            msg: dem[k].entero
+              ? 'Pedido entero (por kilo): pesalo y embolsalo igual que las fracciones. No hace falta registrarlo.'
+              : 'No está en el plan de fraccionamiento: armalo igual y avisá para que se agregue.',
             alerta: ''
           });
         });
@@ -2086,6 +2097,7 @@
             (r.preparado ? ' preparado' : (habilitado ? ' no-llego' : '')) +
             (r.estado === 'cero' || r.estado === 'bloq' ? ' nada' : '') +
             (r.estado === 'cambio' && !r.preparado ? ' parcial' : '') +
+            (r.estado === 'entero' ? ' parcial' : '') +
             (r.alerta ? ' nada' : '');
           if (r.alerta) div.style.opacity = '1';
           div.dataset.idx = String(i);
@@ -2098,7 +2110,10 @@
               '<div class="nota-novedad"></div>' +
             '</div>';
           var nombre = p.nombre || p.id_producto;
-          div.querySelector('.linea-nombre').textContent = (r.ahora <= EPS)
+          div.querySelector('.linea-nombre').textContent = (r.estado === 'entero')
+            ? 'Pesar ' + numeroAmable(r.unidades) + ' ' + (unidadDeProducto(p.id_producto) || 'kg') + ' en entero' +
+              ((r.pedidos || 0) > 1 ? ' (' + r.pedidos + ' pedidos)' : '') + ' — ' + nombre
+            : (r.ahora <= EPS)
             ? nombre + ' · ' + p.fraccion + ' — no se arma'
             : 'Armar ' + porc(r.ahora) + ' de ' + p.fraccion + ' — ' + nombre +
               ' (= ' + numeroAmable(r.unidades) + ' en total)';
@@ -2119,7 +2134,8 @@
       });
 
       function actualizarProgresoFracc() {
-        var aArmar = fraccVista.filter(function (r) { return r.ahora > EPS; });
+        var aArmar = fraccVista.filter(function (r) { return r.ahora > EPS && r.estado !== 'entero'; });
+        var enteros = fraccVista.filter(function (r) { return r.estado === 'entero'; }).length;
         var hechas = aArmar.filter(function (r) { return r.preparado; }).length;
         var bloq = aArmar.filter(function (r) { return !r.preparado && r.estado === 'bloq'; }).length;
         var alertas = fraccVista.filter(function (r) { return !!r.alerta; }).length;
@@ -2127,7 +2143,8 @@
         $('progreso-fracc').textContent = hechas + ' de ' + aArmar.length + ' ya preparadas · ' +
           nuevas + ' por registrar ahora' +
           (bloq ? ' · ' + bloq + ' esperando recepción o ajuste' : '') +
-          (alertas ? ' · ⚠ ' + alertas + ' para revisar' : '');
+          (alertas ? ' · ⚠ ' + alertas + ' para revisar' : '') +
+          (enteros ? ' · ' + enteros + ' producto' + (enteros === 1 ? '' : 's') + ' entero' + (enteros === 1 ? '' : 's') + ' para pesar' : '');
         validarFracc();
       }
 
