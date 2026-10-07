@@ -207,6 +207,17 @@
       margin-top: 4px;
     }
     .item.parcial .nota-novedad { display: block; color: #8a6614; }
+    /* llegó MÁS de lo pedido: azul, queda como sobrante del Nodo */
+    .item.sobra,
+    .item.tildado.sobra {
+      background: rgba(58, 110, 165, 0.10);
+      border-color: #3A6EA5;
+    }
+    .item.sobra .linea-nombre { color: #24496f; }
+    .item.sobra .nota-novedad { display: block; color: #2f5d8c; }
+    .tabla-sobrantes { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+    .tabla-sobrantes th, .tabla-sobrantes td { padding: 6px 8px; border-bottom: 1px solid rgba(0,0,0,0.08); text-align: left; vertical-align: top; }
+    .tabla-sobrantes td.num, .tabla-sobrantes th.num { text-align: right; white-space: nowrap; }
     .item.nada .nota-novedad { display: block; color: #A6402B; }
     .item .detalle input.cant { width: 62px; font-size: 1.05rem; text-align: center; }
 
@@ -779,6 +790,7 @@
       <button type="button" id="tab-fracc">🔪 Fraccionamiento</button>
       <button type="button" id="tab-ajustes">⚖️ Ajustes</button>
       <button type="button" id="tab-entrega">🛍 Entrega</button>
+      <button type="button" id="tab-sobrantes">📦 Sobrantes</button>
     </div>
 
     <div id="vista-recepcion">
@@ -918,6 +930,23 @@
       </div>
     </div>
 
+    <!-- ── Vista Sobrantes ── -->
+    <div id="vista-sobrantes" style="display:none;">
+      <div class="card-eq">
+        <h2>📦 Sobrantes de la edición</h2>
+        <p class="muted">
+          Lo que los productores trajeron <strong>de más</strong> respecto de lo pedido, según lo
+          registrado en Recepción. No se entrega a nadie: queda en el Nodo para
+          <strong>stockear y ofrecer</strong>. Separalo de los pedidos y rotulalo apenas llega.
+        </p>
+        <div id="lista-sobrantes"><p class="muted">Leyendo las recepciones…</p></div>
+        <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="btn btn--ghost btn--small" id="btn-copiar-sobrantes">📋 Copiar lista para ofrecer</button>
+          <span class="muted" id="ok-copiar-sobrantes" style="font-size:0.85rem;"></span>
+        </div>
+      </div>
+    </div>
+
     <!-- ── Vista Entrega ── -->
     <div id="vista-entrega" style="display:none;">
       <div class="card-eq">
@@ -1040,7 +1069,7 @@
       var itemsEd = [];       // ítems de los pedidos de la edición
 
       // ── Solapas ──────────────────────────────────────────────────
-      var VISTAS = ['recepcion', 'fracc', 'ajustes', 'entrega'];
+      var VISTAS = ['recepcion', 'fracc', 'ajustes', 'entrega', 'sobrantes'];
       function mostrarVista(cual) {
         VISTAS.forEach(function (v) {
           document.getElementById('vista-' + v).style.display = (v === cual) ? 'block' : 'none';
@@ -1049,6 +1078,21 @@
       }
       VISTAS.forEach(function (v) {
         document.getElementById('tab-' + v).addEventListener('click', function () { mostrarVista(v); });
+      });
+      document.getElementById('tab-sobrantes').addEventListener('click', function () {
+        try { renderSobrantes(); } catch (e) {}
+      });
+      document.getElementById('btn-copiar-sobrantes').addEventListener('click', function () {
+        var ok = document.getElementById('ok-copiar-sobrantes');
+        if (!sobrantesActuales.length) { ok.textContent = 'No hay sobrantes para copiar.'; return; }
+        var txt = '🌿 *Disponibles en el Nodo* (' + idEdicion + ')\n\n' + sobrantesActuales.map(function (s) {
+          return '• ' + s.producto + ' — ' + numeroAmable(s.sobrante) + ' ' + s.unidad +
+            (s.precio ? ' · $ ' + Math.round(s.precio).toLocaleString('es-AR') + ' por ' + s.unidad : '');
+        }).join('\n');
+        var hecho = function () { ok.textContent = '✅ Copiada. Revisá los precios antes de publicarla.'; };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(txt).then(hecho, function () { window.prompt('Copiá la lista:', txt); });
+        } else { window.prompt('Copiá la lista:', txt); }
       });
 
       // ── util gviz ────────────────────────────────────────────────
@@ -1279,6 +1323,77 @@
             };
           });
         } catch (e) { recibidosVivo = {}; recepDetalle = {}; recepPorProducto = {}; recepCorruptas = {}; }
+        try { renderSobrantes(); } catch (e) {}
+      }
+
+      // ── Sobrantes: recibido de más respecto de lo pedido ─────────
+      // Sale de Recepciones (suma por producto de la edición): recibida (H) −
+      // pedida (G) > 0. No toca ningún escenario: la planilla ya guarda las
+      // dos cantidades. Lo rechazado no cuenta (se registra con 0 recibido).
+      var sobrantesActuales = [];
+      function unidadDeProducto(id) {
+        for (var i = 0; i < lineas.length; i++) {
+          if (lineas[i].id_producto === id) return lineas[i].unidad || '';
+        }
+        return '';
+      }
+      function precioDeProducto(id) {
+        for (var i = 0; i < itemsEd.length; i++) {
+          if (itemsEd[i].id_producto === id && itemsEd[i].precio) return itemsEd[i].precio;
+        }
+        return 0;
+      }
+      function renderSobrantes() {
+        var cont = document.getElementById('lista-sobrantes');
+        if (!cont) return;
+        var lista = [];
+        Object.keys(recepPorProducto).forEach(function (k) {
+          if (recepCorruptas[k]) return;
+          var a = recepPorProducto[k];
+          var extra = Math.round((a.recibida - a.pedida) * 1000) / 1000;
+          if (extra <= 0.0005) return;
+          var precio = precioDeProducto(k);
+          lista.push({
+            id_producto: k,
+            producto: nombreProducto(k),
+            productor: productores[a.id_productor] || a.id_productor,
+            pedida: Math.round(a.pedida * 1000) / 1000,
+            recibida: Math.round(a.recibida * 1000) / 1000,
+            sobrante: extra,
+            unidad: unidadDeProducto(k),
+            precio: precio,
+            valor: Math.round(extra * precio)
+          });
+        });
+        lista.sort(function (x, y) { return x.productor === y.productor ? (x.producto < y.producto ? -1 : 1) : (x.productor < y.productor ? -1 : 1); });
+        sobrantesActuales = lista;
+        var tab = document.getElementById('tab-sobrantes');
+        if (tab) tab.textContent = '📦 Sobrantes' + (lista.length ? ' (' + lista.length + ')' : '');
+        if (!lista.length) {
+          cont.innerHTML = '<p class="muted">No hay sobrantes registrados en esta edición. Cuando en Recepción se carga más de lo pedido, aparece acá.</p>';
+          return;
+        }
+        var total = 0;
+        var h = '<div style="overflow-x:auto;"><table class="tabla-sobrantes"><thead><tr>' +
+          '<th>Producto</th><th>Productor</th><th class="num">Pedido</th><th class="num">Llegó</th>' +
+          '<th class="num">Sobrante</th><th class="num">Valor*</th></tr></thead><tbody>';
+        lista.forEach(function (s) {
+          total += s.valor;
+          h += '<tr><td><strong>' + escH(s.producto) + '</strong></td><td>' + escH(s.productor) + '</td>' +
+            '<td class="num">' + numeroAmable(s.pedida) + '</td><td class="num">' + numeroAmable(s.recibida) + '</td>' +
+            '<td class="num"><strong>+' + numeroAmable(s.sobrante) + ' ' + escH(s.unidad) + '</strong></td>' +
+            '<td class="num">' + (s.precio ? pesos(s.valor) : '—') + '</td></tr>';
+        });
+        h += '</tbody><tfoot><tr><td colspan="5"><strong>Total a precio de productor</strong></td>' +
+          '<td class="num"><strong>' + pesos(total) + '</strong></td></tr></tfoot></table></div>' +
+          '<p class="muted" style="font-size:0.8rem; margin-top:6px;">* Al precio que el productor fijó en esta edición, sin aporte. ' +
+          'Lo que se decida hacer con cada sobrante (vender, guardar, devolver) se anota en la hoja <em>Sobrantes</em>.</p>';
+        cont.innerHTML = h;
+      }
+      function escH(t) {
+        return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
       }
 
       function idRecepcionDe(idProd, l) {
@@ -1563,7 +1678,7 @@
             (l.producto || l.id_producto) + ' — esperado: ' + numeroAmable(esperado) + ' ' + unidadMuestra;
           var inp = div.querySelector('.cant');
           inp.value = numeroAmable(esperado);
-          inp.dataset.max = String(esperado);   // tope: lo solicitado
+          inp.dataset.max = String(esperado);   // lo solicitado (ya no es tope: lo de más es sobrante)
           inp.dataset.paso = '1';                // − / + suman de a una unidad vendible
           div.querySelector('.detalle .muted').textContent = etiquetaUnidad(l, 0);
 
@@ -1628,6 +1743,15 @@
         } else if (!isNaN(max) && v < max - 0.0001) {
           msg = '⚠ Llegó de menos: falta ' + numeroAmable(Math.round((max - v) * 1000) / 1000) + '.';
           estado = 'parcial';
+        } else if (!isNaN(max) && v > max + 0.0001) {
+          var extra = Math.round((v - max) * 1000) / 1000;
+          msg = '➕ Llegó de más: sobra' + (extra === 1 ? '' : 'n') + ' ' + numeroAmable(extra) +
+            '. Separalo: queda como sobrante del Nodo (solapa 📦 Sobrantes).';
+          if (max > 0 && v >= max * 2 && extra >= 2) {
+            msg += ' ¿Seguro? Es el doble o más de lo pedido: revisá que no sea un error de tipeo.';
+          }
+          if (cal === 'Con observaciones') msg += ' (con observaciones)';
+          estado = 'sobra';
         } else if (cal === 'Con observaciones') {
           msg = '⚠ Llegó completo, pero con observaciones.';
           estado = 'parcial';
@@ -1636,6 +1760,7 @@
         nota.textContent = msg;
         item.classList.toggle('parcial', estado === 'parcial');
         item.classList.toggle('nada', estado === 'nada');
+        item.classList.toggle('sobra', estado === 'sobra');
       }
 
       function marcarTodos() {
@@ -1653,20 +1778,8 @@
       $('lista-items').addEventListener('input', function (e) {
         if (!e.target.classList.contains('cant')) return;
         desRechazarSiSube(e.target.closest('.item'), aNumero(e.target.value) || 0);
-        var max = parseFloat(e.target.dataset.max);
-        var v = aNumero(e.target.value);
-        if (!isNaN(max) && v !== null && v > max) {
-          e.target.value = numeroAmable(max);
-          var nota = e.target.closest('.detalle').querySelector('.muted');
-          var original = nota.dataset.orig || nota.textContent;
-          nota.dataset.orig = original;
-          nota.textContent = '⚠ máximo: lo solicitado (' + numeroAmable(max) + ')';
-          nota.style.color = '#A6402B';
-          setTimeout(function () {
-            nota.textContent = original;
-            nota.style.color = '';
-          }, 2500);
-        }
+        // Se puede cargar más de lo pedido: la diferencia queda como sobrante
+        // (lo avisa marcarNovedad en azul).
         marcarNovedad(e.target.closest('.item'));
       });
 
@@ -1684,7 +1797,6 @@
         v += btn.classList.contains('step-mas') ? paso : -paso;
         v = Math.round(v * 10000) / 10000;
         if (v < 0) v = 0;
-        if (!isNaN(max) && v > max) v = max;
         inp.value = numeroAmable(v);
         desRechazarSiSube(item, v);
         marcarNovedad(item);
@@ -1817,6 +1929,10 @@
           }
           if (l.fraccion && tildado) {
             obs = (obs ? obs + ' · ' : '') + recibidaMostrada + ' × ' + l.fraccion + ' ' + l.unidad;
+          }
+          var sobranteEf = Math.round((recibidaEf - pedidaEf) * 1000) / 1000;
+          if (sobranteEf > 0) {
+            obs = (obs ? obs + ' · ' : '') + 'Sobrante: +' + String(sobranteEf).replace('.', ',') + ' ' + (l.unidad || '');
           }
 
           items.push({
