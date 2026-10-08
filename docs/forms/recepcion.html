@@ -860,6 +860,9 @@
                  autocomplete="name" style="display:none; margin-top:8px;">
         </div>
 
+        <input type="search" id="buscar-fracc" placeholder="🔍 Buscar producto (ej.: arroz, lentejas)"
+               autocomplete="off" style="width:100%; margin:6px 0 10px; padding:10px 12px; font-size:1rem;
+               border:1px solid rgba(0,0,0,0.2); border-radius:10px;">
         <div id="lista-fracc"></div>
         <p class="progreso" id="progreso-fracc"></p>
 
@@ -1509,7 +1512,7 @@
               id_plan: String(celda(r, 0)).trim(),
               id_producto: String(celda(r, 2)).trim(),
               nombre: String(celda(r, 3)).trim(),
-              fraccion: String(celda(r, 4)).trim(),
+              fraccion: String(celda(r, 4)).trim() || '1',   // vacía = pedido entero
               porciones: celda(r, 5),
               unidades: celda(r, 6),
               estado: String(celda(r, 8)).trim(),
@@ -2006,14 +2009,23 @@
           // solo lo que se pesa (kg, litro); un maple entero no se arma
           if (entero && !/^(kg|kilo|kilos|l|lt|litro|litros)$/i.test(String(unidadDeProducto(it.id_producto) || '').trim())) return;
           var k = it.id_producto + '|' + (entero ? '1' : it.fraccion);
-          if (!dem[k]) dem[k] = { porciones: 0, unidades: 0, entero: entero, pedidos: 0 };
+          if (!dem[k]) dem[k] = { porciones: 0, unidades: 0, entero: entero, pedidos: 0, bolsas: {} };
           dem[k].pedidos++;
+          // enteros: cuántas bolsas de cada tamaño (un pedido de 2 kg = una bolsa de 2 kg)
+          if (entero) {
+            var tam = Math.round((it.efectiva || it.cantidad) * 1000) / 1000;
+            dem[k].bolsas[tam] = (dem[k].bolsas[tam] || 0) + 1;
+          }
           dem[k].porciones += it.cantidad;
           dem[k].unidades += it.efectiva;
         });
 
         var vistos = {};
-        var out = planFracc.map(function (p) {
+        var out = planFracc.filter(function (p) {
+          // un "entero" de algo que no se pesa (un maple) no se arma
+          return p.fraccion !== '1' ||
+            /^(kg|kilo|kilos|l|lt|litro|litros)$/i.test(String(unidadDeProducto(p.id_producto) || '').trim());
+        }).map(function (p) {
           var k = p.id_producto + '|' + p.fraccion;
           vistos[k] = true;
           var ahora = dem[k] || { porciones: 0, unidades: 0 };
@@ -2024,6 +2036,8 @@
             p: p, plan: plan,
             ahora: redondear3(ahora.porciones), unidades: redondear3(ahora.unidades),
             preparado: p.estado === 'Preparado',
+            pedidos: ahora.pedidos || 0,
+            bolsas: ahora.bolsas || {},
             estado: 'ok', msg: '', alerta: ''
           };
           if (recepCorruptas[p.id_producto]) {
@@ -2032,10 +2046,19 @@
           } else if (!rec) {
             r.estado = 'bloq';
             r.msg = 'Todavía no se registró la recepción de este producto.';
-          } else if (rec.recibida < total - EPS) {
+          } else if (rec.recibida < total - EPS && rec.recibida + EPS < r.unidades) {
+            // ni siquiera alcanza para estas porciones: primero el recorte
             r.estado = 'bloq';
             r.msg = 'Llegaron ' + numeroAmable(redondear3(rec.recibida)) + ' y los pedidos suman ' +
               numeroAmable(total) + ': aplicá primero el recorte en Ajustes.';
+          } else if (rec.recibida < total - EPS) {
+            // Falta producto, pero lo que llegó alcanza para armar estas
+            // porciones: se pueden preparar ya. Si después el recorte cae sobre
+            // alguna, la app avisa que la separes como sobrante.
+            r.estado = 'cambio';
+            r.msg = 'Llegaron ' + numeroAmable(redondear3(rec.recibida)) + ' y los pedidos suman ' +
+              numeroAmable(total) + ' (falta ' + numeroAmable(redondear3(total - rec.recibida)) +
+              '). Alcanza para estas porciones: podés armarlas. El faltante se reparte en Ajustes.';
           } else if (r.ahora <= EPS) {
             r.estado = 'cero';
             r.msg = 'No hay que armar: no llegó o se recortó todo.';
@@ -2066,15 +2089,35 @@
           out.push({
             p: { id_plan: '', id_producto: partes[0], nombre: nombreProducto(partes[0]), fraccion: partes[1] },
             pedidos: dem[k].pedidos,
+            bolsas: dem[k].bolsas || {},
             plan: 0, ahora: redondear3(dem[k].porciones), unidades: redondear3(dem[k].unidades),
             preparado: false, estado: dem[k].entero ? 'entero' : 'bloq',
             msg: dem[k].entero
-              ? 'Pedido entero (por kilo): pesalo y embolsalo igual que las fracciones. No hace falta registrarlo.'
+              ? 'Pedido entero (por kilo): pesalo y embolsalo igual que las fracciones. Para poder tildarlo, tiene que estar en el plan de fraccionamiento (lo agrega la equipa en la planilla).'
               : 'No está en el plan de fraccionamiento: armalo igual y avisá para que se agregue.',
             alerta: ''
           });
         });
+        // mismos productos juntos, en orden alfabético; dentro de cada uno,
+        // de la porción más chica a la más grande (1/4, 1/2, 1 kg entero)
+        out.sort(function (a, b) {
+          var na = String(a.p.nombre || nombreProducto(a.p.id_producto) || '').toLowerCase();
+          var nb = String(b.p.nombre || nombreProducto(b.p.id_producto) || '').toLowerCase();
+          var c = na.localeCompare(nb, 'es');
+          if (c) return c;
+          return (factorFraccion(a.p.fraccion) || 1) - (factorFraccion(b.p.fraccion) || 1);
+        });
         return out;
+      }
+
+      // "6 bolsas de 1 kg · 3 de 2 kg · 1 de 4 kg"
+      function detalleBolsas(bolsas, uni) {
+        var tams = Object.keys(bolsas || {}).map(Number).sort(function (a, b) { return a - b; });
+        if (!tams.length) return 'pedidos enteros';
+        return tams.map(function (t, i) {
+          var n = bolsas[t];
+          return (i === 0 ? n + (n === 1 ? ' bolsa' : ' bolsas') : n) + ' de ' + numeroAmable(t) + ' ' + uni;
+        }).join(' · ');
       }
 
       function renderFracc() {
@@ -2110,7 +2153,11 @@
               '<div class="nota-novedad"></div>' +
             '</div>';
           var nombre = p.nombre || p.id_producto;
-          div.querySelector('.linea-nombre').textContent = (r.estado === 'entero')
+          var esEntero = (p.fraccion === '1');
+          var uni = unidadDeProducto(p.id_producto) || 'kg';
+          div.querySelector('.linea-nombre').textContent = ((esEntero && r.ahora > EPS) || r.estado === 'entero')
+            ? 'Armar ' + detalleBolsas(r.bolsas, uni) + ' — ' + nombre + ' (= ' + numeroAmable(r.unidades) + ' ' + uni + ' en total)'
+            : (r.estado === 'entero')
             ? 'Pesar ' + numeroAmable(r.unidades) + ' ' + (unidadDeProducto(p.id_producto) || 'kg') + ' en entero' +
               ((r.pedidos || 0) > 1 ? ' (' + r.pedidos + ' pedidos)' : '') + ' — ' + nombre
             : (r.ahora <= EPS)
@@ -2122,8 +2169,20 @@
           div.querySelector('.nota-novedad').textContent = r.alerta || r.msg;
           cont.appendChild(div);
         });
+        filtrarFracc();   // al refrescar, se mantiene la búsqueda
         actualizarProgresoFracc();
       }
+
+      function filtrarFracc() {
+        var q = ($('buscar-fracc').value || '').trim().toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        Array.prototype.forEach.call($('lista-fracc').querySelectorAll('.item'), function (div) {
+          var t = (div.querySelector('.linea-nombre').textContent || '').toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          div.style.display = (!q || t.indexOf(q) !== -1) ? '' : 'none';
+        });
+      }
+      $('buscar-fracc').addEventListener('input', filtrarFracc);
 
       $('lista-fracc').addEventListener('change', function (e) {
         if (!e.target.classList.contains('chk-f') || e.target.disabled) return;
@@ -2786,7 +2845,7 @@
                 id_plan: String(celda(r, 0)).trim(),
                 id_producto: String(celda(r, 2)).trim(),
                 nombre: String(celda(r, 3)).trim(),
-                fraccion: String(celda(r, 4)).trim(),
+                fraccion: String(celda(r, 4)).trim() || '1',   // vacía = pedido entero
                 porciones: celda(r, 5),
                 unidades: celda(r, 6),
                 estado: String(celda(r, 8)).trim(),
