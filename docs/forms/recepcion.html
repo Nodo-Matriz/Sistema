@@ -548,6 +548,12 @@
       color: #A6402B; border-radius: 999px; padding: 2px 10px; font: inherit; font-size: .78rem; font-weight: 700; cursor: pointer;
     }
     .btn-recorte:hover { background: rgba(166,64,43,.08); }
+    .btn-modificar {
+      display: block; width: 100%; margin: 8px 0 4px; padding: 9px 12px; border-radius: 999px; cursor: pointer;
+      font: inherit; font-weight: 700; font-size: .88rem; background: transparent; color: #A6402B;
+      border: 1.5px dashed rgba(166,64,43,.55);
+    }
+    .btn-modificar:hover { background: rgba(166,64,43,.06); }
     .form-recorte {
       margin: 2px 0 8px 32px; padding: 10px 12px; border-radius: 10px;
       background: rgba(166,64,43,.06); border: 1px solid rgba(166,64,43,.2); font-size: .88rem;
@@ -2540,7 +2546,7 @@
               tr.textContent = etRec;
               fila.querySelector('.txt').appendChild(tr);
             }
-            if (est === 'Pendiente' && !recortesLocales[it.id_item]) {
+            if ((est === 'Pendiente' || (modoEdicion[p.id_pedido] && !cajonListo)) && !recortesLocales[it.id_item]) {
               var br = document.createElement('button');
               br.type = 'button';
               br.className = 'btn-recorte';
@@ -2596,6 +2602,18 @@
             b.textContent = partes.ambiente.length ? '✓ Cajón armado' : '✓ Listo (sin cajón, todo refrigerado)';
             cuerpo.appendChild(b);
           } else if (est !== 'Entregado') {
+            if (!cajonListo && partes.ambiente.length) {
+              var bm = document.createElement('button');
+              bm.type = 'button';
+              bm.className = 'btn-modificar';
+              bm.textContent = modoEdicion[p.id_pedido] ? '✓ Terminar modificación' : '✏ Modificar armado';
+              bm.title = 'Para corregir un cajón ya armado: habilita ✂ Recorte en cada renglón';
+              if (modoEdicion[p.id_pedido]) {
+                cuerpo.insertAdjacentHTML('beforeend', '<p class="muted" style="font-size:.85rem;margin:6px 0;">✏ Modificando el armado: ' +
+                  'tocá <strong>✂ Recorte</strong> en el producto que no va o va de menos. El cajón sigue figurando como armado.</p>');
+              }
+              cuerpo.appendChild(bm);
+            }
             var acc = document.createElement('div');
             acc.className = 'acciones-2';
             if (partes.frio.length && !frioListo) {
@@ -2706,6 +2724,14 @@
           if (abierta) abierta.scrollIntoView({ behavior: 'smooth', block: 'start' });
           return;
         }
+        var bMod = e.target.closest('.btn-modificar');
+        if (bMod) {
+          var cM = bMod.closest('.ped-card'), pM = pedidos[parseInt(cM.dataset.idx, 10)];
+          if (modoEdicion[pM.id_pedido]) delete modoEdicion[pM.id_pedido]; else modoEdicion[pM.id_pedido] = true;
+          recorteAbierto = '';
+          renderEntrega();
+          return;
+        }
         var bRec = e.target.closest('.btn-recorte');
         if (bRec) {
           e.preventDefault(); e.stopPropagation();
@@ -2784,6 +2810,7 @@
       // empieza con "Recorte en armado · <motivo>": con eso la planilla sabe
       // quién absorbe el costo (Merma y Otro: el Nodo; Descarte: el productor).
       var recorteAbierto = '';          // "id_pedido|k" con el formulario abierto
+      var modoEdicion = {};             // id_pedido -> true: "Modificar armado" de un cajón ya armado
       var recortesLocales = {};         // id_item -> {nueva, ts, ped, clave}: enviado, esperando que la planilla lo muestre
       var avisosRecorte = {};           // id_pedido -> {ts, estado: 'pendiente'|'enviado'}
       var LS_RECORTES = 'nm_recortes_armado_';
@@ -3686,6 +3713,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 09/10 11:36</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 09/10 11:54</p>
 </body>
 </html>
