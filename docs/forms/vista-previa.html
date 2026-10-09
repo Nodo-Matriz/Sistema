@@ -654,6 +654,9 @@
         if (corregir && p._problemas && p._problemas.length) {
           motivos = '<div class="motivos-corregir">⚠ ' +
             p._problemas.map(escapeHtml).join('<br>⚠ ') + '</div>';
+        } else if (!corregir && problemaPresentacion(p)) {
+          // alta nueva: avisar antes de publicarla
+          motivos = '<div class="motivos-corregir">⚠ ' + escapeHtml(problemaPresentacion(p)) + '</div>';
         }
         return '<tr id="fila-' + i + '" class="' + clase + '">' +
           '<td class="col-disponible">' + sel + '</td>' +
@@ -822,8 +825,28 @@
       // Revisa los productos que van a publicarse y avisa de los datos que
       // el formulario no puede interpretar bien (la causa de precios y
       // cantidades disparatadas).
+      // Nombre con presentación propia ("x 500 gr", "x 750 cc") y unidad de
+      // venta por peso o volumen: la comanda suma unidades y le pone la
+      // unidad del producto, así 4 paquetes de 500 g salen "4 kg" (ED19,
+      // Harina de garbanzo de La Pau). Un "x 1 kg" vendido por kg está bien.
+      function problemaPresentacion(p) {
+        var unidad = String(p.unidad || '').trim().toLowerCase();
+        if (!/^(kg|kilo|kilos|kilogramos?|l|lt|litro|litros)$/.test(unidad)) return '';
+        var m = String(p.nombre || '').match(/x\s*(\d+(?:[.,]\d+)?)\s*(g|gr|grs|gramos?|ml|cc|kg|kilos?|l|lt|litros?)\b\.?/i);
+        if (!m) return '';
+        var n = parseFloat(m[1].replace(',', '.'));
+        var u = m[2].toLowerCase();
+        var base = /^(kg|kilo|l|lt|litro)/.test(u) ? n * 1000 : n;   // en g o ml
+        if (Math.abs(base - 1000) < 0.5) return '';
+        return 'el nombre dice «' + m[0].trim() + '» (se vende por paquete o envase) pero la unidad de venta es «' +
+          p.unidad + '»: en la comanda saldría, por ejemplo, «4 ' + p.unidad + '» en vez de 4 envases. ' +
+          'Poné una unidad como unidad, bolsa, botella o frasco.';
+      }
+
       function problemasDe(p) {
         var lista = [];
+        var pres = problemaPresentacion(p);
+        if (pres) lista.push(pres);
         var unidad = String(p.unidad || '').trim().toLowerCase();
         var esPeso = /^(kg|kilo|kilos|kilogramos?|l|lt|litro|litros)$/.test(unidad);
         var fr = String(p.fracciones_raw || '').split(',')
@@ -1077,5 +1100,6 @@
             font-weight:700; font-size:0.9rem; padding:10px 18px;
             border-radius:999px; text-decoration:none;
             box-shadow:0 4px 14px rgba(0,0,0,0.25);">🏠 Guía</a>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 09/10 06:42</p>
 </body>
 </html>
