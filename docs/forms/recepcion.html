@@ -562,6 +562,14 @@
     .tag-recorte { display: inline-block; margin-left: 8px; padding: 1px 8px; font-size: .74rem; font-weight: 700;
       color: #A6402B; background: rgba(166,64,43,.10); border-radius: 999px; white-space: nowrap; }
 
+    .item-ped.coincide, .item-frio.coincide, .item-ped.no-va.coincide { background: rgba(232, 196, 90, 0.28); border-radius: 6px; }
+    .resumen-busqueda { background: rgba(232,196,90,.16); border: 1px solid rgba(232,196,90,.5); border-radius: 12px;
+      padding: 10px 14px; margin-bottom: 12px; font-size: .9rem; }
+    .resumen-busqueda h4 { margin: 0 0 6px; font-size: .95rem; }
+    .resumen-busqueda ul { margin: 0; padding-left: 18px; }
+    .resumen-busqueda li { margin: 2px 0; }
+    .resumen-busqueda .rb-ped { cursor: pointer; text-decoration: underline; }
+
     .prog-control {
       font-size: 0.8rem;
       color: var(--c-tierra);
@@ -1024,8 +1032,8 @@
         <div class="resumen-frio" id="resumen-frio" style="display:none;"></div>
 
         <div class="campo">
-          <label for="buscar-entrega">Buscar por nombre o N° de pedido</label>
-          <input type="text" id="buscar-entrega" placeholder="Escribí parte del nombre o el número…">
+          <label for="buscar-entrega">Buscar por nombre, N° de pedido o producto</label>
+          <input type="text" id="buscar-entrega" placeholder="Ej.: Laura · 74 · repollo">
         </div>
 
         <div class="aviso rojo" id="aviso-entrega" style="display:none;"></div>
@@ -2413,6 +2421,9 @@
           }).join('') + '</ul>';
       }
 
+      function normBusqueda(t) {
+        return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      }
       function renderEntrega() {
         var cont = $('lista-entrega');
         // si hay un recorte a medio cargar, conservar lo escrito al redibujar
@@ -2428,6 +2439,17 @@
         }
 
         var filtro = $('buscar-entrega').value.trim().toLowerCase();
+        var filtroN = normBusqueda(filtro);
+        var nroBuscado = filtro.replace(/^n[°º]?\s*/, '');
+        // búsqueda por producto: qué ítems coinciden (sin tildes, parte del nombre)
+        var porProducto = {};   // id_pedido -> [it]
+        var resumenProd = [];   // filas para el recuadro de arriba
+        if (filtroN.length >= 3 && !/^\d+$/.test(nroBuscado)) {
+          itemsEd.forEach(function (it) {
+            if (normBusqueda(infoProducto(it.id_producto).nombre).indexOf(filtroN) === -1) return;
+            (porProducto[it.id_pedido] = porProducto[it.id_pedido] || []).push(it);
+          });
+        }
 
         // qué pedidos entran en la vista elegida
         var visibles = pedidos.filter(function (p) {
@@ -2448,8 +2470,10 @@
         visibles.forEach(function (p) {
           var i = pedidos.indexOf(p);
           var nombre = nombreConsumidor(p);
-          if (filtro && nombre.toLowerCase().indexOf(filtro) === -1 &&
-              String(p.correlativo) !== filtro.replace(/^n[°º]?\s*/, '')) return;
+          var coincProd = porProducto[p.id_pedido] || null;
+          if (filtro && normBusqueda(nombre).indexOf(filtroN) === -1 &&
+              String(p.correlativo) !== nroBuscado && !coincProd) return;
+          if (coincProd) resumenProd.push({ p: p, i: i, its: coincProd });
 
           var est = estadoDe(p);
           var its = itemsDePedido(p.id_pedido);
@@ -2597,9 +2621,32 @@
             cuerpo.appendChild(b3);
           }
 
+          if (coincProd) {
+            Array.prototype.forEach.call(card.querySelectorAll('.item-ped .txt, .item-frio .txt'), function (t) {
+              if (normBusqueda(t.textContent).indexOf(filtroN) !== -1) t.parentNode.classList.add('coincide');
+            });
+          }
           cont.appendChild(card);
           actualizarControlPed(card);
         });
+        if (resumenProd.length) {
+          var nombresProd = {};
+          resumenProd.forEach(function (x) { x.its.forEach(function (it) { nombresProd[infoProducto(it.id_producto).nombre] = true; }); });
+          var rb = document.createElement('div');
+          rb.className = 'resumen-busqueda';
+          var tot = 0;
+          rb.innerHTML = '<h4>🔎 ' + escH(Object.keys(nombresProd).join(' · ')) + ' — en ' + resumenProd.length +
+            ' pedido' + (resumenProd.length === 1 ? '' : 's') + '</h4><ul>' +
+            resumenProd.map(function (x) {
+              var est = estadoDe(x.p);
+              return '<li><span class="rb-ped" data-ped="' + escH(x.p.id_pedido) + '">N° ' + escH(x.p.correlativo) + ' · ' +
+                escH(nombreConsumidor(x.p)) + '</span> — ' + x.its.map(function (it) {
+                  tot += it.efectiva;
+                  return escH(textoItem(it).replace(/ · .*$/, ''));
+                }).join(', ') + ' <span class="muted">(' + escH(chipEstado(est)) + ')</span></li>';
+            }).join('') + '</ul>';
+          cont.insertBefore(rb, cont.firstChild);
+        }
         var frNuevo = cont.querySelector('.form-recorte');
         if (frNuevo && frVals) { frNuevo.querySelector('.rc-motivo').value = frVals.m; frNuevo.querySelector('.rc-va').value = frVals.v; }
         actualizarTablero();
@@ -2647,6 +2694,14 @@
 
       // Tocar la tarjeta la despliega; tocar el botón registra la acción
       $('lista-entrega').addEventListener('click', function (e) {
+        var rbp = e.target.closest('.rb-ped');
+        if (rbp) {
+          pedAbierto = rbp.dataset.ped;
+          renderEntrega();
+          var abierta = $('lista-entrega').querySelector('.ped-card.abierto');
+          if (abierta) abierta.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          return;
+        }
         var bRec = e.target.closest('.btn-recorte');
         if (bRec) {
           e.preventDefault(); e.stopPropagation();
@@ -3580,6 +3635,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 09/10 10:45</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 09/10 11:11</p>
 </body>
 </html>
