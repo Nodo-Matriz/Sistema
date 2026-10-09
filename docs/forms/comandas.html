@@ -196,7 +196,7 @@
       // edición a "Recepción" para que la guía avance al paso 6.
       var WEBHOOK_A5     = 'https://hook.us2.make.com/qyqw5eh5f6gcbdd558o4t21krx4k72hy';
       // G1 · copia de seguridad de la planilla (pegar la dirección cuando esté armado)
-      var WEBHOOK_G1     = '';
+      var WEBHOOK_G1     = 'https://hook.us2.make.com/su6pkeiv9emvqbrxptwln4mzgqoqh6fa';
       var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
       var OFFSET         = '-03:00'; // Argentina
       var CLAVE_KEY      = 'nm_clave_equipo';
@@ -500,9 +500,8 @@
 
         // Copia de seguridad justo antes de generar (no bloquea si G1 no está)
         if (WEBHOOK_G1.indexOf('https://hook.') === 0) {
-          fetch(WEBHOOK_G1, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify({ tipo: 'backup', motivo: 'antes de comandas', id_edicion: id, clave: $('clave').value.trim() })
-          }).catch(function () {});
+          var qb = new URLSearchParams({ tipo: 'backup', motivo: 'antes de comandas', id_edicion: id, clave: $('clave').value.trim() });
+          fetch(WEBHOOK_G1 + '?' + qb.toString(), { mode: 'no-cors' }).catch(function () {});
         }
         // Disparo en segundo plano: nada de pestañas nuevas con "Accepted".
         fetch(WEBHOOK_C2 + '?' + params.toString(), { mode: 'no-cors' })
@@ -600,6 +599,6 @@
             font-weight:700; font-size:0.9rem; padding:10px 18px;
             border-radius:999px; text-decoration:none;
             box-shadow:0 4px 14px rgba(0,0,0,0.25);">🏠 Guía</a>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 09/10 10:45</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 09/10 13:13</p>
 </body>
 </html>
