@@ -370,6 +370,24 @@
         <p id="p3-boton">
           <span class="nota">El link del form vigente aparece acá cuando hay una edición abierta.</span>
         </p>
+
+        <div class="solo-prueba" style="margin-top:14px;">
+          <div class="etiqueta">Solo para pruebas · finalizar la toma de pedidos ahora</div>
+          <p class="nota" style="margin-bottom:8px;">
+            Cierra el formulario de pedidos <strong>en este momento</strong>, sin esperar la
+            fecha de cierre: registra el cierre en la planilla, el formulario deja de aceptar
+            pedidos y se habilitan las comandas. En una edición real no hace falta: el
+            formulario se cierra solo en la fecha anunciada.
+          </p>
+          <div class="campo-a1">
+            <input type="password" id="clave-finalizar" placeholder="Clave de equipo">
+            <button type="button" class="btn-prueba" id="btn-finalizar-pedidos">
+              Finalizar toma de pedidos
+            </button>
+          </div>
+          <span class="porque" id="porque-finalizar"></span>
+          <div class="ok-mini" id="ok-finalizar"></div>
+        </div>
       </div>
 
       <div class="paso" id="paso-5">
@@ -474,6 +492,25 @@
         </div>
       </div>
 
+      <div class="paso" id="paso-backup" style="opacity:1;">
+        <div class="num">💾</div>
+        <div class="quien">Equipo · en cualquier momento</div>
+        <h3>Copia de seguridad de la planilla</h3>
+        <p>
+          El sistema guarda solo una copia completa de la planilla en el Drive del Nodo
+          (carpeta <em>Backups Nodo Matriz</em>) varias veces por día mientras la edición
+          está en curso, y otra antes de generar comandas, de avisar recortes y de liquidar.
+          Antes de un arreglo a mano grande (pegar filas, borrar pedidos), hacé una copia acá.
+        </p>
+        <div class="campo-a1">
+          <input type="password" id="clave-backup" placeholder="Clave de equipo">
+          <button type="button" class="btn btn--ghost btn--small" id="btn-backup">
+            Hacer una copia ahora
+          </button>
+        </div>
+        <div class="ok-mini" id="ok-backup"></div>
+      </div>
+
     </div>
 
     <footer class="site-footer">
@@ -504,6 +541,22 @@
       // Escenario E3 (liquidación a productores).
       var WEBHOOK_E3 = 'https://hook.us2.make.com/dt98kkee6wq3wxr80y8jkf7gzyn3weix';
       var WEBHOOK_D3B = 'https://hook.us2.make.com/4a2eptxftvx5b3wn7vptjljkjxx3og14';
+      // Escenario G1 (copia de seguridad de la planilla en el Drive del Nodo).
+      // Pegar acá la dirección del webhook cuando esté armado en Make.
+      var WEBHOOK_G1 = '';
+      // Pide una copia de la planilla. No bloquea nada: si G1 no está
+      // conectado o falla, el paso sigue igual.
+      function pedirBackup(motivo, clave) {
+        if (WEBHOOK_G1.indexOf('https://hook.') !== 0) return false;
+        try {
+          fetch(WEBHOOK_G1, {
+            method: 'POST', mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({ tipo: 'backup', motivo: motivo, id_edicion: edicionVigente || '', clave: clave || '' })
+          }).catch(function () {});
+        } catch (e) {}
+        return true;
+      }
 
       var $ = function (id) { return document.getElementById(id); };
 
@@ -518,6 +571,7 @@
       if (claveGuardada()) {
         $('clave-a1').value = claveGuardada();
         $('clave-cerrar').value = claveGuardada();
+        $('clave-finalizar').value = claveGuardada();
         $('clave-liq').value = claveGuardada();
         $('clave-avisos').value = claveGuardada();
       }
@@ -626,6 +680,46 @@
           aviso('✅ Edición iniciada: estado y fecha de apertura registrados. ' +
             'En un momento esta guía pasa al paso 2. (Los avisos automáticos ' +
             'a productores se suman cuando esté conectado WhatsApp.)', false);
+          setTimeout(function () { location.reload(); }, 6000);
+        }
+      });
+
+      // ── Botón "Finalizar toma de pedidos (solo pruebas)" (escenario A5) ───
+      // Antes estaba al pie del formulario público de pedidos; se movió acá
+      // porque la guía está detrás del acceso de la equipa.
+      $('btn-finalizar-pedidos').addEventListener('click', function () {
+        var caja = $('ok-finalizar');
+        function aviso(msg, esError) {
+          caja.style.display = 'block';
+          caja.style.background = esError ? 'rgba(166, 64, 43, 0.10)' : '';
+          caja.style.borderLeftColor = esError ? '#A6402B' : '';
+          caja.style.color = esError ? '#A6402B' : '';
+          caja.textContent = msg;
+        }
+        if (this.disabled) return;
+        var clave = $('clave-finalizar').value.trim();
+        if (!clave) { aviso('Falta la clave de equipo.', true); return; }
+        if (!edicionVigente) { aviso('No hay una edición en curso.', true); return; }
+        guardarClave(clave);
+
+        if (!confirm('¿Finalizar AHORA la toma de pedidos de ' + edicionVigente + '?\n\n' +
+          'El formulario deja de aceptar pedidos en este momento. Usalo solo en pruebas.')) return;
+
+        var btn = $('btn-finalizar-pedidos');
+        btn.disabled = true;
+        btn.textContent = 'Finalizando…';
+
+        fetch(WEBHOOK_A5, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ tipo: 'finalizar_pedidos', clave: clave, id_edicion: edicionVigente })
+        }).then(fin).catch(fin);
+
+        function fin() {
+          btn.textContent = 'Toma de pedidos finalizada ✓';
+          aviso('✅ Toma de pedidos de ' + edicionVigente + ' finalizada: el cierre quedó ' +
+            'registrado y el formulario ya no acepta pedidos. En un momento la guía pasa al paso 5.', false);
           setTimeout(function () { location.reload(); }, 6000);
         }
       });
@@ -1000,6 +1094,22 @@
       }
 
       var avisosConfirmando = null;
+      $('btn-backup').addEventListener('click', function () {
+        var caja = $('ok-backup');
+        caja.style.display = 'block';
+        var clave = $('clave-backup').value.trim() || claveGuardada();
+        if (!clave) { caja.innerHTML = 'Falta la clave de equipo.'; return; }
+        guardarClave(clave);
+        if (!pedirBackup('manual', clave)) {
+          caja.innerHTML = '🚫 Todavía no está conectado (falta la dirección del escenario G1). ' +
+            'Mientras tanto: en la planilla, <em>Archivo → Hacer una copia</em>.';
+          return;
+        }
+        var b = $('btn-backup'); b.disabled = true;
+        caja.innerHTML = '⏳ Pedida. En un minuto aparece en la carpeta <em>Backups Nodo Matriz</em> del Drive del Nodo.';
+        setTimeout(function () { b.disabled = false; }, 60000);
+      });
+
       $('btn-avisos').addEventListener('click', function () {
         var caja = $('ok-avisos');
         function aviso(msg, esError) {
@@ -1041,6 +1151,7 @@
 
         btn.disabled = true;
         btn.textContent = 'Enviando…';
+        pedirBackup('antes de avisos de ajuste', clave);
         fetch(WEBHOOK_D3B, {
           method: 'POST',
           mode: 'no-cors',
@@ -1104,6 +1215,7 @@
 
         btn.disabled = true;
         btn.textContent = 'Calculando…';
+        pedirBackup('antes de liquidación', clave);
         fetch(WEBHOOK_E3, {
           method: 'POST',
           mode: 'no-cors',
@@ -1283,6 +1395,15 @@
           }).catch(function () {
             gate('btn-avisos', 'porque-avisos', false, 'No pude leer la planilla.');
           });
+        }
+
+        // Paso 4: finalizar toma de pedidos (prueba), solo con el form abierto
+        var btnFin = $('btn-finalizar-pedidos');
+        if (cerrada || paso !== 4 || cierrePaso) {
+          btnFin.disabled = true;
+          $('porque-finalizar').textContent = cerrada || paso < 4 ?
+            'Se habilita cuando el formulario de pedidos esté abierto.' :
+            'La toma de pedidos ya cerró.';
         }
 
         // Paso 7: cierre de prueba, desde el cierre de pedidos en adelante
