@@ -1059,6 +1059,9 @@
       var WEBHOOK_FRAC   = 'https://hook.us2.make.com/pnu4revwv7cpba73qpnif4bsa0cuw86i';
       var WEBHOOK_RETIRO = 'https://hook.us2.make.com/gd5qh8wry0v9wmnsqfwp96vjmua55e36';
       var WEBHOOK_D3     = 'https://hook.us2.make.com/8w3cb9fk11gf9rj9352ai7k4pixpmm1n';
+      // D3b · avisos de ajuste (el mismo que usa la guía, paso 6): después de un
+      // recorte en armado se dispara solo, para ese pedido.
+      var WEBHOOK_D3B    = 'https://hook.us2.make.com/4a2eptxftvx5b3wn7vptjljkjxx3og14';
       // Escenario A5 (cambios de estado): al entregar el último pedido, la
       // edición pasa a "Liquidación" y la guía avanza al paso 7.
       var WEBHOOK_A5     = 'https://hook.us2.make.com/qyqw5eh5f6gcbdd558o4t21krx4k72hy';
@@ -2426,6 +2429,7 @@
       }
       function renderEntrega() {
         var cont = $('lista-entrega');
+        cargarRecortes();
         // si hay un recorte a medio cargar, conservar lo escrito al redibujar
         var frPrev = cont.querySelector('.form-recorte'), frVals = null;
         if (frPrev) frVals = { m: frPrev.querySelector('.rc-motivo').value, v: frPrev.querySelector('.rc-va').value };
@@ -2780,7 +2784,44 @@
       // empieza con "Recorte en armado · <motivo>": con eso la planilla sabe
       // quién absorbe el costo (Merma y Otro: el Nodo; Descarte: el productor).
       var recorteAbierto = '';          // "id_pedido|k" con el formulario abierto
-      var recortesLocales = {};         // id_item -> {nueva, ts}: enviado, esperando que la planilla lo muestre
+      var recortesLocales = {};         // id_item -> {nueva, ts, ped, clave}: enviado, esperando que la planilla lo muestre
+      var avisosRecorte = {};           // id_pedido -> {ts, estado: 'pendiente'|'enviado'}
+      var LS_RECORTES = 'nm_recortes_armado_';
+      var recortesCargadosPara = null;
+      function cargarRecortes() {
+        if (recortesCargadosPara === idEdicion || !idEdicion) return;
+        recortesCargadosPara = idEdicion;
+        try {
+          var gr = JSON.parse(localStorage.getItem(LS_RECORTES + idEdicion) || '{}');
+          recortesLocales = gr.r || {}; avisosRecorte = gr.a || {};
+          var lim = Date.now() - 30 * 60000;   // lo de hace más de media hora ya no se espera
+          Object.keys(recortesLocales).forEach(function (k) { if (recortesLocales[k].ts < lim) delete recortesLocales[k]; });
+        } catch (e) {}
+      }
+      function guardarRecortes() {
+        try { localStorage.setItem(LS_RECORTES + idEdicion, JSON.stringify({ r: recortesLocales, a: avisosRecorte })); } catch (e) {}
+      }
+      // Cuando la planilla ya muestra el recorte (y no queda otro recorte del
+      // mismo pedido en camino), se pide a D3b el correo con el total final.
+      // Se espera unos segundos para que D3 termine de actualizar el pedido.
+      function avisarRecorte(idPed, clave) {
+        var a = avisosRecorte[idPed];
+        if (a && a.estado === 'enviado' && Date.now() - a.ts < 60000) return;
+        for (var k in recortesLocales) if (recortesLocales[k].ped === idPed) return;   // otro en camino
+        avisosRecorte[idPed] = { ts: Date.now(), estado: 'pendiente' };
+        guardarRecortes();
+        setTimeout(function () {
+          if (WEBHOOK_D3B.indexOf('https://hook.') !== 0) return;
+          fetch(WEBHOOK_D3B, {
+            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({ tipo: 'avisos_ajuste', id_edicion: idEdicion, clave: clave,
+              id_pedido: idPed, origen: 'recorte_armado' })
+          }).catch(function () {});
+          avisosRecorte[idPed] = { ts: Date.now(), estado: 'enviado' };
+          guardarRecortes();
+          try { renderEntrega(); } catch (e) {}
+        }, 15000);
+      }
       var MOTIVOS_RECORTE = {
         merma: 'Merma al fraccionar',
         descarte: 'Descarte por calidad',
@@ -2794,11 +2835,19 @@
       function etiquetaRecorte(it) {
         var o = recortesLocales[it.id_item];
         if (o) {
-          if (Math.abs(it.cantidad - o.nueva) < 0.0001) { delete recortesLocales[it.id_item]; }
+          if (Math.abs(it.cantidad - o.nueva) < 0.0001) {
+            delete recortesLocales[it.id_item];
+            guardarRecortes();
+            avisarRecorte(o.ped || it.id_pedido, o.clave || $('clave-entrega').value.trim());
+          }
           else if (Date.now() - o.ts < 240000) return '⏳ guardando recorte…';
           else return '⚠ el recorte no se aplicó: probá de nuevo o revisá D3';
         }
-        if (/^Recorte en armado/i.test(it.obs || '')) return '✂ ' + it.obs.replace(/^Recorte en armado\s*·\s*/i, '');
+        if (/^Recorte en armado/i.test(it.obs || '')) {
+          var av = avisosRecorte[it.id_pedido];
+          return '✂ ' + it.obs.replace(/^Recorte en armado\s*·\s*/i, '') +
+            (av ? (av.estado === 'enviado' ? ' · 📧 aviso enviado' : ' · 📧 enviando aviso…') : '');
+        }
         return '';
       }
       function formRecorte(p, it, k) {
@@ -2887,7 +2936,9 @@
           })
         }).then(fin).catch(fin);
         function fin() {
-          recortesLocales[it.id_item] = { nueva: cantNueva, ts: Date.now() };
+          recortesLocales[it.id_item] = { nueva: cantNueva, ts: Date.now(), ped: p.id_pedido, clave: clave };
+          delete avisosRecorte[p.id_pedido];
+          guardarRecortes();
           // el renglón queda controlado: no frena el "Cajón armado"
           var k = parseInt(fr.dataset.k, 10), t = leerTicks(p.id_pedido);
           if (t.indexOf(k) === -1) { t.push(k); guardarTicks(p.id_pedido, t); }
@@ -3635,6 +3686,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 09/10 11:11</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 09/10 11:36</p>
 </body>
 </html>
