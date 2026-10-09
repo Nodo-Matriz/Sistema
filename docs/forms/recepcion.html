@@ -542,6 +542,26 @@
       font-style: italic;
     }
 
+    /* ── Recorte en armado ── */
+    .btn-recorte {
+      margin-left: auto; flex-shrink: 0; border: 1px solid rgba(166,64,43,.35); background: transparent;
+      color: #A6402B; border-radius: 999px; padding: 2px 10px; font: inherit; font-size: .78rem; font-weight: 700; cursor: pointer;
+    }
+    .btn-recorte:hover { background: rgba(166,64,43,.08); }
+    .form-recorte {
+      margin: 2px 0 8px 32px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(166,64,43,.06); border: 1px solid rgba(166,64,43,.2); font-size: .88rem;
+    }
+    .form-recorte select, .form-recorte input { font: inherit; padding: 4px 6px; border-radius: 8px; border: 1px solid rgba(74,107,58,.3); }
+    .form-recorte .fila { margin: 6px 0; }
+    .form-recorte .acciones { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+    .form-recorte .acciones button { font: inherit; font-size: .85rem; padding: 6px 12px; border-radius: 999px; cursor: pointer; }
+    .form-recorte .rc-aplicar { background: #A6402B; color: #fff; border: 0; font-weight: 700; }
+    .form-recorte .rc-cancelar { background: transparent; border: 1px solid rgba(0,0,0,.2); }
+    .form-recorte .rc-msg { color: #A6402B; font-size: .82rem; margin-top: 6px; }
+    .tag-recorte { display: inline-block; margin-left: 8px; padding: 1px 8px; font-size: .74rem; font-weight: 700;
+      color: #A6402B; background: rgba(166,64,43,.10); border-radius: 999px; white-space: nowrap; }
+
     .prog-control {
       font-size: 0.8rem;
       color: var(--c-tierra);
@@ -1264,7 +1284,8 @@
             precio: parseFloat(celda(r, 6)) || 0,
             estado: String(celda(r, 8) || '').trim(),
             efectiva: parseFloat(celda(r, 10)) || 0,
-            quien: String(celda(r, 11) || '').trim()
+            quien: String(celda(r, 11) || '').trim(),
+            obs: String(celda(r, 9) || '').trim()
           });
         });
       }
@@ -2290,7 +2311,8 @@
 
       function textoItem(it) {
         var info = infoProducto(it.id_producto);
-        if (it.efectiva <= 0) return info.nombre + ' — faltante, no va';
+        if (it.efectiva <= 0) return info.nombre + (/^Recorte en armado/i.test(it.obs || '')
+          ? ' — recortado en armado, no va' : ' — faltante, no va');
         var cant;
         if (it.fraccion) {
           cant = it.cantidad + ' × ' + it.fraccion + (info.unidad ? ' ' + info.unidad : '');
@@ -2393,6 +2415,9 @@
 
       function renderEntrega() {
         var cont = $('lista-entrega');
+        // si hay un recorte a medio cargar, conservar lo escrito al redibujar
+        var frPrev = cont.querySelector('.form-recorte'), frVals = null;
+        if (frPrev) frVals = { m: frPrev.querySelector('.rc-motivo').value, v: frPrev.querySelector('.rc-va').value };
         cont.innerHTML = '';
 
         if (!pedidos.length) {
@@ -2480,7 +2505,24 @@
               tag.textContent = productores[idProdIt] || idProdIt;
               fila.querySelector('.txt').appendChild(tag);
             }
+            var etRec = etiquetaRecorte(it);
+            if (etRec) {
+              var tr = document.createElement('span');
+              tr.className = 'tag-recorte';
+              tr.textContent = etRec;
+              fila.querySelector('.txt').appendChild(tr);
+            }
+            if (est === 'Pendiente' && !recortesLocales[it.id_item]) {
+              var br = document.createElement('button');
+              br.type = 'button';
+              br.className = 'btn-recorte';
+              br.dataset.k = String(k);
+              br.title = 'No entra completo en el cajón (merma, descarte…)';
+              br.textContent = '✂ Recorte';
+              fila.appendChild(br);
+            }
             cuerpo.appendChild(fila);
+            if (recorteAbierto === p.id_pedido + '|' + k) cuerpo.appendChild(formRecorte(p, it, k));
           });
           // faltantes (no van): informativos
           its.forEach(function (it) {
@@ -2558,6 +2600,8 @@
           cont.appendChild(card);
           actualizarControlPed(card);
         });
+        var frNuevo = cont.querySelector('.form-recorte');
+        if (frNuevo && frVals) { frNuevo.querySelector('.rc-motivo').value = frVals.m; frNuevo.querySelector('.rc-va').value = frVals.v; }
         actualizarTablero();
       }
 
@@ -2603,6 +2647,21 @@
 
       // Tocar la tarjeta la despliega; tocar el botón registra la acción
       $('lista-entrega').addEventListener('click', function (e) {
+        var bRec = e.target.closest('.btn-recorte');
+        if (bRec) {
+          e.preventDefault(); e.stopPropagation();
+          var cR = bRec.closest('.ped-card'), pR = pedidos[parseInt(cR.dataset.idx, 10)];
+          var clv = pR.id_pedido + '|' + bRec.dataset.k;
+          recorteAbierto = recorteAbierto === clv ? '' : clv;
+          renderEntrega();
+          return;
+        }
+        if (e.target.closest('.form-recorte')) {
+          var fr = e.target.closest('.form-recorte');
+          if (e.target.closest('.rc-cancelar')) { recorteAbierto = ''; renderEntrega(); return; }
+          if (e.target.closest('.rc-aplicar')) { e.preventDefault(); aplicarRecorte(fr, e.target.closest('.rc-aplicar')); }
+          return;
+        }
         var deshacer = e.target.closest('.btn-deshacer');
         if (deshacer) {
           var cardD = deshacer.closest('.ped-card');
@@ -2657,6 +2716,130 @@
         guardarTicks(p.id_pedido, idxs);
         actualizarControlPed(card);
       });
+
+      // ── Recorte en armado ───────────────────────────────────────
+      // Cuando al armar el cajón un producto no entra completo (la fracción
+      // pesó menos, se descartó por calidad…), se registra acá. Va por el
+      // mismo escenario D3 que los faltantes de productores (valores
+      // absolutos: repetir el envío no descuenta dos veces). La observación
+      // empieza con "Recorte en armado · <motivo>": con eso la planilla sabe
+      // quién absorbe el costo (Merma y Otro: el Nodo; Descarte: el productor).
+      var recorteAbierto = '';          // "id_pedido|k" con el formulario abierto
+      var recortesLocales = {};         // id_item -> {nueva, ts}: enviado, esperando que la planilla lo muestre
+      var MOTIVOS_RECORTE = {
+        merma: 'Merma al fraccionar',
+        descarte: 'Descarte por calidad',
+        otro: 'Otro motivo'
+      };
+      function recortePorPeso(it) {
+        // parcial (ej. 0,8 kg) solo en productos por kg/litro sin fracción
+        var u = String(infoProducto(it.id_producto).unidad || '').toLowerCase();
+        return !it.fraccion && (u === 'kg' || u === 'litro' || u === 'l' || u === 'lt');
+      }
+      function etiquetaRecorte(it) {
+        var o = recortesLocales[it.id_item];
+        if (o) {
+          if (Math.abs(it.cantidad - o.nueva) < 0.0001) { delete recortesLocales[it.id_item]; }
+          else if (Date.now() - o.ts < 240000) return '⏳ guardando recorte…';
+          else return '⚠ el recorte no se aplicó: probá de nuevo o revisá D3';
+        }
+        if (/^Recorte en armado/i.test(it.obs || '')) return '✂ ' + it.obs.replace(/^Recorte en armado\s*·\s*/i, '');
+        return '';
+      }
+      function formRecorte(p, it, k) {
+        var info = infoProducto(it.id_producto), peso = recortePorPeso(it);
+        var u = info.unidad || '';
+        var d = document.createElement('div');
+        d.className = 'form-recorte';
+        d.dataset.ped = p.id_pedido; d.dataset.k = String(k);
+        var pidio = peso ? numeroAmable(it.efectiva) + ' ' + u
+          : it.cantidad + (it.fraccion ? ' × ' + it.fraccion + (u ? ' ' + u : '') : (u ? ' ' + u : ''));
+        var unidadVa = peso ? u : (it.fraccion ? '× ' + it.fraccion + (u ? ' ' + u : '') : (u || 'unidad'));
+        d.innerHTML =
+          '<div><strong>✂ Recorte en armado</strong> · ' + escH(info.nombre) + ' · pidió ' + escH(pidio) + '</div>' +
+          '<div class="fila"><label>Motivo: <select class="rc-motivo">' +
+            '<option value="merma">Merma al fraccionar (lo absorbe el Nodo)</option>' +
+            '<option value="descarte">Descarte por calidad (no se le paga al productor)</option>' +
+            '<option value="otro">Otro motivo (lo absorbe el Nodo)</option>' +
+          '</select></label></div>' +
+          '<div class="fila"><label>Va en el cajón: <input type="number" class="rc-va" inputmode="decimal" min="0" value="0" ' +
+            (peso ? 'step="0.05" max="' + it.efectiva + '"' : 'step="1" max="' + Math.max(0, it.cantidad - 1) + '"') +
+            ' style="width:80px;"> ' + escH(unidadVa) + '</label>' +
+            '<div class="muted" style="font-size:.8rem;">' + (peso
+              ? 'Poné lo que realmente va (ej. 0,8). 0 = no va nada.'
+              : 'Cuántas van (0 = no va nada).') + '</div></div>' +
+          '<div class="acciones"><button type="button" class="rc-aplicar">Aplicar recorte</button>' +
+          '<button type="button" class="rc-cancelar">Cancelar</button></div>' +
+          '<div class="rc-msg"></div>';
+        return d;
+      }
+      function aplicarRecorte(fr, btn) {
+        var msg = fr.querySelector('.rc-msg');
+        function err(t) { msg.textContent = t; }
+        if (!webhookListo(WEBHOOK_D3, 'D3 · Ajustes', 'aviso-entrega')) return;
+        var quien = valorQuien('entregado-por');
+        var clave = $('clave-entrega').value.trim();
+        if (!quien) { err('Antes, elegí tu nombre arriba de todo.'); return; }
+        if (!clave) { err('Falta la clave de equipo (arriba de todo).'); return; }
+        var p = null;
+        for (var i = 0; i < pedidos.length; i++) if (pedidos[i].id_pedido === fr.dataset.ped) p = pedidos[i];
+        var it = itemsDePedido(fr.dataset.ped)[parseInt(fr.dataset.k, 10)];
+        if (!p || !it) { err('No encuentro el ítem: actualizá la pantalla.'); return; }
+        var peso = recortePorPeso(it);
+        var va = aNumero(fr.querySelector('.rc-va').value);
+        if (va === null || va < 0) { err('Poné cuánto va (0 si no va nada).'); return; }
+        var fac = it.cantidad > 0 ? it.efectiva / it.cantidad : 1;
+        var cantNueva, efNueva;
+        if (peso) {
+          if (va >= it.efectiva) { err('Tiene que ser menos de lo pedido (' + numeroAmable(it.efectiva) + ').'); return; }
+          cantNueva = Math.round(va * 1000) / 1000;          // sin fracción: E está en kg
+          efNueva = cantNueva;
+        } else {
+          if (va % 1 !== 0) { err('Tiene que ser un número entero.'); return; }
+          if (va >= it.cantidad) { err('Tiene que ser menos de lo pedido (' + it.cantidad + ').'); return; }
+          cantNueva = va;
+          efNueva = Math.round(va * fac * 10000) / 10000;
+        }
+        var motivo = fr.querySelector('.rc-motivo').value;
+        var u = infoProducto(it.id_producto).unidad || '';
+        var menos = Math.round((it.efectiva - efNueva) * 10000) / 10000;
+        var obs = 'Recorte en armado · ' + MOTIVOS_RECORTE[motivo] + ' · -' + numeroAmable(menos) + (u ? ' ' + u : '');
+        var devuelto = Math.round(menos * it.precio);
+        var c = contactos[p.id_consumidor] || {};
+        var nomProd = nombreProducto(it.id_producto);
+        btn.disabled = true; btn.textContent = 'Enviando…';
+        fetch(WEBHOOK_D3, {
+          method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            tipo: 'ajustes', id_edicion: idEdicion, aprobado_por: quien, clave: clave,
+            items: [{
+              id_item: it.id_item, id_pedido: it.id_pedido, id_producto: it.id_producto, producto: nomProd,
+              recorte_efectiva: menos,
+              recorte_cantidad: Math.round((it.cantidad - cantNueva) * 10000) / 10000,
+              cantidad_antes: it.cantidad, cantidad_nueva: cantNueva,
+              cantidad_efectiva_antes: it.efectiva, cantidad_efectiva_nueva: efNueva,
+              precio: it.precio, observacion: obs
+            }],
+            pedidos: [{
+              id_pedido: p.id_pedido, correlativo: p.correlativo,
+              nombre: consumidores[p.id_consumidor] || p.id_consumidor,
+              email: c.email || '', telefono: c.tel || '',
+              total_anterior: p.total, monto_devuelto: devuelto,
+              detalle_recortes: '• ' + nomProd + ': pediste ' + numeroAmable(it.efectiva) + (u ? ' ' + u : '') + ' y te llevás ' +
+                numeroAmable(efNueva) + (u ? ' ' + u : '') + ' (' + pesos(devuelto) + ' menos · ' + MOTIVOS_RECORTE[motivo].toLowerCase() + ')'
+            }],
+            propuestas: []
+          })
+        }).then(fin).catch(fin);
+        function fin() {
+          recortesLocales[it.id_item] = { nueva: cantNueva, ts: Date.now() };
+          // el renglón queda controlado: no frena el "Cajón armado"
+          var k = parseInt(fr.dataset.k, 10), t = leerTicks(p.id_pedido);
+          if (t.indexOf(k) === -1) { t.push(k); guardarTicks(p.id_pedido, t); }
+          recorteAbierto = '';
+          renderEntrega();
+        }
+      }
 
       function avisoEntrega(msg) {
         var caja = $('aviso-entrega');
@@ -3397,5 +3580,6 @@
       });
     })();
   </script>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 09/10 10:45</p>
 </body>
 </html>
