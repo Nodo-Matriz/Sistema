@@ -498,7 +498,7 @@
         <h3>Copia de seguridad de la planilla</h3>
         <p>
           El sistema guarda solo una copia completa de la planilla en el Drive del Nodo
-          (carpeta <em>Backups Nodo Matriz</em>) varias veces por día mientras la edición
+          (carpeta <em>PROCESO NODO GTI / Backups</em>) varias veces por día mientras la edición
           está en curso, y otra antes de generar comandas, de avisar recortes y de liquidar.
           Antes de un arreglo a mano grande (pegar filas, borrar pedidos), hacé una copia acá.
         </p>
@@ -543,17 +543,15 @@
       var WEBHOOK_D3B = 'https://hook.us2.make.com/4a2eptxftvx5b3wn7vptjljkjxx3og14';
       // Escenario G1 (copia de seguridad de la planilla en el Drive del Nodo).
       // Pegar acá la dirección del webhook cuando esté armado en Make.
-      var WEBHOOK_G1 = '';
-      // Pide una copia de la planilla. No bloquea nada: si G1 no está
-      // conectado o falla, el paso sigue igual.
+      var WEBHOOK_G1 = 'https://hook.us2.make.com/su6pkeiv9emvqbrxptwln4mzgqoqh6fa';
+      // Pide una copia de la planilla. No bloquea nada: si G1 falla, el paso
+      // sigue igual. Va por GET con parámetros (igual que G1-reloj), porque
+      // el webhook de G1 lee motivo y clave directo, sin Parse JSON.
       function pedirBackup(motivo, clave) {
         if (WEBHOOK_G1.indexOf('https://hook.') !== 0) return false;
         try {
-          fetch(WEBHOOK_G1, {
-            method: 'POST', mode: 'no-cors',
-            headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify({ tipo: 'backup', motivo: motivo, id_edicion: edicionVigente || '', clave: clave || '' })
-          }).catch(function () {});
+          var q = new URLSearchParams({ tipo: 'backup', motivo: motivo, id_edicion: edicionVigente || '', clave: clave || '' });
+          fetch(WEBHOOK_G1 + '?' + q.toString(), { mode: 'no-cors' }).catch(function () {});
         } catch (e) {}
         return true;
       }
@@ -892,7 +890,7 @@
             var motivo = '';
             // cada dato de entrada tiene que ser lo que se espera; si no, la
             // planilla lo interpretó mal (fechas, textos) y el monto no sirve
-            if (e === null || e < 0 || e > 1000 || e % 1 !== 0) motivo = 'cantidad (E) inválida: ' + celda(r, 4);
+            if (e === null || e < 0 || e > 1000 || (e % 1 !== 0 && !/^Recorte en armado/i.test(String((r.c[9] && r.c[9].v) || '')))) motivo = 'cantidad (E) inválida: ' + celda(r, 4);
             else if (f !== '' && fac === null) motivo = 'fracción (F) «' + celda(r, 5) + '» inválida (¿se convirtió en fecha o es un formato que el formulario no usa?)';
             else if (g === null || g < 50 || g > 10000000) motivo = 'precio (G) inválido: ' + celda(r, 6);
             else if (k === null || k < 0) motivo = 'cantidad efectiva (K) inválida';
@@ -1163,7 +1161,7 @@
           return;
         }
         var b = $('btn-backup'); b.disabled = true;
-        caja.innerHTML = '⏳ Pedida. En un minuto aparece en la carpeta <em>Backups Nodo Matriz</em> del Drive del Nodo.';
+        caja.innerHTML = '⏳ Pedida. En un minuto aparece en la carpeta <em>PROCESO NODO GTI / Backups</em> del Drive del Nodo.';
         setTimeout(function () { b.disabled = false; }, 60000);
       });
 
@@ -1483,5 +1481,6 @@
       });
     })();
   </script>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 09/10 13:13</p>
 </body>
 </html>
