@@ -142,10 +142,28 @@
           </thead>
           <tbody id="precomanda"><tr><td colspan="6" class="meta">Elegí un productor.</td></tr></tbody>
         </table></div>
+
+        <h3 style="margin-top:22px;">Detalle por pedido</h3>
+        <p class="meta">Qué lleva cada pedido de este productor, con número y nombre: para que el productor arme o rotule por pedido (como el listado de La Higuera). No incluye lo recortado por faltante.</p>
+        <p class="fila-sel">
+          <button type="button" class="btn btn--ghost btn--small" id="btn-copiar-detalle" disabled>Copiar detalle por pedido</button>
+          <span class="meta" id="resumen-detalle"></span>
+        </p>
+        <pre id="detalle-pedidos" style="white-space:pre-wrap; font:inherit; font-size:0.9rem; background:rgba(74,107,58,.06); border-radius:10px; padding:12px; max-height:420px; overflow:auto; display:none;"></pre>
       </div>
 
       <div class="card-eq fade-in" data-delay="4">
         <h2>Lista de pedidos</h2>
+        <p class="fila-sel">
+          <label>Entrega: <select id="f-entrega">
+            <option value="">Todas</option>
+            <option value="galpón">Retiro en el galpón</option>
+            <option value="domicilio">Envío a domicilio</option>
+          </select></label>
+          <label style="margin-left:8px;">Día: <select id="f-dia"><option value="">Todos</option></select></label>
+          <button type="button" class="btn btn--ghost btn--small" id="btn-copiar-lista" style="margin-left:6px;">Copiar lista</button>
+          <span class="meta" id="cuenta-lista"></span>
+        </p>
         <table class="lista">
           <thead><tr><th>#</th><th>Consumidor</th><th>Entrega</th><th class="num">Total</th><th>Hora</th></tr></thead>
           <tbody id="lista-pedidos"></tbody>
@@ -263,7 +281,7 @@
         $('estado').textContent = 'Leyendo la planilla…';
         Promise.all([
           gviz('sheet=Pedidos&range=A1:Z5000&headers=1'),
-          gviz('sheet=Items&range=A1:P20000&headers=1'),
+          gviz('sheet=Items&range=A1:R20000&headers=1'),
           gviz('sheet=Consumidores&range=A1:D5000&headers=1'),
           gviz('sheet=Productores&range=A1:B2000&headers=1'),
           gviz('sheet=Productos&range=A1:D5000&headers=1').catch(function () { return null; })
@@ -434,7 +452,11 @@
         // ── Items: productos y productores ────────────────────
         var iPed = idx(ri, /^id_pedido$/i), iProd = idx(ri, /^id_producto$/i), iPr = idx(ri, /^id_productor$/i),
             iCant = idx(ri, /^cantidad$/i), iSub = idx(ri, /^subtotal$/i), iNom = idx(ri, /aux_nombre/i), iEst = idx(ri, /estado_item/i),
-            iEfec = idx(ri, /cantidad_efectiva/i), iFrac = idx(ri, /^fraccion$/i);
+            iEfec = idx(ri, /cantidad_efectiva/i), iFrac = idx(ri, /^fraccion$/i),
+            iDetN = idx(ri, /aux_detalle_nuevo/i);
+        var corrDe = {}, consDe = {};
+        pedidos.forEach(function (p) { corrDe[p.id] = p.corr; consDe[p.id] = p.cons; });
+        detallePorProductor = {};
         var unidadDe = {};
         if (rprod && rprod.table) rprod.table.rows.forEach(function (r) {
           var id = String(celda(r, 0)).trim(); if (id) unidadDe[id] = String(celda(r, 3) || '').trim();
@@ -464,6 +486,14 @@
           if (!precomanda[pr]) precomanda[pr] = {};
           if (!precomanda[pr][prod]) precomanda[pr][prod] = { nombre: nom, unidad: unidadDe[prod] || '', cant: 0, pedidos: 0, monto: 0 };
           precomanda[pr][prod].cant += ce; precomanda[pr][prod].pedidos += 1; precomanda[pr][prod].monto += s;
+          // detalle por pedido (sin lo recortado por faltante)
+          var cantItem = num(celda(r, iCant));
+          if (est !== 'faltante' && cantItem > 0) {
+            var det = iDetN !== -1 ? String(celda(r, iDetN)).trim() : '';
+            if (!det) det = fmtCant(cantItem) + (unidadDe[prod] ? ' ' + unidadDe[prod] : '');
+            var dp = detallePorProductor[pr] || (detallePorProductor[pr] = {});
+            (dp[idp] = dp[idp] || []).push({ det: det, nombre: nom });
+          }
         });
         var topP = Object.keys(porProducto).map(function (k) { return porProducto[k]; })
           .sort(function (a, b) { return b.pedidos - a.pedidos || b.monto - a.monto; }).slice(0, 15)
@@ -487,12 +517,15 @@
         pintarPrecomanda();
 
         // ── Lista ─────────────────────────────────────────────
-        $('lista-pedidos').innerHTML = pedidos.slice().reverse().map(function (p) {
-          return '<tr><td>' + esc(p.corr || '') + '</td><td>' + esc(nombres[p.cons] || p.cons) + '</td>' +
-            '<td><span class="pill' + (p.entrega === 'domicilio' ? ' dom' : '') + '">' + esc(p.entrega) + '</span>' +
-            (p.dia ? '<br><span class="meta">' + esc(p.dia) + '</span>' : '') + '</td>' +
-            '<td class="num">' + money(p.total) + '</td><td>' + esc(hora(p.ts)) + '</td></tr>';
-        }).join('') || '<tr><td colspan="5" class="meta">Todavía no hay pedidos.</td></tr>';
+        pedidosEd = pedidos; nombresCons = nombres; corrPorId = corrDe; consPorId = consDe;
+        var selDia = $('f-dia'), diaAct = selDia.value, dias = {};
+        pedidos.forEach(function (p) { dias[p.dia || '(sin día elegido)'] = true; });
+        selDia.innerHTML = '<option value="">Todos</option>' + Object.keys(dias).sort(function (a, b) {
+          return ordenDia(a) - ordenDia(b) || a.localeCompare(b, 'es');
+        }).map(function (d) { return '<option value="' + esc(d) + '">' + esc(d) + '</option>'; }).join('');
+        if (diaAct && dias[diaAct]) selDia.value = diaAct;
+        pintarLista();
+        pintarDetalle();
 
         // ── Comentarios ───────────────────────────────────────
         var conComentario = pedidos.filter(function (p) { return p.comentario; }).reverse();
@@ -574,6 +607,82 @@
           '<td class="num pron pron-ini"></td>' +
           '<td class="num pron"><strong>' + money(tmp) + '</strong></td></tr>';
       }
+      // ── Detalle por pedido del productor elegido ──────────────
+      var detallePorProductor = {}, pedidosEd = [], nombresCons = {}, corrPorId = {}, consPorId = {};
+      // el nombre va al productor: se le sacan teléfonos u otros números largos
+      function nombreLimpio(idCons) {
+        return String(nombresCons[idCons] || idCons || '').replace(/[+\d][\d\s-]{6,}\d/g, '').replace(/\s{2,}/g, ' ').trim();
+      }
+      function textoDetalle() {
+        var pr = $('sel-productor').value, dp = detallePorProductor[pr];
+        if (!pr || !dp) return { txt: '', n: 0 };
+        var ids = Object.keys(dp).sort(function (a, b) { return (corrPorId[a] || 0) - (corrPorId[b] || 0); });
+        var tot = {};
+        var cuerpo = ids.map(function (id) {
+          dp[id].forEach(function (x) { tot[x.nombre] = (tot[x.nombre] || []).concat([x.det]); });
+          return '*N° ' + (corrPorId[id] || '?') + ' · ' + nombreLimpio(consPorId[id]) + '*\n' +
+            dp[id].map(function (x) { return '  • ' + x.det + ' — ' + x.nombre; }).join('\n');
+        }).join('\n');
+        var filasTot = filasPrecomanda().map(function (x) {
+          return '  • ' + fmtCant(x.cant) + (x.unidad ? ' ' + x.unidad : '') + ' — ' + x.nombre;
+        }).join('\n');
+        return {
+          txt: 'Pedidos Nodo Matríz · ' + edicionActual + ' · ' + (nombresProductor[pr] || pr) + '\n\n' + cuerpo +
+            (filasTot ? '\n\n*Total:*\n' + filasTot : ''),
+          n: ids.length
+        };
+      }
+      function pintarDetalle() {
+        var t = textoDetalle(), pre = $('detalle-pedidos');
+        $('btn-copiar-detalle').disabled = !t.n;
+        $('resumen-detalle').textContent = t.n ? t.n + ' pedido' + (t.n === 1 ? '' : 's') : ($('sel-productor').value ? 'sin pedidos' : '');
+        pre.style.display = t.n ? '' : 'none';
+        pre.textContent = t.txt;
+      }
+      function copiarTexto(txt, btn, rotulo) {
+        var done = function () { btn.textContent = 'Copiado ✓'; setTimeout(function () { btn.textContent = rotulo; }, 1500); };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done).catch(function () { window.prompt('Copiá el texto:', txt); });
+        else window.prompt('Copiá el texto:', txt);
+      }
+
+      // ── Lista de pedidos con filtros ──────────────────────────
+      // "Viernes 09/10 de 13 a 15 hs" → número para ordenar por fecha
+      function ordenDia(d) {
+        var m = String(d).match(/(\d{1,2})\/(\d{1,2})/);
+        return m ? (+m[2]) * 100 + (+m[1]) : 9999;
+      }
+      function pedidosFiltrados() {
+        var fe = $('f-entrega').value, fd = $('f-dia').value;
+        return pedidosEd.filter(function (p) {
+          if (fe && p.entrega !== fe) return false;
+          if (fd && (p.dia || '(sin día elegido)') !== fd) return false;
+          return true;
+        });
+      }
+      function pintarLista() {
+        var lista = pedidosFiltrados(), total = 0;
+        lista.forEach(function (p) { total += p.total; });
+        $('cuenta-lista').textContent = lista.length + ' pedido' + (lista.length === 1 ? '' : 's') + ' · ' + money(total);
+        $('lista-pedidos').innerHTML = lista.slice().reverse().map(function (p) {
+          return '<tr><td>' + esc(p.corr || '') + '</td><td>' + esc(nombresCons[p.cons] || p.cons) + '</td>' +
+            '<td><span class="pill' + (p.entrega === 'domicilio' ? ' dom' : '') + '">' + esc(p.entrega) + '</span>' +
+            (p.dia ? '<br><span class="meta">' + esc(p.dia) + '</span>' : '') + '</td>' +
+            '<td class="num">' + money(p.total) + '</td><td>' + esc(hora(p.ts)) + '</td></tr>';
+        }).join('') || '<tr><td colspan="5" class="meta">' + (pedidosEd.length ? 'Ningún pedido con ese filtro.' : 'Todavía no hay pedidos.') + '</td></tr>';
+      }
+      function copiarLista() {
+        var lista = pedidosFiltrados().slice().sort(function (a, b) { return a.corr - b.corr; });
+        if (!lista.length) return;
+        var fe = $('f-entrega'), fd = $('f-dia');
+        var titulo = 'Pedidos ' + edicionActual +
+          (fe.value ? ' · ' + fe.options[fe.selectedIndex].text : '') + (fd.value ? ' · ' + fd.value : '');
+        var txt = titulo + ' (' + lista.length + ')\n' + lista.map(function (p) {
+          return 'N° ' + p.corr + ' · ' + (nombresCons[p.cons] || p.cons) + ' · ' + p.entrega +
+            (p.dia ? ' · ' + p.dia : '') + ' · ' + money(p.total);
+        }).join('\n');
+        copiarTexto(txt, $('btn-copiar-lista'), 'Copiar lista');
+      }
+
       function copiarPrecomanda() {
         var pr = $('sel-productor').value;
         var filas = filasPrecomanda();
@@ -591,7 +700,13 @@
         if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done).catch(function () { window.prompt('Copiá el texto:', txt); });
         else window.prompt('Copiá el texto:', txt);
       }
-      $('sel-productor').addEventListener('change', pintarPrecomanda);
+      $('sel-productor').addEventListener('change', function () { pintarPrecomanda(); pintarDetalle(); });
+      $('btn-copiar-detalle').addEventListener('click', function () {
+        copiarTexto(textoDetalle().txt, this, 'Copiar detalle por pedido');
+      });
+      $('f-entrega').addEventListener('change', pintarLista);
+      $('f-dia').addEventListener('change', pintarLista);
+      $('btn-copiar-lista').addEventListener('click', copiarLista);
       $('pedidos-esperados').addEventListener('input', function () {
         try { localStorage.setItem('nm_panel_pedidos_esperados', this.value); } catch (e) {}
         pintarPrecomanda();
@@ -609,5 +724,6 @@
       timer = setInterval(function () { if (!document.hidden) cargar(); }, REFRESCO_MS);
     })();
   </script>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 09/10 09:12</p>
 </body>
 </html>
