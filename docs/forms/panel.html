@@ -86,6 +86,7 @@
     <div class="aviso" id="estado">Leyendo la planilla…</div>
 
     <div id="contenido" style="display:none;">
+      <div class="aviso" id="control-datos" style="display:none;"></div>
       <div class="kpis fade-in" data-delay="2">
         <div class="kpi"><div class="v" id="k-pedidos">–</div><div class="l">pedidos</div></div>
         <div class="kpi"><div class="v" id="k-total">–</div><div class="l">total a abonar</div></div>
@@ -276,6 +277,79 @@
         });
       }
 
+      // ── Control de datos ─────────────────────────────────────
+      // Cada pedido tiene que tener sus ítems, cada ítem datos sanos (cantidad
+      // entera, fracción como texto, precio, cantidad efectiva calculada) y el
+      // total de la planilla tiene que coincidir con el que el formulario le
+      // mostró a la persona (total_form). Así un problema como el del 06/10
+      // (fracciones convertidas en fecha, ítems pisados) se ve apenas entra.
+      function factorFraccion(f) {
+        f = String(f || '').trim();
+        if (!f) return 1;
+        var m = f.match(/^(\d+(?:[.,]\d+)?)\s*(g|gr|grs|gramos?|ml|cc)\.?$/i);
+        if (m) { var n = parseFloat(m[1].replace(',', '.')); return n ? n / 1000 : null; }
+        if (f.indexOf('/') !== -1) {
+          var q = f.split('/'), x = parseFloat(q[0]), y = parseFloat(q[1]);
+          return (x > 0 && y > 0) ? x / y : null;
+        }
+        return null;
+      }
+      function controlarDatos(rp, ri, pedidos) {
+        var caja = $('control-datos');
+        if (!caja) return;
+        function n(r, i) { var c = r.c[i]; return (c && typeof c.v === 'number' && isFinite(c.v)) ? c.v : null; }
+        var problemas = [], porPedido = {};
+        ri.table.rows.forEach(function (r) {
+          var idPed = String(celda(r, 1)).trim(), idItem = String(celda(r, 0)).trim();
+          if (!idItem || idPed.indexOf('PED-' + edicionActual + '-') !== 0) return;
+          var st = porPedido[idPed] || (porPedido[idPed] = { recortado: false });
+          var est = String(celda(r, 8)).trim().toLowerCase();
+          if (est === 'descontado' || est === 'faltante' || String(celda(r, 13)).trim() !== '') st.recortado = true;
+          var e = n(r, 4), g = n(r, 6), h = n(r, 7), k = n(r, 10);
+          var fc = r.c[5], f = (fc && fc.v !== null && fc.v !== undefined) ? fc.v : '';
+          var fac = (typeof f === 'string') ? factorFraccion(f) : null;
+          var mot = '';
+          if (e === null || e < 0 || e > 1000 || e % 1 !== 0) mot = 'cantidad (E) inválida';
+          else if (f !== '' && fac === null) mot = /^Date\(/.test(String(f))
+            ? 'la fracción (F) se convirtió en fecha: volver a escribirla con un apóstrofo delante (\'1/2)'
+            : 'fracción (F) «' + esc(f) + '» inválida';
+          else if (g === null || g < 50) mot = 'precio (G) inválido';
+          else if (k === null || Math.abs(k - e * fac) > 0.0005) mot = 'cantidad efectiva (K) inválida';
+          else if (h === null) mot = 'subtotal (H) inválido';
+          if (mot) problemas.push('Ítem ' + esc(idItem.replace(/^PED-/, '')) + ': ' + mot);
+        });
+        var cForm = idx(rp, /^total_form$/i), cId = idx(rp, /^id_pedido$/i), cEd = idx(rp, /^id_edicion$/i),
+            cCorr = idx(rp, /correlativo/i), cTot = idx(rp, /^total_a_abonar$/i), cPorc = idx(rp, /aporte_porcentaje/i);
+        rp.table.rows.forEach(function (r) {
+          var idp = String(celda(r, cId)).trim();
+          if (!idp || String(celda(r, cEd)).trim() !== edicionActual) return;
+          if (String(celda(r, idx(rp, /^estado$/i))).trim().toLowerCase() === 'cancelado') return;
+          var corr = celda(r, cCorr), st = porPedido[idp];
+          if (!st) { problemas.push('Pedido N° ' + esc(corr) + ': no tiene ítems en la hoja Items'); return; }
+          var hp = n(r, cPorc);
+          if (hp === null || hp < 0 || hp > 100) { problemas.push('Pedido N° ' + esc(corr) + ': aporte (H) inválido'); return; }
+          if (cForm >= 0 && !st.recortado) {
+            var tf = n(r, cForm), kt = n(r, cTot);
+            if (tf !== null && (kt === null || Math.abs(kt - tf) > 1)) {
+              problemas.push('Pedido N° ' + esc(corr) + ': el formulario mostró ' + money(tf) +
+                ' y la planilla calcula ' + (kt === null ? '?' : money(kt)));
+            }
+          }
+        });
+        caja.style.display = 'block';
+        if (!problemas.length) {
+          caja.className = 'aviso';
+          caja.innerHTML = '✅ <strong>Datos controlados:</strong> los ' + pedidos.length +
+            ' pedidos tienen sus ítems y sus totales coinciden con lo que vio cada persona.';
+        } else {
+          caja.className = 'aviso rojo';
+          caja.innerHTML = '⛔ <strong>' + problemas.length + ' problema' + (problemas.length === 1 ? '' : 's') +
+            ' en la planilla.</strong> Revisalo antes de seguir (las comandas no se van a poder generar así):' +
+            '<ul style="margin:6px 0 0 18px;">' + problemas.slice(0, 15).map(function (t) { return '<li>' + t + '</li>'; }).join('') +
+            (problemas.length > 15 ? '<li>… y ' + (problemas.length - 15) + ' más</li>' : '') + '</ul>';
+        }
+      }
+
       function pintar(rp, ri, rc, rpr, rprod) {
         var ed = ediciones.filter(function (e) { return e.id === edicionActual; })[0] || {};
 
@@ -319,6 +393,8 @@
         $('k-promedio').textContent = n ? money(total / n) : '–';
         $('k-aporte').textContent = money(aporte);
         $('k-aporte-porc').textContent = n ? (Math.round(porcSum / n * 10) / 10) + '%' : '–';
+
+        controlarDatos(rp, ri, pedidos);
 
         // ── Entrega ───────────────────────────────────────────
         var galpon = pedidos.filter(function (p) { return p.entrega === 'galpón'; }).length;

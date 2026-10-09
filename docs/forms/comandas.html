@@ -195,6 +195,8 @@
       // Escenario A5 (cambios de estado): al confirmarse las comandas, pasa la
       // edición a "Recepción" para que la guía avance al paso 6.
       var WEBHOOK_A5     = 'https://hook.us2.make.com/qyqw5eh5f6gcbdd558o4t21krx4k72hy';
+      // G1 · copia de seguridad de la planilla (pegar la dirección cuando esté armado)
+      var WEBHOOK_G1     = '';
       var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
       var OFFSET         = '-03:00'; // Argentina
       var CLAVE_KEY      = 'nm_clave_equipo';
@@ -340,12 +342,22 @@
       function controlarItems() {
         var id = idEdicion();
         if (!id) { itemsMalos = null; refrescar(); return; }
-        gviz('sheet=Items&range=A1:S50000&headers=1').then(function (res) {
+        Promise.all([
+          gviz('sheet=Items&range=A1:S50000&headers=1'),
+          gviz('sheet=Pedidos&range=A1:Z20000&headers=1')
+        ]).then(function (both) {
+          var res = both[0], resPed = both[1];
           var malos = [];
+          var porPedido = {};   // id_pedido -> {n, recortado}
           function num(r, i) { var c = r.c[i]; return (c && typeof c.v === 'number' && isFinite(c.v)) ? c.v : null; }
           res.table.rows.forEach(function (r) {
             var idPed = r.c[1] && r.c[1].v ? String(r.c[1].v).trim() : '';
             if (idPed.indexOf('PED-' + id + '-') !== 0) return;
+            if (!(r.c[0] && r.c[0].v)) return;
+            var st = porPedido[idPed] || (porPedido[idPed] = { n: 0, recortado: false });
+            st.n++;
+            var est = r.c[8] && r.c[8].v ? String(r.c[8].v).trim().toLowerCase() : '';
+            if (est === 'descontado' || est === 'faltante' || (r.c[13] && r.c[13].v !== null && r.c[13].v !== '')) st.recortado = true;
             var e = num(r, 4), k = num(r, 10), g = num(r, 6);
             var fc = r.c[5], f = (fc && fc.v !== null && fc.v !== undefined) ? fc.v : '';
             var fac = (typeof f === 'string') ? factorFormulario(f) : null;
@@ -356,13 +368,38 @@
             else if (k === null || Math.abs(k - e * fac) > 0.0005) mot = 'la planilla calcula otra cantidad que el formulario';
             if (mot) malos.push((r.c[0] && r.c[0].v ? String(r.c[0].v).replace(/^PED-/, '') : '?') + ': ' + mot);
           });
+          // Pedidos: que cada uno tenga sus ítems y que el total coincida con el
+          // que el formulario le mostró a la persona (total_form). Un pedido sin
+          // ítems no aparece en ninguna comanda: sus productos no se pedirían.
+          var colForm = -1;
+          (resPed.table.cols || []).forEach(function (c, i) {
+            if (String(c.label || '').trim().toLowerCase() === 'total_form') colForm = i;
+          });
+          resPed.table.rows.forEach(function (r) {
+            var idPed = r.c[0] && r.c[0].v ? String(r.c[0].v).trim() : '';
+            var ed = r.c[1] && r.c[1].v ? String(r.c[1].v).trim() : '';
+            if (ed !== id || !idPed) return;
+            var corr = r.c[3] && r.c[3].v !== null ? r.c[3].v : '?';
+            var st = porPedido[idPed];
+            if (!st) { malos.push('Pedido N° ' + corr + ': no tiene ningún ítem en la hoja Items'); return; }
+            var hp = num(r, 7);
+            if (hp === null || hp < 0 || hp > 100) { malos.push('Pedido N° ' + corr + ': aporte (H) inválido'); return; }
+            if (colForm >= 0 && !st.recortado) {
+              var tf = num(r, colForm), k = num(r, 10);
+              if (tf !== null && (k === null || Math.abs(k - tf) > 1)) {
+                malos.push('Pedido N° ' + corr + ': el formulario le mostró $ ' + tf.toLocaleString('es-AR') +
+                  ' y la planilla calcula $ ' + (k === null ? '?' : k.toLocaleString('es-AR')) +
+                  ' (falta o sobra algún ítem)');
+              }
+            }
+          });
           itemsMalos = malos;
           var caja = $('alerta-items');
           if (malos.length) {
             caja.style.display = 'block';
-            caja.innerHTML = '⛔ <strong>' + malos.length + ' ítem' + (malos.length === 1 ? '' : 's') +
-              ' con datos inválidos</strong> en la hoja Items: las comandas pedirían cantidades ' +
-              'equivocadas. Corregilo en la planilla y recargá esta página.<ul style="margin:6px 0 0 18px;">' +
+            caja.innerHTML = '⛔ <strong>' + malos.length + ' problema' + (malos.length === 1 ? '' : 's') +
+              ' a revisar</strong> en Items o Pedidos: las comandas pedirían cantidades ' +
+              'equivocadas o se saltearían productos. Corregilo en la planilla y recargá esta página.<ul style="margin:6px 0 0 18px;">' +
               malos.slice(0, 12).map(function (m) { return '<li>' + m + '</li>'; }).join('') +
               (malos.length > 12 ? '<li>… y ' + (malos.length - 12) + ' más</li>' : '') + '</ul>';
           } else {
@@ -373,7 +410,7 @@
           itemsMalos = null;
           var caja = $('alerta-items');
           caja.style.display = 'block';
-          caja.textContent = '⚠️ No pude leer la hoja Items para controlarla. Recargá la página.';
+          caja.textContent = '⚠️ No pude leer las hojas Items y Pedidos para controlarlas. Recargá la página.';
           refrescar();
         });
       }
@@ -461,6 +498,12 @@
           clave: $('clave').value.trim()
         });
 
+        // Copia de seguridad justo antes de generar (no bloquea si G1 no está)
+        if (WEBHOOK_G1.indexOf('https://hook.') === 0) {
+          fetch(WEBHOOK_G1, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({ tipo: 'backup', motivo: 'antes de comandas', id_edicion: id, clave: $('clave').value.trim() })
+          }).catch(function () {});
+        }
         // Disparo en segundo plano: nada de pestañas nuevas con "Accepted".
         fetch(WEBHOOK_C2 + '?' + params.toString(), { mode: 'no-cors' })
           .catch(function () {});
