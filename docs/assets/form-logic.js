@@ -84,7 +84,8 @@
    * @param {Object} payload
    * @returns {Promise<Object>}
    */
-  function submitToWebhook(formEl, payload) {
+  function submitToWebhook(formEl, payload, opts) {
+    opts = opts || {};
     var webhookUrl = formEl.dataset.webhook;
     if (!webhookUrl) {
       console.error('[NodoMatriz] Falta data-webhook en el <form>.');
@@ -104,8 +105,21 @@
       mode: 'cors',
     }).then(function (res) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.json().catch(function () { return { ok: true }; });
+      // Con requireOk, una respuesta que no es JSON (Make contesta "Accepted"
+      // cuando el escenario no llega a un "Webhook response") NO es un éxito.
+      return res.json().catch(function () { return opts.requireOk ? { _sinJson: true } : { ok: true }; });
     }).then(function (data) {
+      if (opts.requireOk && (!data || data.ok !== true)) {
+        if (data && data.ok === false) {
+          var e1 = new Error(data.error || 'rechazado');
+          e1.userMessage = data.mensaje || 'El sistema no pudo aceptar tu envío. Avisanos al Nodo.';
+          throw e1;
+        }
+        var e2 = new Error('sin confirmacion');
+        e2.userMessage = opts.mensajeSinConfirmar ||
+          'No pudimos confirmar tu envío. Avisanos al Nodo antes de volver a enviarlo.';
+        throw e2;
+      }
       // El escenario puede rechazar el envío (ej: form cerrado).
       // En ese caso responde 200 con { ok: false, mensaje: "..." }.
       if (data && data.ok === false) {
@@ -143,7 +157,7 @@
         btn.innerHTML = '<span class="spinner"></span><span>Enviando…</span>';
       }
 
-      submitToWebhook(formEl, payload)
+      submitToWebhook(formEl, payload, opts)
         .then(function (resp) {
           if (opts.onSuccess) opts.onSuccess(resp, payload);
           else showSuccessMessage(formEl, opts.successMessage);
