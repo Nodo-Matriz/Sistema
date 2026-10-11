@@ -42,6 +42,8 @@
     table.lista th { color: var(--c-tierra); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: .03em; }
     table.lista td.num, table.lista th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .meta { font-size: 0.82rem; color: var(--c-tierra); font-style: italic; }
+    #card-precios .solo-movil { display: none; }
+    @media (max-width: 560px) { #card-precios .col-prodr { display: none; } #card-precios .solo-movil { display: block; } #card-precios td, #card-precios th { padding-left: 4px; padding-right: 4px; white-space: normal; } #card-precios td.num { white-space: nowrap; } #card-precios td.num .meta { white-space: normal; } #card-precios table { font-size: 0.82rem; } #card-precios th { letter-spacing: 0; font-size: 0.7rem; } #card-precios td:last-child, #card-precios th:last-child { padding-right: 0; } #card-precios table { table-layout: fixed; width: 100%; } #card-precios th:first-child { width: 38%; } }
     .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.75rem; background: rgba(110,142,85,.15); color: var(--c-musgo); }
     .pill.dom { background: rgba(201, 150, 60, .18); color: #7a5a1e; }
     .coment { padding: 10px 12px; margin: 8px 0; background: rgba(201, 150, 60, .10); border-left: 3px solid #c9963c; border-radius: 8px; }
@@ -120,6 +122,20 @@
         <h2>Productores</h2>
         <p class="meta">Cuánto se le va a pedir a cada uno (subtotal de ítems).</p>
         <div id="productores"></div>
+      </div>
+
+      <div class="card-eq fade-in" data-delay="3" id="card-precios">
+        <h2>Buscar precios de productos</h2>
+        <p class="meta">Productos ofrecidos en esta edición (los que están en el formulario). <strong>Publicado</strong> es el precio del formulario, que es lo que cobra el productor. <strong>Sobrante</strong> es el publicado + 20%, el precio al que se venden los sobrantes en el Nodo.</p>
+        <p class="fila-sel">
+          <input type="search" id="busca-precio" placeholder="Nombre del producto o del productor…" autocomplete="off" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(74,107,58,.3); font:inherit; width:100%; max-width:340px;">
+          <button type="button" class="btn btn--ghost btn--small" id="btn-copiar-precios" style="margin-left:6px;" disabled>Copiar</button>
+          <span class="meta" id="cuenta-precios"></span>
+        </p>
+        <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;"><table class="lista">
+          <thead><tr><th>Producto</th><th class="col-prodr">Productor</th><th class="num">Publicado</th><th class="num">Sobrante<br>+20%</th></tr></thead>
+          <tbody id="tabla-precios"><tr><td colspan="4" class="meta">Escribí al menos 2 letras.</td></tr></tbody>
+        </table></div>
       </div>
 
       <div class="card-eq fade-in" data-delay="3" id="card-precomanda">
@@ -285,7 +301,7 @@
           gviz('sheet=Items&range=A1:R20000&headers=1'),
           gviz('sheet=Consumidores&range=A1:D5000&headers=1'),
           gviz('sheet=Productores&range=A1:B2000&headers=1'),
-          gviz('sheet=Productos&range=A1:D5000&headers=1').catch(function () { return null; })
+          gviz('sheet=Productos&range=A1:T5000&headers=1').catch(function () { return null; })
         ]).then(function (rs) {
           pintar(rs[0], rs[1], rs[2], rs[3], rs[4]);
           $('ultima-act').textContent = 'actualizado ' + hora(new Date());
@@ -503,6 +519,7 @@
 
         var nomPr = {};
         rpr.table.rows.forEach(function (r) { var id = String(celda(r, 0)).trim(); if (id) nomPr[id] = String(celda(r, 1)).trim(); });
+        try { cargarCatalogoPrecios(rprod, nomPr); } catch (e) { console.error(e); }
         var filasPr = Object.keys(porProductor).map(function (k) { return { nombre: nomPr[k] || k, valor: porProductor[k] }; })
           .sort(function (a, b) { return b.valor - a.valor; });
         barras($('productores'), filasPr, function (f) { return money(f.valor); });
@@ -766,6 +783,79 @@
         pintarPrecomanda();
       });
       $('busca-producto').addEventListener('input', pintarPrecomanda);
+
+      // ── Buscar precios de productos ──────────────────────────
+      // Lee Productos (A..T): nombre C, unidad D, fracciones F, precio G,
+      // disponible_edicion_actual J, nombre_productor Q. Solo los ofrecidos.
+      var catalogoPrecios = [];
+      var RECARGO_SOBRANTE = 0.20;
+      function normTxt(s) {
+        return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      }
+      function cargarCatalogoPrecios(rprod, nombreProductorDe) {
+        catalogoPrecios = [];
+        if (!rprod || !rprod.table) return;
+        rprod.table.rows.forEach(function (r) {
+          var id = String(celda(r, 0)).trim();
+          if (!id) return;
+          if (normTxt(celda(r, 9)).trim() !== 'si') return;
+          var precio = num(celda(r, 6));
+          if (!precio) return;
+          var prodr = String(celda(r, 16) || '').trim() || nombreProductorDe[String(celda(r, 1)).trim()] || String(celda(r, 1));
+          var item = {
+            id: id, nombre: String(celda(r, 2)).trim(), productor: prodr,
+            unidad: String(celda(r, 3) || '').trim(), fracciones: String(celda(r, 5) || '').trim(),
+            precio: precio
+          };
+          item.clave = normTxt(item.nombre + ' ' + item.productor + ' ' + id);
+          catalogoPrecios.push(item);
+        });
+        catalogoPrecios.sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); });
+        pintarPrecios();
+      }
+      function preciosFiltrados() {
+        var q = normTxt($('busca-precio').value).trim();
+        if (q.length < 2) return null;
+        var palabras = q.split(/\s+/);
+        return catalogoPrecios.filter(function (it) {
+          return palabras.every(function (w) { return it.clave.indexOf(w) !== -1; });
+        });
+      }
+      function fraccionesTexto(it, factor) {
+        if (!it.fracciones) return '';
+        return it.fracciones.split(/\s*,\s*/).filter(function (f) { return f && f !== '1'; }).map(function (f) {
+          var k = factorFraccion(f);
+          return k ? f + ' ' + it.unidad + ': ' + money(it.precio * factor * k) : '';
+        }).filter(Boolean).join(' · ');
+      }
+      function pintarPrecios() {
+        var tb = $('tabla-precios');
+        var lista = preciosFiltrados();
+        $('btn-copiar-precios').disabled = !(lista && lista.length);
+        if (!catalogoPrecios.length) { tb.innerHTML = '<tr><td colspan="4" class="meta">Todavía no hay productos ofrecidos en esta edición.</td></tr>'; $('cuenta-precios').textContent = ''; return; }
+        if (!lista) { tb.innerHTML = '<tr><td colspan="4" class="meta">Escribí al menos 2 letras.</td></tr>'; $('cuenta-precios').textContent = catalogoPrecios.length + ' productos ofrecidos'; return; }
+        $('cuenta-precios').textContent = lista.length + (lista.length === 1 ? ' producto' : ' productos');
+        if (!lista.length) { tb.innerHTML = '<tr><td colspan="4" class="meta">No hay productos ofrecidos con ese nombre.</td></tr>'; return; }
+        tb.innerHTML = lista.slice(0, 80).map(function (it) {
+          var fp = fraccionesTexto(it, 1), fs = fraccionesTexto(it, 1 + RECARGO_SOBRANTE);
+          return '<tr><td>' + esc(it.nombre) + (it.unidad ? ' <span class="meta">· por ' + esc(it.unidad) + '</span>' : '') + '<div class="meta solo-movil">' + esc(it.productor) + '</div></td><td class="col-prodr">' + esc(it.productor) + '</td>' +
+            '<td class="num">' + money(it.precio) + (fp ? '<div class="meta">' + esc(fp) + '</div>' : '') + '</td>' +
+            '<td class="num">' + money(it.precio * (1 + RECARGO_SOBRANTE)) + (fs ? '<div class="meta">' + esc(fs) + '</div>' : '') + '</td></tr>';
+        }).join('') + (lista.length > 80 ? '<tr><td colspan="4" class="meta">Hay ' + (lista.length - 80) + ' más: escribí algo más específico.</td></tr>' : '');
+      }
+      $('busca-precio').addEventListener('input', pintarPrecios);
+      $('btn-copiar-precios').addEventListener('click', function () {
+        var lista = preciosFiltrados() || [];
+        var txt = lista.map(function (it) {
+          return it.nombre + ' (' + it.productor + ') · ' + it.unidad + ' · publicado ' + money(it.precio) +
+            ' · sobrante ' + money(it.precio * (1 + RECARGO_SOBRANTE));
+        }).join('\n');
+        var b = this;
+        (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function () {
+          b.textContent = '✓ Copiado'; setTimeout(function () { b.textContent = 'Copiar'; }, 1500);
+        }).catch(function () { window.prompt('Copiá la lista:', txt); });
+      });
+
       $('btn-copiar').addEventListener('click', copiarPrecomanda);
 
       $('btn-refrescar').addEventListener('click', cargar);
@@ -778,6 +868,6 @@
       timer = setInterval(function () { if (!document.hidden) cargar(); }, REFRESCO_MS);
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 09/10 10:45</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 09/10 14:19</p>
 </body>
 </html>
