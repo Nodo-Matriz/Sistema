@@ -3345,23 +3345,44 @@
           pr.ya_recortado = Math.max(0, Math.round((pr.pedida - actual) * 10000) / 10000);
           if (pr.faltante_actual > 0.0001) visibles++;
         });
-        // Lo contrario también es un problema: si los pedidos tienen MENOS de
-        // lo que llegó, se recortó de más (p. ej. un recorte aplicado dos
-        // veces) y hay mercadería sin dueño. No se corrige sola: se avisa.
-        var demas = propuestas.filter(function (pr) {
-          return pr.recibida - pr.pendiente_hoy > 0.0001;
+        // Recorte duplicado: solo cuando hubo un faltante real (llegó menos
+        // de lo pedido), se aplicaron recortes por faltante y aun así los
+        // pedidos quedaron con MENOS de lo que llegó. Lo que sobra porque
+        // llegó de más, o por un "Recorte en armado", es un sobrante común:
+        // va a la pestaña Sobrantes y acá no se avisa.
+        function menosEnArmado(idProducto) {
+          var t = 0;
+          itemsEd.forEach(function (it) {
+            if (it.id_producto !== idProducto || it.obs.indexOf('Recorte en armado') !== 0) return;
+            var m = it.obs.match(/·\s*-\s*([\d.,]+)/);
+            if (m) t += parseFloat(m[1].replace(',', '.')) || 0;
+          });
+          return t;
+        }
+        function huboRecortePorFaltante(idProducto) {
+          return itemsEd.some(function (it) {
+            return it.id_producto === idProducto && /^(Faltante|Descontado)$/i.test(it.estado) &&
+              it.obs.indexOf('Recorte en armado') !== 0;
+          });
+        }
+        var demas = [];
+        propuestas.forEach(function (pr) {
+          if (!(pr.pedida - pr.recibida > 0.0001)) return;          // no hubo faltante real
+          if (!huboRecortePorFaltante(pr.id_producto)) return;
+          var exceso = Math.round((pr.recibida - pr.pendiente_hoy - menosEnArmado(pr.id_producto)) * 10000) / 10000;
+          if (exceso > 0.0001) { pr.exceso_recorte = exceso; demas.push(pr); }
         });
         var avisoDemas = '';
         if (demas.length) {
           avisoDemas = '<div class="prop-card" style="border-color:#A6402B;">' +
-            '<h3 style="color:#A6402B;">⚠️ Se recortó de más</h3>' +
-            '<p class="prop-sub">En estos productos los pedidos tienen <strong>menos</strong> de lo que ' +
-            'llegó al galpón: sobra mercadería que no está asignada a nadie. Revisá en la planilla ' +
-            '(hoja Items) si algún recorte se aplicó dos veces.</p><ul style="margin:6px 0 0 18px;">' +
+            '<h3 style="color:#A6402B;">⚠️ Posible recorte duplicado</h3>' +
+            '<p class="prop-sub">En estos productos faltó mercadería, pero los recortes que se aplicaron dejan ' +
+            'a los pedidos con <strong>menos</strong> de lo que llegó. Revisá en la planilla (hoja Items) ' +
+            'si algún recorte por faltante se aplicó dos veces.</p><ul style="margin:6px 0 0 18px;">' +
             demas.map(function (pr) {
               return '<li>' + (pr.detalle || pr.id_producto) + ': llegaron ' + numeroAmable(pr.recibida) +
-                ', los pedidos tienen ' + numeroAmable(pr.pendiente_hoy) + ' → sobran <strong>' +
-                numeroAmable(Math.round((pr.recibida - pr.pendiente_hoy) * 10000) / 10000) + '</strong></li>';
+                ', los pedidos tienen ' + numeroAmable(pr.pendiente_hoy) + ' → recortado de más <strong>' +
+                numeroAmable(pr.exceso_recorte) + '</strong></li>';
             }).join('') + '</ul></div>';
         }
         if (!visibles) {
@@ -3713,6 +3734,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 09/10 11:54</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 11/10 23:01</p>
 </body>
 </html>
