@@ -773,6 +773,14 @@
       transition: border-color 0.15s, color 0.15s;
     }
 
+    .btn-resolver {
+      width: 100%; padding: 10px 12px; margin: 4px 0; border-radius: 10px;
+      border: 1px solid #A8B894; background: #fff; color: var(--c-corteza, #4a4234);
+      font: inherit; font-weight: 600; cursor: pointer; text-align: left;
+    }
+    .btn-resolver:hover { border-color: #5b7a3a; background: rgba(110, 142, 85, 0.08); }
+    .btn-resolver:disabled { opacity: .6; cursor: default; }
+    .btn-resolver small { display: block; font-weight: 400; font-size: .82rem; color: #6f6a5c; margin-top: 2px; }
     .btn-deshacer:hover { border-color: var(--c-arcilla-oscuro); color: var(--c-arcilla-oscuro); }
 
     .ped-head .caret {
@@ -2623,7 +2631,7 @@
             b.textContent = partes.ambiente.length ? '✓ Cajón armado' : '✓ Listo (sin cajón, todo refrigerado)';
             cuerpo.appendChild(b);
           } else if (est !== 'Entregado') {
-            if (!cajonListo && partes.ambiente.length) {
+            if (!cajonListo && partes.ambiente.length && est !== 'No retirado') {
               var bm = document.createElement('button');
               bm.type = 'button';
               bm.className = 'btn-modificar';
@@ -2640,13 +2648,18 @@
               res.className = 'resolver-nr';
               res.style.cssText = 'margin:10px 0;padding:10px 12px;border:1px dashed #A8B894;border-radius:8px;';
               res.innerHTML = '<div class="bloque-tit">⏸ No se retiró · ¿qué hacemos?</div>' +
-                '<p class="muted" style="font-size:.85rem;margin:4px 0 8px;">Si la persona viene igual, registrá la entrega con los botones de abajo. ' +
-                'Si no, elegí una opción (pide confirmar con un segundo toque).</p>' +
+                '<p class="muted" style="font-size:.85rem;margin:4px 0 6px;">Si la persona viene a buscarlo, registrá la entrega con los botones verdes de abajo, como siempre. ' +
+                'Si no, elegí qué hacer (cada opción pide confirmar con un segundo toque):</p>' +
+                '<ul class="muted" style="font-size:.85rem;margin:0 0 8px 18px;padding:0;">' +
+                '<li><strong>Recoordinar retiro</strong>: el pedido sigue guardado para esa persona. Solo queda anotado (con la nota) que se habló de otro día.</li>' +
+                '<li><strong>Al stock · se cobra igual</strong>: la mercadería pasa al stock del Nodo y el pedido se le cobra igual a la persona.</li>' +
+                '<li><strong>Al stock · anular el cobro</strong>: la mercadería pasa al stock del Nodo y el pedido no se cobra.</li>' +
+                '</ul>' +
                 '<input type="text" class="nota-nr" placeholder="Nota (opcional): qué se habló, cuándo viene…" style="width:100%;margin-bottom:8px;">' +
                 '<div class="acciones-2">' +
-                '<button type="button" class="btn-modificar btn-resolver" data-accion="recoordinar" data-txt="📅 Recoordinar retiro">📅 Recoordinar retiro</button>' +
-                '<button type="button" class="btn-modificar btn-resolver" data-accion="stock_cobra" data-txt="📦 Al stock · se cobra igual">📦 Al stock · se cobra igual</button>' +
-                '<button type="button" class="btn-modificar btn-resolver" data-accion="stock_anula" data-txt="📦 Al stock · anular el cobro">📦 Al stock · anular el cobro</button>' +
+                '<button type="button" class="btn-resolver" data-accion="recoordinar" data-txt="📅 Recoordinar retiro">📅 Recoordinar retiro</button>' +
+                '<button type="button" class="btn-resolver" data-accion="stock_cobra" data-txt="📦 Al stock · se cobra igual">📦 Al stock · se cobra igual</button>' +
+                '<button type="button" class="btn-resolver" data-accion="stock_anula" data-txt="📦 Al stock · anular el cobro">📦 Al stock · anular el cobro</button>' +
                 '</div><div class="aviso" style="display:none;margin-top:8px;"></div>';
               cuerpo.appendChild(res);
             }
@@ -2908,6 +2921,9 @@
           if (abierta) abierta.scrollIntoView({ behavior: 'smooth', block: 'start' });
           return;
         }
+        var bRes = e.target.closest('.btn-resolver');
+        if (bRes) { resolverNoRetirado(bRes); return; }
+        if (e.target.closest('.nota-nr')) return;
         var bMod = e.target.closest('.btn-modificar');
         if (bMod) {
           var cM = bMod.closest('.ped-card'), pM = pedidos[parseInt(cM.dataset.idx, 10)];
@@ -2931,9 +2947,6 @@
           if (e.target.closest('.rc-aplicar')) { e.preventDefault(); aplicarRecorte(fr, e.target.closest('.rc-aplicar')); }
           return;
         }
-        var bRes = e.target.closest('.btn-resolver');
-        if (bRes) { resolverNoRetirado(bRes); return; }
-        if (e.target.closest('.nota-nr')) return;
         var deshacer = e.target.closest('.btn-deshacer');
         if (deshacer) {
           var cardD = deshacer.closest('.ped-card');
@@ -3921,6 +3934,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 13/10 20:04</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 13/10 20:21</p>
 </body>
 </html>
