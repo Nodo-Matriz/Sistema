@@ -1045,6 +1045,13 @@
         <div class="aviso rojo" id="aviso-entrega" style="display:none;"></div>
 
         <div id="lista-entrega"></div>
+
+        <div id="cierre-entrega" style="margin-top:22px;padding:14px 16px;border:1px dashed #A8B894;border-radius:10px;">
+          <h3 style="margin:0 0 6px;font-size:1.05rem;">⏸ Cerrar la entrega</h3>
+          <p class="muted" id="cierre-texto" style="margin:0 0 10px;">Leyendo los pedidos…</p>
+          <button type="button" class="btn btn--ghost" id="btn-cerrar-entrega" style="display:none;">Cerrar la entrega</button>
+          <div class="aviso" id="aviso-cierre" style="display:none;margin-top:10px;"></div>
+        </div>
       </div>
     </div>
 
@@ -1071,6 +1078,8 @@
       // Escenario A5 (cambios de estado): al entregar el último pedido, la
       // edición pasa a "Liquidación" y la guía avanza al paso 7.
       var WEBHOOK_A5     = 'https://hook.us2.make.com/qyqw5eh5f6gcbdd558o4t21krx4k72hy';
+      // D5 · No retirados (botón "Cerrar la entrega")
+      var WEBHOOK_D5     = 'https://hook.us2.make.com/ny5kuoplx4algk8ptgssu3224c57e9m6';
       var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
 
       var $ = function (id) { return document.getElementById(id); };
@@ -2344,7 +2353,7 @@
       var overrides = {};    // id_pedido -> {estado} optimista hasta que la planilla confirme
       var LS_TICKS = 'nm_ticks_';  // tildes de control guardados en el navegador
 
-      var ESTADOS_ENTREGA = ['Armado', 'Frío entregado', 'Cajón entregado', 'Entregado'];
+      var ESTADOS_ENTREGA = ['Armado', 'Frío entregado', 'Cajón entregado', 'Entregado', 'No retirado'];
       function rango(e) { return e === 'Entregado' ? 2 : (e === 'Pendiente' ? 0 : 1); }
 
       function estadoDe(p) {
@@ -2393,6 +2402,7 @@
         if (est === 'Armado') return '✓ cajón armado';
         if (est === 'Frío entregado') return '❄ frío entregado · falta el cajón';
         if (est === 'Cajón entregado') return '📦 cajón entregado · faltan refrigerados';
+        if (est === 'No retirado') return '⏸ no retirado · lo resuelve la equipa en el panel';
         return '✓✓ entregado';
       }
       function claseEstado(est) {
@@ -2701,7 +2711,91 @@
         $('barra-armados').style.width = tot ? (arm / tot * 100) + '%' : '0%';
         $('barra-entregados').style.width = tot ? (ent / tot * 100) + '%' : '0%';
         $('barra-frio').style.width = conFrio ? (frioOk / conFrio * 100) + '%' : '0%';
+        renderCierre();
       }
+
+      // ── Cerrar la entrega (D5 · No retirados) ─────────────────────
+      // Lo que no se retiró queda "No retirado": D5 lo marca en la planilla
+      // y le manda la lista a la equipa, que decide en el panel qué hacer
+      // con cada pedido. La edición pasa a Liquidación (A5).
+      var cierreConfirmar = false, cierreEnviado = false;
+      function pendientesDeRetiro() {
+        return pedidos.filter(function (p) {
+          if (p.estado === 'Cancelado') return false;
+          var e = estadoDe(p);
+          return e !== 'Entregado' && e !== 'No retirado';
+        });
+      }
+      function renderCierre() {
+        var txt = $('cierre-texto'), btn = $('btn-cerrar-entrega');
+        if (!txt || !btn) return;
+        if (!pedidos.length) { txt.textContent = 'Todavía no hay pedidos en esta edición.'; btn.style.display = 'none'; return; }
+        var pend = pendientesDeRetiro();
+        if (!pend.length) {
+          txt.textContent = cierreEnviado
+            ? 'Listo: la entrega quedó cerrada.'
+            : 'No queda ningún pedido por entregar.';
+          btn.style.display = 'none';
+          return;
+        }
+        var nros = pend.map(function (p) { return 'N° ' + p.correlativo; }).join(', ');
+        txt.innerHTML = 'Quedan <strong>' + pend.length + '</strong> pedido' + (pend.length === 1 ? '' : 's') +
+          ' sin retirar (' + escH(nros) + '). Cuando termine el horario de retiro, cerrá la entrega: ' +
+          'esos pedidos quedan como <strong>No retirado</strong>, la equipa recibe un mail con la lista y ' +
+          'decide en el panel qué hacer con cada uno. La edición pasa a Liquidación. ' +
+          'Si alguien viene después, igual se le puede registrar la entrega.';
+        btn.style.display = '';
+        btn.disabled = false;
+        btn.textContent = cierreConfirmar
+          ? 'Sí, marcar ' + pend.length + ' como No retirado'
+          : 'Cerrar la entrega';
+      }
+      function avisoCierre(msg, ok) {
+        var caja = $('aviso-cierre');
+        if (!msg) { caja.style.display = 'none'; return; }
+        caja.style.display = 'block';
+        caja.style.background = ok ? 'rgba(110, 142, 85, 0.12)' : 'rgba(166, 64, 43, 0.10)';
+        caja.style.color = ok ? 'var(--c-corteza, #4a4234)' : '#A6402B';
+        caja.textContent = msg;
+      }
+      $('btn-cerrar-entrega').addEventListener('click', function () {
+        avisoCierre('');
+        if (!webhookListo(WEBHOOK_D5, 'D5 · No retirados', 'aviso-cierre')) return;
+        var quien = valorQuien('entregado-por');
+        var clave = $('clave-entrega').value.trim();
+        if (!quien) { avisoCierre('Antes de cerrar, elegí tu nombre arriba de todo.'); return; }
+        if (!clave) { avisoCierre('Falta la clave de equipo (arriba de todo).'); return; }
+        var pend = pendientesDeRetiro();
+        if (!pend.length) { renderCierre(); return; }
+        if (!cierreConfirmar) { cierreConfirmar = true; renderCierre(); return; }
+        var btn = this;
+        btn.disabled = true;
+        btn.textContent = 'Cerrando…';
+        fetch(WEBHOOK_D5, {
+          method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            tipo: 'no_retirados',
+            id_edicion: idEdicion,
+            cerrado_por: quien,
+            clave: clave
+          })
+        }).then(seguir).catch(seguir);
+        function seguir() {
+          pend.forEach(function (p) { overrides[p.id_pedido] = { estado: 'No retirado', ts: Date.now() }; });
+          if (!liqAvisada && WEBHOOK_A5.indexOf('https://hook.') === 0) {
+            liqAvisada = true;
+            fetch(WEBHOOK_A5, {
+              method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+              body: JSON.stringify({ tipo: 'iniciar_liquidacion', clave: clave })
+            }).catch(function () {});
+          }
+          cierreConfirmar = false;
+          cierreEnviado = true;
+          avisoCierre('✓ Entrega cerrada: ' + pend.length + ' pedido' + (pend.length === 1 ? '' : 's') +
+            ' quedaron como No retirado. La equipa recibe la lista por mail. En un minuto la planilla lo confirma.', true);
+          renderEntrega();
+        }
+      });
 
       $('buscar-entrega').addEventListener('input', renderEntrega);
       $('filtros-entrega').addEventListener('click', function (e) {
@@ -3734,6 +3828,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 11/10 23:01</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 13/10 19:48</p>
 </body>
 </html>
