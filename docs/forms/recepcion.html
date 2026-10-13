@@ -1080,6 +1080,8 @@
       var WEBHOOK_A5     = 'https://hook.us2.make.com/qyqw5eh5f6gcbdd558o4t21krx4k72hy';
       // D5 · No retirados (botón "Cerrar la entrega")
       var WEBHOOK_D5     = 'https://hook.us2.make.com/ny5kuoplx4algk8ptgssu3224c57e9m6';
+      // D5b · Resolver un no retirado (botones en la tarjeta del pedido)
+      var WEBHOOK_D5B    = 'https://hook.us2.make.com/panfqk3ruawq5q9kdt3fdkwp7y12fyr5';
       var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
 
       var $ = function (id) { return document.getElementById(id); };
@@ -2353,7 +2355,8 @@
       var overrides = {};    // id_pedido -> {estado} optimista hasta que la planilla confirme
       var LS_TICKS = 'nm_ticks_';  // tildes de control guardados en el navegador
 
-      var ESTADOS_ENTREGA = ['Armado', 'Frío entregado', 'Cajón entregado', 'Entregado', 'No retirado'];
+      var ESTADOS_ENTREGA = ['Armado', 'Frío entregado', 'Cajón entregado', 'Entregado', 'No retirado', 'Pasado a stock', 'Cancelado'];
+      function estadoCerrado(e) { return e === 'Pasado a stock' || e === 'Cancelado'; }
       function rango(e) { return e === 'Entregado' ? 2 : (e === 'Pendiente' ? 0 : 1); }
 
       function estadoDe(p) {
@@ -2402,7 +2405,9 @@
         if (est === 'Armado') return '✓ cajón armado';
         if (est === 'Frío entregado') return '❄ frío entregado · falta el cajón';
         if (est === 'Cajón entregado') return '📦 cajón entregado · faltan refrigerados';
-        if (est === 'No retirado') return '⏸ no retirado · lo resuelve la equipa en el panel';
+        if (est === 'No retirado') return '⏸ no retirado · falta decidir qué se hace';
+        if (est === 'Pasado a stock') return '📦 no retirado · mercadería al stock (se cobra)';
+        if (est === 'Cancelado') return '📦 no retirado · al stock, cobro anulado';
         return '✓✓ entregado';
       }
       function claseEstado(est) {
@@ -2605,7 +2610,13 @@
           }
 
           // ── Botones según estado ──
-          if (est === 'Pendiente') {
+          if (estadoCerrado(est)) {
+            cuerpo.insertAdjacentHTML('beforeend', '<p class="muted" style="font-size:.9rem;margin:8px 0;">' +
+              (est === 'Cancelado'
+                ? 'No se retiró: la mercadería pasó al stock del Nodo y el cobro quedó anulado.'
+                : 'No se retiró: la mercadería pasó al stock del Nodo. El pedido se cobra igual.') +
+              ' Ya no se puede entregar desde acá.</p>');
+          } else if (est === 'Pendiente') {
             var b = document.createElement('button');
             b.type = 'button';
             b.className = 'btn-accion armar';
@@ -2623,6 +2634,21 @@
                   'tocá <strong>✂ Recorte</strong> en el producto que no va o va de menos. El cajón sigue figurando como armado.</p>');
               }
               cuerpo.appendChild(bm);
+            }
+            if (est === 'No retirado') {
+              var res = document.createElement('div');
+              res.className = 'resolver-nr';
+              res.style.cssText = 'margin:10px 0;padding:10px 12px;border:1px dashed #A8B894;border-radius:8px;';
+              res.innerHTML = '<div class="bloque-tit">⏸ No se retiró · ¿qué hacemos?</div>' +
+                '<p class="muted" style="font-size:.85rem;margin:4px 0 8px;">Si la persona viene igual, registrá la entrega con los botones de abajo. ' +
+                'Si no, elegí una opción (pide confirmar con un segundo toque).</p>' +
+                '<input type="text" class="nota-nr" placeholder="Nota (opcional): qué se habló, cuándo viene…" style="width:100%;margin-bottom:8px;">' +
+                '<div class="acciones-2">' +
+                '<button type="button" class="btn-modificar btn-resolver" data-accion="recoordinar" data-txt="📅 Recoordinar retiro">📅 Recoordinar retiro</button>' +
+                '<button type="button" class="btn-modificar btn-resolver" data-accion="stock_cobra" data-txt="📦 Al stock · se cobra igual">📦 Al stock · se cobra igual</button>' +
+                '<button type="button" class="btn-modificar btn-resolver" data-accion="stock_anula" data-txt="📦 Al stock · anular el cobro">📦 Al stock · anular el cobro</button>' +
+                '</div><div class="aviso" style="display:none;margin-top:8px;"></div>';
+              cuerpo.appendChild(res);
             }
             var acc = document.createElement('div');
             acc.className = 'acciones-2';
@@ -2714,6 +2740,71 @@
         renderCierre();
       }
 
+      // ── Resolver un pedido No retirado (D5b) ─────────────────────
+      // recoordinar: queda No retirado con la nota en observaciones.
+      // stock_cobra / stock_anula: cada producto del pedido entra a
+      // Sobrantes (origen No retirado) y el pedido pasa a "Pasado a stock"
+      // o "Cancelado". Al productor se le paga igual lo que entregó.
+      var TXT_RESOLVER = {
+        recoordinar: 'Queda como No retirado, con la nota en la planilla.',
+        stock_cobra: 'La mercadería pasa al stock del Nodo y el pedido se cobra igual.',
+        stock_anula: 'La mercadería pasa al stock del Nodo y se anula el cobro del pedido.'
+      };
+      function resolverNoRetirado(btn) {
+        var card = btn.closest('.ped-card'), p = pedidos[parseInt(card.dataset.idx, 10)];
+        var caja = btn.closest('.resolver-nr').querySelector('.aviso');
+        function aviso(msg, ok) {
+          caja.style.display = msg ? 'block' : 'none';
+          caja.style.background = ok ? 'rgba(110, 142, 85, 0.12)' : 'rgba(166, 64, 43, 0.10)';
+          caja.style.color = ok ? 'var(--c-corteza, #4a4234)' : '#A6402B';
+          caja.textContent = msg || '';
+        }
+        aviso('');
+        if (!webhookListo(WEBHOOK_D5B, 'D5b · Resolver no retirado', 'aviso-entrega')) return;
+        var quien = valorQuien('entregado-por');
+        var clave = $('clave-entrega').value.trim();
+        if (!quien) { aviso('Antes, elegí tu nombre arriba de todo.'); return; }
+        if (!clave) { aviso('Falta la clave de equipo (arriba de todo).'); return; }
+        var accion = btn.dataset.accion;
+        if (!btn.dataset.conf) {
+          Array.prototype.forEach.call(card.querySelectorAll('.btn-resolver'), function (b) {
+            delete b.dataset.conf; b.textContent = b.dataset.txt;
+          });
+          btn.dataset.conf = '1';
+          btn.textContent = '¿Confirmás? Tocá de nuevo';
+          aviso(TXT_RESOLVER[accion], true);
+          setTimeout(function () {
+            if (!btn.isConnected || !btn.dataset.conf) return;
+            delete btn.dataset.conf; btn.textContent = btn.dataset.txt; aviso('');
+          }, 6000);
+          return;
+        }
+        delete btn.dataset.conf;
+        var nota = (card.querySelector('.nota-nr') || {}).value || '';
+        Array.prototype.forEach.call(card.querySelectorAll('.btn-resolver'), function (b) { b.disabled = true; });
+        btn.textContent = 'Guardando…';
+        fetch(WEBHOOK_D5B, {
+          method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            tipo: 'resolver_no_retirado',
+            accion: accion,
+            id_pedido: p.id_pedido,
+            nota: nota.trim(),
+            resuelto_por: quien,
+            clave: clave
+          })
+        }).then(fin).catch(fin);
+        function fin() {
+          if (accion !== 'recoordinar') {
+            overrides[p.id_pedido] = { estado: accion === 'stock_anula' ? 'Cancelado' : 'Pasado a stock', ts: Date.now() };
+            renderEntrega();
+          } else {
+            Array.prototype.forEach.call(card.querySelectorAll('.btn-resolver'), function (b) { b.disabled = false; b.textContent = b.dataset.txt; });
+            aviso('✓ Guardado: sigue como No retirado, con la nota en la planilla.', true);
+          }
+        }
+      }
+
       // ── Cerrar la entrega (D5 · No retirados) ─────────────────────
       // Lo que no se retiró queda "No retirado": D5 lo marca en la planilla
       // y le manda la lista a la equipa, que decide en el panel qué hacer
@@ -2721,9 +2812,8 @@
       var cierreConfirmar = false, cierreEnviado = false;
       function pendientesDeRetiro() {
         return pedidos.filter(function (p) {
-          if (p.estado === 'Cancelado') return false;
           var e = estadoDe(p);
-          return e !== 'Entregado' && e !== 'No retirado';
+          return e !== 'Entregado' && e !== 'No retirado' && !estadoCerrado(e);
         });
       }
       function renderCierre() {
@@ -2841,6 +2931,9 @@
           if (e.target.closest('.rc-aplicar')) { e.preventDefault(); aplicarRecorte(fr, e.target.closest('.rc-aplicar')); }
           return;
         }
+        var bRes = e.target.closest('.btn-resolver');
+        if (bRes) { resolverNoRetirado(bRes); return; }
+        if (e.target.closest('.nota-nr')) return;
         var deshacer = e.target.closest('.btn-deshacer');
         if (deshacer) {
           var cardD = deshacer.closest('.ped-card');
@@ -3828,6 +3921,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 13/10 19:48</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 13/10 20:04</p>
 </body>
 </html>
