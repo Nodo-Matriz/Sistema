@@ -541,6 +541,8 @@
       // Escenario E3 (liquidación a productores).
       var WEBHOOK_E3 = 'https://hook.us2.make.com/dt98kkee6wq3wxr80y8jkf7gzyn3weix';
       var WEBHOOK_D3B = 'https://hook.us2.make.com/4a2eptxftvx5b3wn7vptjljkjxx3og14';
+      // Escenario D6 (registra el stock del Nodo usado en la edición; corre junto con E3).
+      var WEBHOOK_D6 = 'https://hook.us2.make.com/glsbz0yujth5eq8gga1kq35637exark5';
       // Escenario G1 (copia de seguridad de la planilla en el Drive del Nodo).
       // Pegar acá la dirección del webhook cuando esté armado en Make.
       var WEBHOOK_G1 = 'https://hook.us2.make.com/su6pkeiv9emvqbrxptwln4mzgqoqh6fa';
@@ -1277,6 +1279,13 @@
           headers: { 'Content-Type': 'text/plain' },
           body: JSON.stringify({ tipo: 'liquidacion', id_edicion: edicionVigente, clave: clave })
         }).catch(function () {});
+        // Stock del Nodo usado en esta edición -> Movimientos_Stock (una sola vez por edición)
+        if (WEBHOOK_D6.indexOf('https://hook.') === 0) {
+          fetch(WEBHOOK_D6, {
+            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({ tipo: 'uso_stock', id_edicion: edicionVigente, clave: clave })
+          }).catch(function () {});
+        }
 
         aviso('⏳ <strong>Generando la liquidación de ' + edicionVigente + '…</strong> ' +
           'Esta pantalla avisa sola cuando quede registrada en la planilla.', false);
@@ -1481,6 +1490,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 09/10 13:13</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 14/10 11:15</p>
 </body>
 </html>
