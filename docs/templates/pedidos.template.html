@@ -47,6 +47,12 @@
     }
     .product__meta { display: block; margin-top: 3px; }
 
+    /* Stock limitado (14/10) */
+    .product__stock { display:inline-block; margin-top:4px; padding:2px 8px; border-radius:10px;
+      font-size:0.78rem; font-weight:600; background:rgba(110,142,85,0.14); color:#4a5d33; }
+    .product__stock--agotado { background:rgba(166,64,43,0.12); color:#A6402B; }
+    .product--agotado .product__name { opacity:0.6; }
+    .product__stock-aviso { margin-top:6px; font-size:0.85rem; color:#A6402B; }
     /* "Otra cantidad": presentación + cantidad, solo si se pide */
     .product__otro {
       margin-top: 8px; padding: 10px 12px;
@@ -1105,6 +1111,8 @@
         var f = pres ? String(pres.value || '') : '';
         var v = valorPresentacion(f, p);
         var tope = maxCantidadPara(v);
+        var topeSt = topeStockPara(id, v);
+        if (topeSt !== null) tope = Math.min(tope, topeSt);
         var n = parseInt(cant && cant.value, 10) || 0;
         if (n > tope) { n = tope; if (cant) cant.value = String(n); }
         if (n < 0) n = 0;
@@ -1186,6 +1194,151 @@
         inp.value = String(n);
         inp.dispatchEvent(new Event('input', { bubbles: true }));
       });
+
+      // ----------------------------------------------------------------
+      // 4ter. Stock limitado (14/10)
+      // ----------------------------------------------------------------
+      // Si un productor cargó "stock limitado" (Productos!K, se borra al abrir
+      // cada edición), el tope del producto es ese stock + lo que el Nodo
+      // tiene guardado para la próxima edición (Sobrantes con destino
+      // "Próxima edición", menos lo ya usado en otras ediciones). A eso se le
+      // resta lo que ya se pidió en esta edición. Se relee cada 30 segundos.
+      // Sin stock limitado = sin tope (como siempre).
+      var SS_STOCK = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
+      var ED_STOCK = '{{id_edicion}}';
+      var stockInfo = {};   // id_producto -> { limite, pedido, restante }
+      function gvizQuery(sheet, tq) {
+        var url = 'https://docs.google.com/spreadsheets/d/' + SS_STOCK + '/gviz/tq?tqx=out:json&sheet=' +
+          encodeURIComponent(sheet) + '&tq=' + encodeURIComponent(tq) + '&_=' + Date.now();
+        return fetch(url, { cache: 'no-store' }).then(function (r) { return r.text(); }).then(function (t) {
+          var m = t.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+          if (!m) return [];
+          var res = JSON.parse(m[1]);
+          if (!res.table || !res.table.rows) return [];
+          return res.table.rows.map(function (r) {
+            return (r.c || []).map(function (c) { return c ? c.v : null; });
+          });
+        }).catch(function () { return null; });
+      }
+      function numSt(v) {
+        if (v === null || v === undefined || v === '') return null;
+        var n = typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.'));
+        return isFinite(n) ? n : null;
+      }
+      function topeStockPara(id, v) {
+        var si = stockInfo[id];
+        if (!si) return null;
+        return Math.max(0, Math.floor(si.restante / (v || 1) + 0.000001));
+      }
+      function valorDeEstado(id, s) {
+        var p = productoPorId[id];
+        if (!p || !s || !s.cantidad) return 0;
+        var mult = 1;
+        if (s.fraccion) {
+          var esp = parseFraccionEspecial(s.fraccion, p.unidad);
+          mult = esp ? esp.valor : parseFraction(s.fraccion);
+        }
+        return s.cantidad * mult;
+      }
+      function textoCantidad(v, p) {
+        v = Math.floor(v * 1000 + 0.0001) / 1000;
+        return conUnidad(etiquetaTotal(v), v, p.unidad);
+      }
+      function cargarStock() {
+        var ed = ED_STOCK;
+        if (ed.indexOf('{{') !== -1) return Promise.resolve();   // demo sin procesar
+        return Promise.all([
+          gvizQuery('Productos', "select A, K, S where K is not null"),
+          gvizQuery('Items', "select C, sum(K) where B starts with 'PED-" + ed + "-' and I <> 'Faltante' and K is not null group by C"),
+          gvizQuery('Sobrantes', "select C, sum(J) where F = 'Próxima edición' and B <> '" + ed + "' and J is not null group by C"),
+          gvizQuery('Movimientos_Stock', "select D, sum(F) where E = 'Uso en edición' and J <> '" + ed + "' group by D")
+        ]).then(function (r) {
+          if (!r[0] || !r[1]) return;          // sin conexión: se deja lo último que se sabía
+          var pedido = {}, sob = {}, uso = {};
+          r[1].forEach(function (f) { if (f[0]) pedido[String(f[0]).trim()] = numSt(f[1]) || 0; });
+          (r[2] || []).forEach(function (f) { if (f[0]) sob[String(f[0]).trim()] = numSt(f[1]) || 0; });
+          (r[3] || []).forEach(function (f) { if (f[0]) uso[String(f[0]).trim()] = numSt(f[1]) || 0; });
+          var nuevo = {};
+          r[0].forEach(function (f) {
+            var id = f[0] ? String(f[0]).trim() : '';
+            var k = numSt(f[1]);
+            if (!id || k === null || !productoPorId[id]) return;
+            var deNodo = String(f[2] || '').trim() === 'Productor' ? 0 : Math.max(0, (sob[id] || 0) - (uso[id] || 0));
+            var limite = k + deNodo;
+            var ped = pedido[id] || 0;
+            nuevo[id] = { limite: limite, pedido: ped, restante: Math.max(0, Math.round((limite - ped) * 1000) / 1000) };
+          });
+          stockInfo = nuevo;
+          aplicarStock();
+        });
+      }
+      function aplicarStock() {
+        Object.keys(productoPorId).forEach(function (id) {
+          var p = productoPorId[id];
+          var card = document.querySelector('.product[data-product-id="' + id + '"]');
+          if (!card) return;
+          var si = stockInfo[id];
+          var badge = card.querySelector('.product__stock');
+          var sel = card.querySelector('select[data-field="total"]');
+          if (!si) {
+            if (badge) badge.remove();
+            if (sel) {
+              sel.disabled = false;
+              Array.prototype.forEach.call(sel.options, function (o) { o.disabled = false; });
+            }
+            card.classList.remove('product--agotado');
+            return;
+          }
+          if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'product__stock';
+            var head = card.querySelector('.product__head');
+            if (head) head.appendChild(badge);
+          }
+          var agotado = si.restante <= 0.0001;
+          badge.textContent = agotado ? 'Agotado' : 'Quedan ' + textoCantidad(si.restante, p);
+          badge.classList.toggle('product__stock--agotado', agotado);
+          card.classList.toggle('product--agotado', agotado);
+          // lo que ya eligió esta persona y ahora no entra
+          var s = stateProductos[id];
+          var elegido = valorDeEstado(id, s);
+          var seAjusto = elegido > si.restante + 0.0001;
+          if (sel) {
+            Array.prototype.forEach.call(sel.options, function (o) {
+              if (!o.value || o.value === 'otro') { o.disabled = (o.value === 'otro' && agotado); return; }
+              var partes = o.value.split('@');
+              var v = valorDeEstado(id, { cantidad: parseInt(partes[0], 10) || 0, fraccion: partes[1] || null });
+              o.disabled = v > si.restante + 0.0001;
+            });
+            if (seAjusto) {
+              sel.value = '';
+              mostrarOtro(id, false);
+              stateProductos[id] = { cantidad: 0, fraccion: null };
+              var aviso = card.querySelector('.product__stock-aviso');
+              if (!aviso) {
+                aviso = document.createElement('div');
+                aviso.className = 'product__stock-aviso';
+                card.appendChild(aviso);
+              }
+              aviso.textContent = agotado
+                ? 'Este producto se agotó mientras armabas tu pedido: lo sacamos de tu lista.'
+                : 'Mientras armabas tu pedido se pidió parte de este producto: ahora quedan ' +
+                  textoCantidad(si.restante, p) + '. Volvé a elegir la cantidad.';
+              try { guardarBorrador(); } catch (e) {}
+            }
+            sel.disabled = agotado && !elegido;
+          }
+          var cantOtro = card.querySelector('input[data-field="otro-cant"]');
+          if (cantOtro && sel && sel.value === 'otro') {
+            var s2 = estadoDesdeOtro(id);
+            stateProductos[id] = { cantidad: s2.cantidad, fraccion: s2.fraccion };
+            pintarTotalOtro(id, s2);
+          }
+        });
+        try { if (typeof actualizarTotales === 'function') actualizarTotales(calcularItems().subtotal); } catch (e) {}
+      }
+      cargarStock();
+      setInterval(function () { if (!document.hidden) cargarStock(); }, 30000);
 
       // ----------------------------------------------------------------
       // 4bis. El pedido no se pierde si se recarga la página
@@ -1632,6 +1785,22 @@
       NM.bindFormSubmit(pedidoForm, function buildPayload() {
         var calc = calcularItems();
 
+        // Validación: stock limitado (con lo último que se leyó de la planilla)
+        var excedidos = [];
+        calc.items.forEach(function (it) {
+          var si = stockInfo[it.id_producto];
+          if (!si) return;
+          var v = valorDeEstado(it.id_producto, { cantidad: it.cantidad, fraccion: it.fraccion });
+          if (v > si.restante + 0.0001) excedidos.push(it.nombre + ' (quedan ' + textoCantidad(si.restante, productoPorId[it.id_producto]) + ')');
+        });
+        if (excedidos.length) {
+          aplicarStock();
+          NM.showErrorMessage(pedidoForm,
+            'Algunos productos tienen stock limitado y ya no alcanza para lo que elegiste: ' +
+            excedidos.join(', ') + '. Volvé a la categoría y ajustá la cantidad.');
+          return null;
+        }
+
         // Validación: al menos un producto
         if (calc.items.length === 0) {
           NM.showErrorMessage(pedidoForm,
@@ -1776,6 +1945,6 @@
 
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 13/10 13:59</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 14/10 11:15</p>
 </body>
 </html>
