@@ -1465,7 +1465,7 @@
         // Edición vigente (Comandas_Calc!K1) + tabla de comandas + nombres
         Promise.all([
           gviz('sheet=Comandas_Calc&range=K1&headers=0'),
-          gviz('sheet=Comandas_Calc&range=A1:H5000&headers=1'),
+          gviz('sheet=Comandas_Calc&range=A1:I5000&headers=1'),
           gviz('sheet=Productores&range=A1:B2000&headers=1'),
           gviz('sheet=Plan_Fraccionamiento&range=A1:L20000&headers=1'),
           gviz('sheet=Pedidos&range=A1:U20000&headers=1'),
@@ -1515,7 +1515,9 @@
               cant_paquetes: parseFloat(celda(r, 4)) || 0,
               producto: String(celda(r, 5)).trim(),
               unidad: String(celda(r, 6)).trim(),
-              linea: String(celda(r, 7)).trim()
+              linea: String(celda(r, 7)).trim(),
+              // lo que cubre el stock del Nodo (Comandas_Calc!I): no lo trae el productor
+              de_stock: parseFloat(String(celda(r, 8) || '0').replace(',', '.')) || 0
             });
           });
 
@@ -1706,7 +1708,8 @@
         var propias = lineas.filter(function (l) { return l.id_productor === idProd; });
 
         propias.forEach(function (l, i) {
-          var esperado = l.fraccion ? l.cant_paquetes : l.cant_efectiva;
+          var deStock = l.fraccion ? 0 : (l.de_stock || 0);
+          var esperado = l.fraccion ? l.cant_paquetes : Math.max(0, Math.round((l.cant_efectiva - deStock) * 1000) / 1000);
           var unidadMuestra = etiquetaUnidad(l, esperado);
 
           var div = document.createElement('div');
@@ -1736,6 +1739,14 @@
 
           div.querySelector('.linea-nombre').textContent =
             (l.producto || l.id_producto) + ' — esperado: ' + numeroAmable(esperado) + ' ' + unidadMuestra;
+          if (deStock > 0) {
+            var nst = document.createElement('div');
+            nst.className = 'nota-stock';
+            nst.style.cssText = 'font-size:.82rem;color:#4a5d33;margin-top:2px;';
+            nst.textContent = '📦 Además se usan ' + numeroAmable(deStock) + ' ' + etiquetaUnidad(l, deStock) +
+              ' del stock del Nodo (sacalos del depósito para el armado). El productor trae solo lo esperado.';
+            div.querySelector('.linea-nombre').insertAdjacentElement('afterend', nst);
+          }
           var inp = div.querySelector('.cant');
           inp.value = numeroAmable(esperado);
           inp.dataset.max = String(esperado);   // lo solicitado (ya no es tope: lo de más es sobrante)
@@ -1974,7 +1985,9 @@
           var tildado = div.querySelector('.chk').checked;
           var calidad = tildado ? div.querySelector('.calidad').value : 'No llegó';
           var factor = l.fraccion ? factorFraccion(l.fraccion) : 1;
-          var pedidaEf = l.cant_efectiva;
+          // lo que cubre el stock del Nodo no se le pidió al productor
+          var deStockEf = l.fraccion ? 0 : (l.de_stock || 0);
+          var pedidaEf = Math.max(0, Math.round((l.cant_efectiva - deStockEf) * 1000) / 1000);
           // lo rechazado no se recibe: cuenta como faltante completo
           var recibidaMostrada = (tildado && calidad !== 'Rechazado')
             ? (aNumero(div.querySelector('.cant').value) || 0) : 0;
@@ -1984,6 +1997,7 @@
           if (tildado && recibidaEf <= 0 && calidad !== 'Rechazado') calidad = 'No llegó';
 
           var obs = tildado ? div.querySelector('.obs').value.trim() : 'No recibido';
+          if (deStockEf > 0) obs = (obs ? obs + ' · ' : '') + 'Stock del Nodo: ' + String(deStockEf).replace('.', ',');
           if (calidad === 'Rechazado') {
             obs = (obs ? obs + ' · ' : '') + 'Rechazado: no se recibe';
           }
@@ -2661,6 +2675,9 @@
                 '<button type="button" class="btn-resolver" data-accion="stock_cobra" data-txt="📦 Al stock · se cobra igual">📦 Al stock · se cobra igual</button>' +
                 '<button type="button" class="btn-resolver" data-accion="stock_anula" data-txt="📦 Al stock · anular el cobro">📦 Al stock · anular el cobro</button>' +
                 '</div><div class="aviso" style="display:none;margin-top:8px;"></div>';
+              var inNota = res.querySelector('.nota-nr');
+              inNota.value = (notasNR && notasNR[p.id_pedido]) || '';
+              inNota.dataset.ped = p.id_pedido;
               cuerpo.appendChild(res);
             }
             var acc = document.createElement('div');
@@ -2758,6 +2775,10 @@
       // stock_cobra / stock_anula: cada producto del pedido entra a
       // Sobrantes (origen No retirado) y el pedido pasa a "Pasado a stock"
       // o "Cancelado". Al productor se le paga igual lo que entregó.
+      var notasNR = {};   // lo escrito en la nota sobrevive al refresco automático
+      document.getElementById('lista-entrega').addEventListener('input', function (e) {
+        if (e.target.classList.contains('nota-nr')) notasNR[e.target.dataset.ped] = e.target.value;
+      });
       var TXT_RESOLVER = {
         recoordinar: 'Queda como No retirado, con la nota en la planilla.',
         stock_cobra: 'La mercadería pasa al stock del Nodo y el pedido se cobra igual.',
@@ -3934,6 +3955,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 13/10 20:21</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 14/10 11:15</p>
 </body>
 </html>

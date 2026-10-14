@@ -86,6 +86,10 @@
       max-width: 110px;
     }
 
+    .lbl-stock { display:block; font-size:0.78rem; color:#6f6a5c; margin-top:6px; }
+    .lbl-stock input { display:block; margin-top:2px; }
+    .det-desc { margin-top:6px; font-size:0.85rem; }
+    .det-desc summary { cursor:pointer; color:#5b7a3a; }
     .celda-editable.stock {
       max-width: 90px;
       text-align: center;
@@ -316,6 +320,10 @@
         <p class="lead">
           Indicá qué productos vas a tener disponibles para esta nueva edición,
           ajustá los precios si hace falta y marcá cuáles están en oferta.
+          Si de algún producto tenés una <strong>cantidad limitada</strong>, escribila en
+          <strong>Stock limitado</strong>: el formulario de pedidos no deja pedir más que eso.
+          Si no hay límite, dejalo vacío. También podés completar o mejorar la
+          <strong>descripción</strong> que ven los consumidores.
           Cuando termines, confirmá con <strong>Enviar actualización</strong>.
         </p>
         <div id="info-productor" class="note note--info">
@@ -353,7 +361,7 @@
             <tr>
               <th>Disponible</th>
               <th>Producto</th>
-              <th>Precio</th>
+              <th>Precio · stock</th>
               <th>Oferta</th>
             </tr>
           </thead>
@@ -411,7 +419,7 @@
     // esta línea a true y subir el archivo: aparece el campo "stock"
     // en cada producto y viaja en el envío (A2 ya lo graba en la
     // planilla y la curaduría ya lo puede corregir). Nada más que tocar.
-    var STOCK_ACTIVO = false;
+    var STOCK_ACTIVO = true;
 
     // Columnas de la hoja Productos_API_Stock (en orden, 0-based):
     // 0:id_producto, 1:id_productor, 2:nombre, 3:unidad_venta,
@@ -429,7 +437,9 @@
       es_intercambio_directo:   8,
       ultima_actualizacion:     9,
       notas:                   10,
+      descripcion:             11,   // Productos!P (agregada a la QUERY el 14/10)
     };
+    var HAY_COL_DESCRIPCION = false;   // se confirma al leer la hoja
 
     // ── Init ───────────────────────────────────────────────────────
     var idProductor = NM.getQueryParam('id_productor');
@@ -539,6 +549,9 @@
 
     function procesarRespuestaGviz(data) {
       var rows = data.table.rows;
+      var colsDef = data.table.cols || [];
+      HAY_COL_DESCRIPCION = colsDef.length > COL.descripcion &&
+        /descrip/i.test(String((colsDef[COL.descripcion] || {}).label || ''));
 
       var misProd = rows
         .map(function (row) {
@@ -585,12 +598,17 @@
         }
 
         // Guardar el estado inicial para poder mostrar el log de cambios
+        var stockAct = cols[COL.stock_estimado];
+        stockAct = (stockAct === null || stockAct === undefined || stockAct === '') ? '' : String(stockAct);
+        var descAct = HAY_COL_DESCRIPCION ? String(cols[COL.descripcion] || '') : '';
         baseline[idProd] = {
           nombre: nombre,
           unidad: unidad,
           precio: parseFloat(precio) || null,
           oferta: esOferta,
           disponible: disponible,
+          stock: stockAct === '' ? null : parseFloat(String(stockAct).replace(',', '.')),
+          descripcion: descAct.trim(),
         };
 
         var tr = document.createElement('tr');
@@ -612,6 +630,13 @@
             '<span class="sub-producto">por ' + escH(unidad) +
               (ultimaAct ? ' · act. ' + escH(String(ultimaAct).slice(0, 10)) : '') +
             '</span>' +
+            (HAY_COL_DESCRIPCION ?
+              '<details class="det-desc"' + (descAct ? '' : '') + '>' +
+                '<summary>✎ Descripción' + (descAct ? '' : ' (vacía)') + '</summary>' +
+                '<textarea class="celda-editable" data-campo="descripcion" rows="2" ' +
+                  'style="width:100%; box-sizing:border-box; min-width:160px; margin-top:4px; resize:vertical;" ' +
+                  'placeholder="Cómo lo hacés, presentación, ingredientes…">' + escH(descAct) + '</textarea>' +
+              '</details>' : '') +
           '</td>' +
 
           '<td class="td-precio">' +
@@ -619,10 +644,11 @@
               'min="0" step="50" value="' + (precio || '') + '" data-campo="precio" ' +
               'placeholder="$ precio" title="Editá el precio">' +
             (STOCK_ACTIVO ?
-              '<input class="celda-editable" type="number" inputmode="numeric" min="0" step="any" ' +
-                'value="' + (cols[COL.stock_estimado] || '') + '" data-campo="stock" ' +
-                'placeholder="stock disp." title="Cuánto tenés para esta edición" ' +
-                'style="margin-top:4px;">' : '') +
+              '<label class="lbl-stock">Stock limitado (' + escH(unidad) + ')' +
+              '<input class="celda-editable" type="number" inputmode="decimal" min="0" step="any" ' +
+                'value="' + escH(stockAct) + '" data-campo="stock" ' +
+                'placeholder="sin límite" title="Solo si tenés una cantidad limitada para esta edición. Vacío = sin límite.">' +
+              '</label>' : '') +
           '</td>' +
 
           '<td class="td-oferta">' +
@@ -693,6 +719,19 @@
         }
         if (ofertaAct !== base.oferta) {
           difs.push(ofertaAct ? '<strong>entra en Oferta</strong> 🏷️' : 'deja de estar en Oferta');
+        }
+        var elSt = tr.querySelector('[data-campo="stock"]');
+        if (elSt) {
+          var stTxt = String(elSt.value || '').trim();
+          var stAct = stTxt === '' ? null : parseFloat(stTxt.replace(',', '.'));
+          if (stAct !== base.stock && !(isNaN(stAct) && base.stock === null)) {
+            difs.push(stAct === null ? 'stock <strong>sin límite</strong>'
+              : 'stock limitado a <strong>' + escH(String(stAct).replace('.', ',')) + ' ' + escH(base.unidad) + '</strong>');
+          }
+        }
+        var elDe = tr.querySelector('[data-campo="descripcion"]');
+        if (elDe && elDe.value.trim() !== base.descripcion) {
+          difs.push('descripción nueva ✎');
         }
 
         if (difs.length) {
@@ -765,8 +804,10 @@
         '<td class="td-precio"><input class="celda-editable precio" type="number" inputmode="numeric" ' +
           'min="0" step="50" placeholder="$ precio" data-campo="precio">' +
           (STOCK_ACTIVO ?
-            '<input class="celda-editable" type="number" inputmode="numeric" min="0" step="any" ' +
-              'data-campo="stock" placeholder="stock disp." style="margin-top:4px;">' : '') +
+            '<label class="lbl-stock">Stock limitado' +
+            '<input class="celda-editable" type="number" inputmode="decimal" min="0" step="any" ' +
+              'data-campo="stock" placeholder="sin límite" title="Vacío = sin límite">' +
+            '</label>' : '') +
         '</td>' +
         '<td class="td-oferta">' +
           '<label class="toggle-oferta">' +
@@ -819,7 +860,9 @@
         if (!tr) return;
 
         var elStock = tr.querySelector('[data-campo="stock"]');
+        var elDescE = tr.querySelector('[data-campo="descripcion"]');
         productos.push({
+          descripcion:    (HAY_COL_DESCRIPCION && elDescE) ? (elDescE.value.trim() || null) : null,
           id_producto:    id,
           nombre:         cols[COL.nombre],
           unidad:         cols[COL.unidad_venta],
@@ -864,6 +907,17 @@
       if (sinPrecio.length) {
         alert('Revisá el precio de: ' + sinPrecio.join(', ') +
           '.\nEscribilo en pesos, sin puntos ni comas (ej.: 1500).');
+        return null;
+      }
+
+      var stockMal = productos.filter(function (p) {
+        if (p.stock_estimado === null) return false;
+        var n = parseFloat(String(p.stock_estimado).replace(',', '.'));
+        return !isFinite(n) || n < 0;
+      }).map(function (p) { return p.nombre; });
+      if (stockMal.length) {
+        alert('Revisá el stock limitado de: ' + stockMal.join(', ') +
+          '.\nEscribí solo un número (ej.: 5 o 2,5), o dejalo vacío si no hay límite.');
         return null;
       }
 
