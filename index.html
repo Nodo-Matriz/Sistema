@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nodo Matriz Agroecológico · Unquillo, Sierras Chicas</title>
+  <meta name="description" content="Nodo de consumo agroecológico en Unquillo, Sierras Chicas. Cada quincena juntamos los pedidos de las familias y los encargos a productoras y productores de la región.">
+  <meta property="og:title" content="Nodo Matriz Agroecológico">
+  <meta property="og:description" content="Alimentos agroecológicos del campo al barrio, con la menor cantidad de eslabones posible. Unquillo, Sierras Chicas.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://nodomatriz.ar/">
+  <meta property="og:image" content="https://nodomatriz.ar/assets/logo-nodo-192.png">
+  <link rel="icon" href="assets/favicon-nodo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --suelo: #2C2418; --corteza: #4A3E2E; --tierra: #6B5D4F;
+      --oliva: #4A6B3A; --oliva-claro: #6E8E55; --salvia: #A8B894; --musgo: #3A5128;
+      --arcilla: #B07D62; --arcilla-osc: #8B5A40; --mostaza: #C49543;
+      --crema: #FAF6EE; --crema-osc: #F0E9D6; --leche: #FDFBF5;
+      --f-display: 'Fraunces', Georgia, serif;
+      --f-body: 'Atkinson Hyperlegible', system-ui, -apple-system, sans-serif;
+      --r-card: 18px 22px 16px 24px;
+      --sombra: 0 4px 20px rgba(74, 62, 46, 0.10);
+      --ancho: 1080px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0; background: var(--crema); color: var(--suelo);
+      font-family: var(--f-body); font-size: 17px; line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    img { max-width: 100%; display: block; }
+    a { color: var(--oliva); }
+    a:hover { color: var(--musgo); }
+    .envoltura { max-width: var(--ancho); margin: 0 auto; padding: 0 20px; }
+    h1, h2, h3 { font-family: var(--f-display); font-weight: 650; line-height: 1.12; color: var(--musgo); margin: 0 0 .5em; }
+    h2 { font-size: clamp(1.8rem, 4vw, 2.5rem); }
+    h3 { font-size: 1.25rem; }
+    p { margin: 0 0 1em; }
+    .antetitulo { font-size: .8rem; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: var(--arcilla-osc); margin-bottom: .6rem; }
+    section { padding: 72px 0; }
+    section + section { border-top: 1px dashed rgba(74, 62, 46, .18); }
+
+    /* Barra superior */
+    .barra { position: sticky; top: 0; z-index: 10; background: rgba(250, 246, 238, .94); backdrop-filter: blur(6px); border-bottom: 1px solid rgba(74, 62, 46, .08); }
+    .barra .envoltura { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 64px; }
+    .marca { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--musgo); }
+    .marca img { width: 38px; height: 38px; }
+    .marca span { font-family: var(--f-display); font-weight: 700; font-size: 1.15rem; }
+    .menu { display: flex; gap: 20px; list-style: none; margin: 0; padding: 0; }
+    .menu a { text-decoration: none; color: var(--corteza); font-weight: 700; font-size: .95rem; }
+    .menu a:hover { color: var(--oliva); }
+    .btn-menu { display: none; background: none; border: 1px solid rgba(74,62,46,.25); border-radius: 999px; padding: 6px 14px; font: inherit; font-weight: 700; color: var(--corteza); cursor: pointer; }
+    @media (max-width: 820px) {
+      .btn-menu { display: block; }
+      .menu { display: none; position: absolute; top: 64px; left: 0; right: 0; flex-direction: column; gap: 0; background: var(--leche); border-bottom: 1px solid rgba(74,62,46,.12); box-shadow: var(--sombra); }
+      .menu.abierto { display: flex; }
+      .menu a { display: block; padding: 14px 20px; }
+    }
+
+    /* Portada */
+    .portada { padding: 64px 0 56px; }
+    .portada .hero { display: grid; grid-template-columns: 1.3fr .9fr; gap: 48px; align-items: center; }
+    .portada h1 { font-size: clamp(2.3rem, 6vw, 3.8rem); letter-spacing: -.01em; }
+    .portada .bajada { font-size: 1.2rem; color: var(--corteza); max-width: 38em; }
+    .acciones { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 22px; border-radius: 999px; font-weight: 700; text-decoration: none; border: 2px solid var(--musgo); }
+    .btn-lleno { background: var(--musgo); color: var(--crema); }
+    .btn-lleno:hover { background: var(--oliva); border-color: var(--oliva); color: var(--crema); }
+    .btn-borde { color: var(--musgo); }
+    .btn-borde:hover { background: var(--crema-osc); }
+    .sello { background: var(--leche); border-radius: 62% 38% 55% 45% / 50% 60% 40% 50%; padding: 48px; box-shadow: var(--sombra); aspect-ratio: 1; display: grid; place-items: center; }
+    .sello img { width: 70%; }
+    @media (max-width: 820px) {
+      .portada .hero { grid-template-columns: 1fr; gap: 28px; }
+      .sello { max-width: 240px; padding: 32px; order: -1; }
+    }
+
+    /* Datos rápidos */
+    .datos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 48px; }
+    .dato { background: var(--leche); border-radius: var(--r-card); padding: 18px 20px; box-shadow: 0 2px 8px rgba(74,62,46,.06); }
+    .dato strong { display: block; font-family: var(--f-display); font-size: 1.5rem; color: var(--oliva); }
+    .dato span { color: var(--tierra); font-size: .95rem; }
+    @media (max-width: 820px) { .datos { grid-template-columns: 1fr 1fr; } }
+
+    /* Proceso */
+    .pasos { list-style: none; margin: 32px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; counter-reset: paso; }
+    .pasos li { background: var(--leche); border-radius: var(--r-card); padding: 24px 22px 22px; position: relative; box-shadow: 0 2px 8px rgba(74,62,46,.06); counter-increment: paso; }
+    .pasos li::before { content: counter(paso); position: absolute; top: -14px; left: 20px; width: 32px; height: 32px; border-radius: 50%; background: var(--arcilla); color: var(--leche); font-family: var(--f-display); font-weight: 700; display: grid; place-items: center; }
+    .pasos h3 { margin-top: 8px; }
+    .pasos p { color: var(--corteza); margin: 0; }
+    @media (max-width: 900px) { .pasos { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 560px) { .pasos { grid-template-columns: 1fr; } }
+
+    /* Historia */
+    .dos-col { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
+    .cita { font-family: var(--f-display); font-size: 1.45rem; line-height: 1.35; color: var(--corteza); border-left: 4px solid var(--mostaza); padding: 4px 0 4px 22px; margin: 0 0 24px; font-style: italic; }
+    .aporte { background: var(--crema-osc); border-radius: var(--r-card); padding: 26px; }
+    .aporte h3 { color: var(--arcilla-osc); }
+    @media (max-width: 820px) { .dos-col { grid-template-columns: 1fr; gap: 28px; } }
+
+    /* Preguntas */
+    .preguntas { margin-top: 28px; display: grid; gap: 10px; max-width: 820px; }
+    details { background: var(--leche); border-radius: 14px; padding: 0 20px; box-shadow: 0 2px 8px rgba(74,62,46,.05); }
+    summary { cursor: pointer; list-style: none; padding: 18px 0; font-weight: 700; color: var(--suelo); display: flex; justify-content: space-between; gap: 16px; }
+    summary::-webkit-details-marker { display: none; }
+    summary::after { content: '+'; font-family: var(--f-display); font-size: 1.4rem; line-height: 1; color: var(--oliva); }
+    details[open] summary::after { content: '–'; }
+    details p { color: var(--corteza); padding-bottom: 6px; }
+
+    /* Fotos */
+    .galeria { margin-top: 28px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+    .galeria figure { margin: 0; background: var(--leche); border-radius: 14px; overflow: hidden; box-shadow: 0 2px 8px rgba(74,62,46,.06); }
+    .galeria img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+    .galeria figcaption { padding: 10px 14px 12px; font-size: .92rem; color: var(--tierra); }
+    .vacio { margin-top: 24px; padding: 28px; border: 2px dashed rgba(74,62,46,.18); border-radius: var(--r-card); color: var(--tierra); text-align: center; }
+
+    /* Novedades */
+    .novedades { margin-top: 28px; display: grid; gap: 16px; max-width: 820px; }
+    .novedad { background: var(--leche); border-radius: var(--r-card); padding: 22px 24px; box-shadow: 0 2px 8px rgba(74,62,46,.06); }
+    .novedad time { font-size: .85rem; font-weight: 700; color: var(--arcilla-osc); letter-spacing: .04em; text-transform: uppercase; }
+    .novedad h3 { margin: 6px 0 8px; }
+    .novedad p { color: var(--corteza); margin: 0; }
+    .novedad p + p { margin-top: .7em; }
+    .ver-mas { margin-top: 16px; background: none; border: 2px solid var(--musgo); color: var(--musgo); border-radius: 999px; padding: 10px 20px; font: inherit; font-weight: 700; cursor: pointer; }
+
+    /* Contacto */
+    .contacto { background: var(--musgo); color: var(--crema); }
+    .contacto h2 { color: var(--crema); }
+    .contacto p { color: #E7E1D2; max-width: 40em; }
+    .contacto .btn-lleno { background: var(--crema); color: var(--musgo); border-color: var(--crema); }
+    .contacto .btn-lleno:hover { background: var(--crema-osc); }
+    .contacto .btn-borde { color: var(--crema); border-color: var(--crema); }
+    .contacto .btn-borde:hover { background: rgba(250,246,238,.1); }
+    footer { background: var(--suelo); color: #BDB4A4; font-size: .9rem; padding: 28px 0; }
+    footer .envoltura { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
+    footer a { color: #D9D1C1; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <header class="barra">
+    <div class="envoltura">
+      <a class="marca" href="#inicio"><img src="assets/logo-nodo-192.png" alt=""><span>Nodo Matriz</span></a>
+      <button class="btn-menu" type="button" aria-expanded="false" aria-controls="menu">Menú</button>
+      <ul class="menu" id="menu">
+        <li><a href="#como-funciona">Cómo funciona</a></li>
+        <li><a href="#quienes-somos">Quiénes somos</a></li>
+        <li><a href="#preguntas">Preguntas</a></li>
+        <li><a href="#fotos">Fotos</a></li>
+        <li><a href="#novedades">Novedades</a></li>
+        <li><a href="#contacto">Contacto</a></li>
+      </ul>
+    </div>
+  </header>
+
+  <main id="inicio">
+    <section class="portada">
+      <div class="envoltura hero">
+        <div>
+          <p class="antetitulo">Nodo de consumo agroecológico · Unquillo, Sierras Chicas</p>
+          <h1>Alimento soberano, del campo al barrio.</h1>
+          <p class="bajada">Cada quincena juntamos los pedidos de las familias y los encargos a productoras y
+            productores agroecológicos de la región. Se produce y se trae lo que se pidió, con la menor cantidad
+            de eslabones posible y al precio más justo que logramos.</p>
+          <div class="acciones">
+            <a class="btn btn-lleno" href="#como-funciona">Cómo hacer un pedido</a>
+            <a class="btn btn-borde" href="#contacto" data-sumate>Sumate a la red</a>
+          </div>
+        </div>
+        <div class="sello"><img src="assets/logo-nodo-192.png" alt="Logo del Nodo Matriz Agroecológico"></div>
+      </div>
+      <div class="envoltura">
+        <div class="datos">
+          <div class="dato"><strong>2021</strong><span>en funcionamiento desde el solsticio de invierno</span></div>
+          <div class="dato"><strong>Quincenal</strong><span>una edición de pedidos cada dos semanas</span></div>
+          <div class="dato"><strong>Local</strong><span>productoras y productores del corredor serrano y la región</span></div>
+          <div class="dato"><strong>En red</strong><span>familias, productores y equipa organizados</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="como-funciona">
+      <div class="envoltura">
+        <p class="antetitulo">Una edición, paso a paso</p>
+        <h2>Cómo funciona</h2>
+        <p style="max-width:44em;color:var(--corteza)">No somos un almacén ni una tienda online: somos una red que se organiza para
+          comprar en conjunto. Cada edición sigue el mismo recorrido.</p>
+        <ol class="pasos">
+          <li><h3>La oferta de la quincena</h3><p>Cada productora y productor nos cuenta qué tiene disponible y a qué precio.
+            Con eso armamos el formulario de la edición.</p></li>
+          <li><h3>Hacés tu pedido</h3><p>Compartimos el formulario en el grupo. Elegís qué y cuánto, ves el total en el momento
+            y te llega el detalle por correo.</p></li>
+          <li><h3>Encargos exactos</h3><p>Al cerrar el formulario, cada productor recibe exactamente lo que se pidió. No se
+            produce de más ni se desperdicia.</p></li>
+          <li><h3>El galpón</h3><p>Recibimos los alimentos, fraccionamos lo que va por peso y armamos el cajón de cada familia.</p></li>
+          <li><h3>Retirás tu cajón</h3><p>Pasás a buscarlo el día y horario que elegiste. Los productos refrigerados se entregan
+            aparte, en el puesto de frío.</p></li>
+          <li><h3>Cuentas claras</h3><p>Si algo no llegó, te avisamos por correo con el total corregido. A cada productor se le
+            paga lo que efectivamente entregó.</p></li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="quienes-somos">
+      <div class="envoltura dos-col">
+        <div>
+          <p class="antetitulo">Nuestra historia</p>
+          <h2>Quiénes somos</h2>
+          <p class="cita">¿Podemos trazar una ruta del alimento soberano que llegue hasta el barrio, con la menor cantidad de
+            eslabones posibles y al precio más justo que se logre conseguir?</p>
+          <p>Con esa pregunta nació el Nodo Matriz, el 21 de julio de 2021, en el solsticio de invierno. La primera vez nos
+            juntamos entre 15 y 20 familias alrededor del alimento: sin balanza ni tablones, solo con la voluntad de
+            organizarnos. También era una forma de acceder a la producción agroecológica para quienes no podían llegar a las
+            ferias del corredor.</p>
+          <p>Hoy somos una red de familias, productoras, productores y una equipa que sostiene cada edición. Queremos que
+            quienes trabajan la tierra puedan hacerlo de manera más sostenible, y compartir la herramienta de logística,
+            gestión y educación ambiental que fuimos construyendo con otros territorios.</p>
+        </div>
+        <div class="aporte">
+          <h3>El aporte solidario</h3>
+          <p>Cada pedido suma un aporte solidario, mínimo del 15&nbsp;% del subtotal. Es lo que sostiene el funcionamiento del
+            Nodo: el galpón, la logística, el fraccionado y el trabajo de la equipa.</p>
+          <p style="margin:0">Si podés aportar más, el formulario te deja elegir otro porcentaje. El precio de los alimentos es
+            el que pone cada productor.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="preguntas">
+      <div class="envoltura">
+        <p class="antetitulo">Lo que más nos preguntan</p>
+        <h2>Preguntas frecuentes</h2>
+        <div class="preguntas">
+          <details><summary>¿Cómo hago un pedido?</summary>
+            <p>Cada quincena compartimos el link del formulario en el grupo de WhatsApp del Nodo. Elegís los productos y
+              las cantidades, completás tus datos y lo enviás. Te llega un correo con el detalle y el total a abonar.</p></details>
+          <details><summary>¿Cuándo abre y cierra el formulario?</summary>
+            <p>Cada edición tiene sus fechas y las anunciamos en el grupo. Habitualmente el formulario abre el fin de semana
+              y cierra el martes al mediodía. Después del cierre no se pueden sumar pedidos, porque ya se hicieron los
+              encargos a productores.</p></details>
+          <details><summary>¿Dónde y cuándo retiro mi pedido?</summary>
+            <p>En nuestro galpón, en Unquillo. En el formulario elegís el día de retiro entre los que ofrece esa edición, y
+              la ubicación exacta te llega junto con la confirmación del pedido.</p></details>
+          <details><summary>¿Cómo pago?</summary>
+            <p>Elegís la forma de pago en el formulario. Los datos para transferir llegan con el correo de confirmación.</p></details>
+          <details><summary>¿Qué pasa si un producto no llega?</summary>
+            <p>A veces una cosecha no alcanza o un productor no puede traer todo. En ese caso te escribimos antes del retiro
+              con el detalle de lo que cambió y el nuevo total: solo pagás lo que recibís.</p></details>
+          <details><summary>¿Puedo pedir medio kilo o fracciones?</summary>
+            <p>Sí, en los productos que lo permiten. El formulario te muestra las fracciones disponibles de cada uno
+              (por ejemplo ½ o ¼ kg) con su precio.</p></details>
+          <details><summary>¿Qué hago con frascos y cajones?</summary>
+            <p>Traelos cuando vengas a retirar. Los cajones de madera y muchos frascos vuelven a la red y nos son de gran
+              ayuda.</p></details>
+          <details><summary>¿Por qué hay un aporte solidario?</summary>
+            <p>Porque organizar cada edición es trabajo: recibir, fraccionar, armar, entregar y hacer las cuentas. El aporte
+              (mínimo 15&nbsp;%) sostiene ese trabajo y el espacio, sin cambiar el precio que recibe cada productor.</p></details>
+          <details><summary>Produzco de forma agroecológica, ¿cómo me sumo?</summary>
+            <p>Escribinos por correo contándonos qué producís, dónde y cómo. Te vamos a contar cómo es la carga de productos
+              cada quincena y los días de entrega en el galpón.</p></details>
+        </div>
+      </div>
+    </section>
+
+    <section id="fotos">
+      <div class="envoltura">
+        <p class="antetitulo">El Nodo en imágenes</p>
+        <h2>Fotos</h2>
+        <div class="galeria" id="galeria"></div>
+        <div class="vacio" id="galeria-vacia" hidden>Pronto vamos a compartir fotos del galpón, las ediciones y las
+          productoras y productores de la red.</div>
+      </div>
+    </section>
+
+    <section id="novedades">
+      <div class="envoltura">
+        <p class="antetitulo">Lo último</p>
+        <h2>Novedades</h2>
+        <div class="novedades" id="lista-novedades"></div>
+        <button class="ver-mas" id="ver-mas" type="button" hidden>Ver novedades anteriores</button>
+        <div class="vacio" id="novedades-vacia" hidden>Todavía no hay novedades publicadas.</div>
+      </div>
+    </section>
+
+    <section id="contacto" class="contacto">
+      <div class="envoltura">
+        <p class="antetitulo" style="color:var(--salvia)">Sumate</p>
+        <h2>Contacto</h2>
+        <p>Si querés hacer pedidos, sumarte como productora o productor, o simplemente conocernos, escribinos.</p>
+        <div class="acciones">
+          <a class="btn btn-lleno" id="btn-whatsapp" href="#" hidden>Unirme al grupo de WhatsApp</a>
+          <a class="btn btn-borde" id="btn-mail" href="mailto:nodo.matriz.agroeco@gmail.com">nodo.matriz.agroeco@gmail.com</a>
+          <a class="btn btn-borde" id="btn-instagram" href="#" hidden>Instagram</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="envoltura">
+      <span>Nodo Matriz Agroecológico · Unquillo, Sierras Chicas, Córdoba</span>
+      <a href="https://webapp.nodomatriz.ar/">Acceso equipa</a>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      'use strict';
+      // ── Datos de contacto: completar acá (dejar '' para ocultar el botón) ──
+      var CONTACTO = {
+        whatsapp: '',    // link de invitación al grupo, ej.: 'https://chat.whatsapp.com/XXXXXXXX'
+        instagram: ''    // ej.: 'https://www.instagram.com/nodomatriz'
+      };
+
+      function $(id) { return document.getElementById(id); }
+      function esc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+      }
+      function linkSeguro(u) { return /^https:\/\//i.test(String(u || '')) ? u : ''; }
+
+      if (linkSeguro(CONTACTO.whatsapp)) { $('btn-whatsapp').href = CONTACTO.whatsapp; $('btn-whatsapp').hidden = false; }
+      if (linkSeguro(CONTACTO.instagram)) { $('btn-instagram').href = CONTACTO.instagram; $('btn-instagram').hidden = false; }
+
+      // Menú en celular
+      var btn = document.querySelector('.btn-menu'), menu = $('menu');
+      btn.addEventListener('click', function () {
+        var abierto = menu.classList.toggle('abierto');
+        btn.setAttribute('aria-expanded', abierto ? 'true' : 'false');
+      });
+      menu.addEventListener('click', function (e) { if (e.target.tagName === 'A') { menu.classList.remove('abierto'); btn.setAttribute('aria-expanded', 'false'); } });
+
+      function leer(url) {
+        return fetch(url + '?v=' + Date.now(), { cache: 'no-store' }).then(function (r) {
+          if (!r.ok) throw new Error(r.status);
+          return r.json();
+        });
+      }
+
+      // Fotos: contenido/fotos.json → [{ "archivo": "galpon.jpg", "texto": "..." }]
+      leer('contenido/fotos.json').then(function (fotos) {
+        fotos = (Array.isArray(fotos) ? fotos : []).filter(function (f) { return f && f.archivo; });
+        if (!fotos.length) { $('galeria-vacia').hidden = false; return; }
+        $('galeria').innerHTML = fotos.map(function (f) {
+          var src = /^https:\/\//i.test(f.archivo) ? f.archivo : 'fotos/' + String(f.archivo).replace(/^\/+/, '');
+          return '<figure><img loading="lazy" src="' + esc(src) + '" alt="' + esc(f.texto || 'Foto del Nodo') + '">' +
+            (f.texto ? '<figcaption>' + esc(f.texto) + '</figcaption>' : '') + '</figure>';
+        }).join('');
+      }).catch(function () { $('galeria-vacia').hidden = false; });
+
+      // Novedades: contenido/novedades.json → [{ "fecha": "2026-09-30", "titulo": "...", "texto": "..." }]
+      var MOSTRAR = 3;
+      function fechaLinda(iso) {
+        var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!m) return esc(iso || '');
+        var d = new Date(+m[1], +m[2] - 1, +m[3]);
+        return new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'long', year: 'numeric' }).format(d);
+      }
+      leer('contenido/novedades.json').then(function (lista) {
+        lista = (Array.isArray(lista) ? lista : []).filter(function (n) { return n && n.titulo; });
+        lista.sort(function (a, b) { return String(b.fecha || '').localeCompare(String(a.fecha || '')); });
+        if (!lista.length) { $('novedades-vacia').hidden = false; return; }
+        function pintar(n) {
+          $('lista-novedades').innerHTML = lista.slice(0, n).map(function (x) {
+            var parrafos = String(x.texto || '').split(/\n\s*\n/).map(function (p) { return '<p>' + esc(p) + '</p>'; }).join('');
+            return '<article class="novedad"><time datetime="' + esc(x.fecha) + '">' + fechaLinda(x.fecha) + '</time>' +
+              '<h3>' + esc(x.titulo) + '</h3>' + parrafos + '</article>';
+          }).join('');
+          $('ver-mas').hidden = lista.length <= n;
+        }
+        pintar(MOSTRAR);
+        $('ver-mas').addEventListener('click', function () { pintar(lista.length); });
+      }).catch(function () { $('novedades-vacia').hidden = false; });
+    })();
+  </script>
+</body>
+</html>

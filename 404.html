@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nodo Matriz</title>
+  <meta name="robots" content="noindex">
+  <script>
+    // El sistema de la edición (formularios, guía, galpón) se mudó a
+    // webapp.nodomatriz.ar. Los links viejos (nodomatriz.ar/forms/..., etc.)
+    // se reenvían solos a la misma dirección en el subdominio, con sus datos.
+    (function () {
+      var p = location.pathname;
+      if (/^\/(forms|templates|assets)\//.test(p) || /^\/flujo-edicion\.html$/.test(p)) {
+        location.replace('https://webapp.nodomatriz.ar' + p + location.search + location.hash);
+      }
+    })();
+  </script>
+  <style>
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #FAF6EE; color: #2C2418;
+      font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; text-align: center; padding: 20px; }
+    h1 { font-family: Georgia, serif; color: #3A5128; }
+    a { color: #4A6B3A; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>No encontramos esta página</h1>
+    <p>Puede que el link haya cambiado. <a href="/">Volver al inicio del Nodo</a></p>
+  </main>
+</body>
+</html>
