@@ -97,8 +97,31 @@
     }
     .aporte-box__title { margin: 0 0 4px; font-size: 1.05rem; }
     .aporte-box__texto { margin: 0 0 6px; font-size: 0.86rem; line-height: 1.35; }
-    .aporte-box .aporte-grid .option--chip { padding: 6px 10px; min-width: 58px; font-size: 0.95rem; }
-    .aporte-box .aporte-grid .option--chip input { width: 14px; height: 14px; }
+    /* 9 opciones (15 a 20, 25, 30, Otro): grilla compacta, 5 por fila en
+       celular (2 filas) y menos filas en pantallas anchas. La elección se ve
+       por el borde y el fondo del chip; el círculo del radio se oculta (sigue
+       siendo accesible con teclado) solo en navegadores que entienden :has. */
+    .aporte-box .aporte-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(42px, 1fr)); gap: 5px;
+    }
+    .aporte-box .aporte-grid .option--chip {
+      position: relative; padding: 6px 2px; min-width: 0; gap: 3px;
+      font-size: 0.86rem; line-height: 1.2; border-radius: 10px;
+    }
+    .aporte-box .aporte-grid .option--chip input { width: 12px; height: 12px; flex-shrink: 0; }
+    .aporte-box .aporte-grid .option__label { white-space: nowrap; }
+    @supports selector(:has(*)) {
+      .aporte-box .aporte-grid .option--chip input {
+        position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none;
+      }
+      .aporte-box .aporte-grid .option--chip:has(input:focus-visible) {
+        outline: 2px solid var(--c-musgo, #3c5230); outline-offset: 1px;
+      }
+      .aporte-box .aporte-grid .option--chip:has(input:checked),
+      .aporte-box .aporte-grid .option--chip:has(input:checked) .option__label {
+        background: var(--c-musgo, #3c5230); color: #fff;
+      }
+    }
 
     /* Día de retiro (dentro de la opción galpón) */
     #dias-retiro { margin: 8px 0 0 var(--s-6); display: flex; flex-direction: column; gap: 6px; }
@@ -233,6 +256,22 @@
             <label class="option option--chip">
               <input type="radio" name="aporte_porcent" value="15" checked>
               <span class="option__label">15%</span>
+            </label>
+            <label class="option option--chip">
+              <input type="radio" name="aporte_porcent" value="16">
+              <span class="option__label">16%</span>
+            </label>
+            <label class="option option--chip">
+              <input type="radio" name="aporte_porcent" value="17">
+              <span class="option__label">17%</span>
+            </label>
+            <label class="option option--chip">
+              <input type="radio" name="aporte_porcent" value="18">
+              <span class="option__label">18%</span>
+            </label>
+            <label class="option option--chip">
+              <input type="radio" name="aporte_porcent" value="19">
+              <span class="option__label">19%</span>
             </label>
             <label class="option option--chip">
               <input type="radio" name="aporte_porcent" value="20">
@@ -1696,6 +1735,13 @@
           actualizarTotales(calc.subtotal);
         });
       });
+
+      // Estado inicial (p. ej. un borrador restaurado con "Otro" elegido)
+      (function () {
+        var chk = document.querySelector('input[name="aporte_porcent"]:checked');
+        if (aporteOtroCampo) aporteOtroCampo.style.display = (chk && chk.value === 'otro') ? 'flex' : 'none';
+        try { actualizarTotales(calcularItems().subtotal); } catch (e) {}
+      })();
 
       if (aporteInputCustom) {
         aporteInputCustom.addEventListener('input', function () {
