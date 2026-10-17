@@ -56,6 +56,13 @@
     #tabla-precomanda .pron-ini { border-left: 2px solid #c9963c; }
     #tabla-precomanda tr.total td { border-top: 2px solid rgba(74,107,58,.35); }
     .fila-sel select { padding: 4px 8px; border-radius: 8px; border: 1px solid rgba(74,107,58,.3); font: inherit; }
+    .btn-wa {
+      display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 0.82rem; font-weight: 700;
+      background: #25a35a; color: #fff; text-decoration: none; white-space: nowrap;
+    }
+    .btn-wa:hover { background: #1f8a4c; color: #fff; }
+    .btn-wa.hecho { background: transparent; color: #1f8a4c; border: 1.5px solid #25a35a; }
+    .pill.primera { background: rgba(201, 150, 60, .22); color: #6b4e12; white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -104,6 +111,12 @@
       <div class="card-eq fade-in" data-delay="3">
         <h2>Consumidores</h2>
         <div id="consumidores"></div>
+      </div>
+
+      <div class="card-eq fade-in" data-delay="3" id="card-grupo-wa">
+        <h2>💬 Para sumar al grupo de WhatsApp</h2>
+        <p class="meta">Quienes respondieron en el formulario «No, me gustaría sumarme». El botón abre el chat con un mensaje listo para mandar.</p>
+        <div id="grupo-wa"></div>
       </div>
 
       <div class="card-eq fade-in" data-delay="3">
@@ -203,6 +216,10 @@
     (function () {
       var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
       var REFRESCO_MS = 60 * 1000;
+      // Enlace de invitación al grupo de WhatsApp del Nodo (opcional). Si se
+      // completa, va dentro del mensaje; si queda vacío, el mensaje pregunta
+      // si la agregamos.
+      var LINK_GRUPO_WA = '';
 
       function $(id) { return document.getElementById(id); }
       function gviz(params) {
@@ -301,9 +318,13 @@
           gviz('sheet=Items&range=A1:R20000&headers=1'),
           gviz('sheet=Consumidores&range=A1:D5000&headers=1'),
           gviz('sheet=Productores&range=A1:B2000&headers=1'),
-          gviz('sheet=Productos&range=A1:T5000&headers=1').catch(function () { return null; })
+          gviz('sheet=Productos&range=A1:T5000&headers=1').catch(function () { return null; }),
+          // Pedidos AA en_grupo_whatsapp / AB primera_vez_declarada (las escribe B1).
+          // Si las columnas todavía no existen, la consulta falla y seguimos igual.
+          gviz('sheet=Pedidos&headers=1&tq=' + encodeURIComponent("select A, AA, AB where B = '" +
+            edicionActual.replace(/'/g, '') + "'")).catch(function () { return null; })
         ]).then(function (rs) {
-          pintar(rs[0], rs[1], rs[2], rs[3], rs[4]);
+          pintar(rs[0], rs[1], rs[2], rs[3], rs[4], rs[5]);
           $('ultima-act').textContent = 'actualizado ' + hora(new Date());
         }).catch(function (err) {
           console.error(err);
@@ -385,7 +406,72 @@
         }
       }
 
-      function pintar(rp, ri, rc, rpr, rprod) {
+      // ── Para sumar al grupo de WhatsApp ─────────────────────
+      var LS_WA = 'nm_wa_invitado_';
+      function telWa(t) {
+        var d = String(t || '').replace(/\D/g, '');
+        if (!d) return '';
+        if (d.indexOf('549') === 0) return d;
+        if (d.indexOf('54') === 0) return '549' + d.slice(2);
+        if (d.charAt(0) === '0') d = d.slice(1);
+        return d.length >= 8 ? '549' + d : '';
+      }
+      function pintarGrupo(rext, pedidos, nombres, tels, consEnOtras) {
+        var cont = $('grupo-wa');
+        if (!cont) return;
+        var ok = rext && rext.table && rext.table.cols && rext.table.cols.length >= 2;
+        var iG = -1;
+        if (ok) for (var c = 1; c < rext.table.cols.length; c++) if (/grupo/i.test(String(rext.table.cols[c].label || ''))) iG = c;
+        if (!ok || iG < 0) {
+          cont.innerHTML = '<p class="meta">La planilla todavía no guarda esta respuesta del formulario ' +
+            '(falta la columna AA «en_grupo_whatsapp» en Pedidos y el cambio en B1). ' +
+            'Cuando esté, acá aparece la lista.</p>';
+          return;
+        }
+        var resp = {}, correo = 0;
+        rext.table.rows.forEach(function (r) {
+          var v = String(celda(r, iG)).trim().toLowerCase();
+          resp[String(celda(r, 0)).trim()] = v;
+        });
+        var vistos = {}, lista = [];
+        pedidos.forEach(function (p) {
+          var v = resp[p.id];
+          if (v === 'no_prefiero_correo' && !vistos['c' + p.cons]) { vistos['c' + p.cons] = true; correo++; }
+          if (v !== 'no' || vistos[p.cons]) return;
+          vistos[p.cons] = true;
+          lista.push({ cons: p.cons, corr: p.corr, nombre: nombres[p.cons] || p.cons, tel: tels[p.cons] || '', primera: !consEnOtras[p.cons] });
+        });
+        var pie = correo ? '<p class="meta" style="margin-top:8px;">' + correo + (correo === 1 ? ' persona prefiere' : ' personas prefieren') +
+          ' recibir todo por correo: a esas no se les escribe.</p>' : '';
+        if (!lista.length) { cont.innerHTML = '<p class="meta">Nadie pidió sumarse en esta edición.</p>' + pie; return; }
+        cont.innerHTML = '<table class="lista"><thead><tr><th>Nombre y teléfono</th><th></th></tr></thead><tbody>' +
+          lista.map(function (x) {
+            var primerNombre = String(x.nombre).split(/\s+/)[0] || '';
+            var msg = '¡Hola ' + primerNombre + '! 🌱 Te escribimos del Nodo Matríz. En tu pedido nos contaste que te gustaría ' +
+              'sumarte al grupo de WhatsApp del Nodo' + (LINK_GRUPO_WA ? ': podés entrar desde acá ' + LINK_GRUPO_WA : '. ¿Te agregamos?') +
+              ' Por ahí avisamos cuándo abre cada edición, los días de retiro y las novedades. ¡Gracias por ser parte de la red!';
+            var tw = telWa(x.tel), hecho = false;
+            try { hecho = !!localStorage.getItem(LS_WA + edicionActual + '_' + x.cons); } catch (e) {}
+            var btn = tw
+              ? '<a class="btn-wa' + (hecho ? ' hecho' : '') + '" data-cons="' + esc(x.cons) + '" target="_blank" rel="noopener" href="https://wa.me/' + tw +
+                '?text=' + encodeURIComponent(msg) + '">' + (hecho ? '✓ Escrito' : 'WhatsApp') + '</a>'
+              : '';
+            return '<tr><td>' + esc(x.nombre) + ' <span class="meta">#' + esc(x.corr) + '</span>' +
+              (x.primera ? ' <span class="pill primera">🌱 primera vez</span>' : '') +
+              '<br><span class="meta" style="font-style:normal;">' + esc(x.tel || 'sin teléfono') + '</span></td>' +
+              '<td class="num" style="vertical-align:middle;">' + btn + '</td></tr>';
+          }).join('') + '</tbody></table>' +
+          '<p class="meta" style="margin-top:6px;">' + lista.length + (lista.length === 1 ? ' persona' : ' personas') +
+          '. «✓ Escrito» queda marcado solo en este navegador.</p>' + pie;
+      }
+      document.addEventListener('click', function (e) {
+        var a = e.target && e.target.closest ? e.target.closest('.btn-wa') : null;
+        if (!a) return;
+        try { localStorage.setItem(LS_WA + edicionActual + '_' + a.dataset.cons, '1'); } catch (err) {}
+        a.classList.add('hecho'); a.textContent = '✓ Escrito';
+      });
+
+      function pintar(rp, ri, rc, rpr, rprod, rext) {
         var ed = ediciones.filter(function (e) { return e.id === edicionActual; })[0] || {};
 
         // ── Pedidos de la edición ─────────────────────────────
@@ -444,6 +530,10 @@
         var nombres = {};
         var cCId = idx(rc, /^id_consumidor$/i), cCNom = idx(rc, /nombre/i);
         rc.table.rows.forEach(function (r) { var id = String(celda(r, cCId)).trim(); if (id) nombres[id] = String(celda(r, cCNom)).trim(); });
+        var tels = {}, cCTel = idx(rc, /telefono|whatsapp/i);
+        if (cCTel < 0) cCTel = 2;
+        rc.table.rows.forEach(function (r) { var id = String(celda(r, cCId)).trim(); if (id) tels[id] = String(celda(r, cCTel)).trim(); });
+        pintarGrupo(rext, pedidos, nombres, tels, consEnOtras);
         var distintos = {}; pedidos.forEach(function (p) { distintos[p.cons] = (distintos[p.cons] || 0) + 1; });
         var ids = Object.keys(distintos);
         var nuevos = ids.filter(function (c) { return !consEnOtras[c]; }).length;

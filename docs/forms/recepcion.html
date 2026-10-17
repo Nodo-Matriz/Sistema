@@ -516,6 +516,23 @@
       border-radius: 999px; vertical-align: middle; white-space: nowrap;
     }
     .item-ped.no-va .tag-productor { opacity: 0.5; }
+
+    /* Etiquetas del pedido (primera vez / grupo de WhatsApp): visibles con la tarjeta cerrada */
+    .ped-tags { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 var(--s-4) var(--s-3); margin-top: -4px; }
+    .tag-ped {
+      display: inline-block; padding: 3px 10px; border-radius: 999px;
+      font-size: 0.8rem; font-weight: 700; line-height: 1.3;
+    }
+    .tag-ped.primera { background: rgba(201, 150, 60, 0.22); color: #6b4e12; }
+    .tag-ped.grupo { background: rgba(37, 160, 90, 0.14); color: #1f5e36; }
+    .tag-ped.correo { background: transparent; color: var(--c-tierra); font-weight: 400; font-style: italic; padding-left: 2px; }
+    /* Subtítulo de categoría en el armado (orden físico del galpón) */
+    .cat-sub {
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--c-tierra); opacity: 0.8; margin: 8px 0 0; padding-top: 4px;
+      border-top: 1px dotted rgba(107, 93, 79, 0.22);
+    }
+    .item-frio + .cat-sub, .cat-sub.frio { color: #2f6b8f; }
     .item-ped {
       display: flex;
       align-items: center;
@@ -1127,6 +1144,115 @@
       }
       var itemsEd = [];       // ítems de los pedidos de la edición
 
+      // ── Orden de armado por categoría ────────────────────────────
+      // Los renglones de cada pedido se muestran en el orden físico del
+      // galpón: 1) hoja Orden_Armado (A categoria, B orden), que edita el
+      // equipo; 2) las categorías que no estén ahí van al final, en el orden
+      // del formulario de la edición (orden_categorias); 3) si tampoco, por
+      // orden alfabético. Sin categoría conocida, al final de todo.
+      var categoriaProd = {};   // id_producto -> categoría (Productos!I)
+      var ordenArmado = {};     // categoría normalizada -> número (hoja Orden_Armado)
+      var ordenForm = {};       // categoría normalizada -> posición en el formulario
+      var consPrevios = {};     // id_consumidor -> true si pidió en una edición anterior
+      var extrasPed = {};       // id_pedido -> {grupo, primera} (Pedidos AA/AB, si existen)
+      function normCat(t) {
+        return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .replace(/\s+/g, ' ').trim();
+      }
+      function rangoCategoria(cat) {
+        var c = normCat(cat);
+        if (!c) return [3, 0, ''];
+        if (ordenArmado.hasOwnProperty(c)) return [0, ordenArmado[c], c];
+        if (ordenForm.hasOwnProperty(c)) return [1, ordenForm[c], c];
+        return [2, 0, c];
+      }
+      function compararPorCategoria(a, b) {
+        var ra = rangoCategoria(categoriaProd[a.it.id_producto]);
+        var rb = rangoCategoria(categoriaProd[b.it.id_producto]);
+        if (ra[0] !== rb[0]) return ra[0] - rb[0];
+        if (ra[1] !== rb[1]) return ra[1] - rb[1];
+        if (ra[2] !== rb[2]) return ra[2] < rb[2] ? -1 : 1;
+        return a.k - b.k;   // dentro de la categoría, el orden del pedido
+      }
+      function parseOrdenArmado(res) {
+        ordenArmado = {};
+        if (!res || !res.table || !res.table.cols || !res.table.cols.length) return;
+        // si la hoja no existe, gviz devuelve OTRA hoja: se exige el encabezado
+        if (!/categ/i.test(String(res.table.cols[0].label || ''))) return;
+        res.table.rows.forEach(function (r, i) {
+          var c = normCat(celda(r, 0));
+          if (!c || ordenArmado.hasOwnProperty(c)) return;
+          var n = parseFloat(String(celda(r, 1)).replace(',', '.'));
+          ordenArmado[c] = isNaN(n) ? 1000 + i : n;
+        });
+      }
+      // Orden de categorías del formulario de la edición (lo eligió el equipo
+      // en generar-edicion y A3 lo dejó escrito en el HTML del formulario).
+      function cargarOrdenForm() {
+        if (!idEdicion) return;
+        var aplicar = function (lista) {
+          var o = {};
+          lista.forEach(function (c, i) { var n = normCat(c); if (n && !o.hasOwnProperty(n)) o[n] = i; });
+          if (!Object.keys(o).length) return false;
+          ordenForm = o;
+          return true;
+        };
+        fetch('pedidos-' + encodeURIComponent(idEdicion) + '.html', { cache: 'no-store' })
+          .then(function (r) { return r.ok ? r.text() : ''; })
+          .then(function (t) {
+            var m = String(t || '').match(/var ORDEN_RAW = '([^']*)'/);
+            return (m && m[1].indexOf('{{') === -1) ? m[1].split('|') : null;
+          })
+          .catch(function () { return null; })
+          .then(function (lista) {
+            if (!lista) {
+              // mismo navegador que generó la edición: el orden quedó guardado
+              try { lista = JSON.parse(localStorage.getItem('nm_orden_categorias') || 'null'); } catch (e) { lista = null; }
+            }
+            if (lista && lista.length && aplicar(lista)) {
+              try { renderEntrega(); } catch (e) {}
+            }
+          });
+      }
+      function numEdicion(id) {
+        var m = String(id || '').match(/^ED(\d{4})-(\d+)$/);
+        return m ? parseInt(m[1], 10) * 1000 + parseInt(m[2], 10) : null;
+      }
+      // Respuestas del formulario que B1 guarda en Pedidos (AA en_grupo_whatsapp,
+      // AB primera_vez_declarada). Si las columnas todavía no existen, nada.
+      function parseExtrasPedidos(res) {
+        extrasPed = {};
+        if (!res || !res.table || !res.table.cols || res.table.cols.length < 2) return;
+        var cols = res.table.cols, iG = -1, iP = -1;
+        for (var c = 1; c < cols.length; c++) {
+          var lab = String(cols[c].label || '');
+          if (/grupo/i.test(lab)) iG = c;
+          else if (/primera/i.test(lab)) iP = c;
+        }
+        res.table.rows.forEach(function (r) {
+          var id = String(celda(r, 0)).trim();
+          if (!id) return;
+          var g = iG >= 0 ? String(celda(r, iG)).trim().toLowerCase() : '';
+          var pv = iP >= 0 ? String(celda(r, iP)).trim().toLowerCase() : '';
+          if (g || pv) extrasPed[id] = { grupo: g, primera: pv };
+        });
+      }
+      function esPrimeraVez(p) {
+        // Principal: no tiene pedidos en ediciones anteriores. Si el pedido no
+        // tiene consumidor, se usa lo que la persona declaró en el formulario.
+        if (p.id_consumidor) return !consPrevios[p.id_consumidor];
+        var ex = extrasPed[p.id_pedido];
+        return !!(ex && ex.primera === 'si');
+      }
+      function tagsDePedido(p) {
+        var h = '';
+        if (esPrimeraVez(p)) h += '<span class="tag-ped primera">🌱 Primera vez en el Nodo — explicale la dinámica</span>';
+        var ex = extrasPed[p.id_pedido];
+        if (ex && ex.grupo === 'no') h += '<span class="tag-ped grupo">💬 Sumar al grupo de WhatsApp</span>';
+        else if (ex && ex.grupo === 'no_prefiero_correo') h += '<span class="tag-ped correo">✉ prefiere correo</span>';
+        return h ? '<div class="ped-tags">' + h + '</div>' : '';
+      }
+
       // ── Solapas ──────────────────────────────────────────────────
       var VISTAS = ['recepcion', 'fracc', 'ajustes', 'entrega', 'sobrantes'];
       function mostrarVista(cual) {
@@ -1258,8 +1384,18 @@
       function parsePedidos(res) {
         pedidos = [];
         if (!res) return;
+        consPrevios = {};
+        var nActual = numEdicion(idEdicion);
         res.table.rows.forEach(function (r) {
-          if (String(celda(r, 1)).trim() !== idEdicion) return;
+          var edR = String(celda(r, 1)).trim();
+          if (edR !== idEdicion) {
+            var nR = numEdicion(edR);
+            if (nR !== null && nActual !== null && nR < nActual) {
+              var idC = String(celda(r, 2)).trim();
+              if (idC) consPrevios[idC] = true;
+            }
+            return;
+          }
           pedidos.push({
             id_pedido: String(celda(r, 0)).trim(),
             id_consumidor: String(celda(r, 2)).trim(),
@@ -1478,7 +1614,11 @@
           // Productos!U conservacion (Frío / Ambiente): qué va al puesto de frío
           gviz('sheet=Productos&range=A1:U5000&headers=1').catch(function () { return null; }),
           // Ediciones: para saber cuál es la edición en curso
-          gviz('sheet=Ediciones&range=A1:D1000&headers=1').catch(function () { return null; })
+          gviz('sheet=Ediciones&range=A1:D1000&headers=1').catch(function () { return null; }),
+          // Orden físico del galpón para armar (hoja Orden_Armado, opcional)
+          gviz('sheet=Orden_Armado&range=A1:B300&headers=1').catch(function () { return null; }),
+          // Respuestas "en el grupo" / "primera vez" que guarda B1 (Pedidos AA:AB, opcional)
+          gviz('sheet=Pedidos&headers=1&tq=' + encodeURIComponent('select A, AA, AB')).catch(function () { return null; })
         ]).then(function (res) {
           // Edición en curso = última fila de Ediciones con id ED####-##
           var edVigente = '';
@@ -1495,6 +1635,16 @@
               if (idP) conservacion[idP] = String(celda(r, 20) || '').trim();
             });
           }
+          // Productos!I categoria: para ordenar el armado
+          categoriaProd = {};
+          if (res[10]) {
+            res[10].table.rows.forEach(function (r) {
+              var idP = String(celda(r, 0)).trim();
+              if (idP) categoriaProd[idP] = String(celda(r, 8) || '').trim();
+            });
+          }
+          parseOrdenArmado(res[12]);
+          parseExtrasPedidos(res[13]);
           var rowsK = res[0].table.rows;
           idEdicion = rowsK.length ? String(celda(rowsK[0], 0)).trim() : '';
 
@@ -1609,6 +1759,7 @@
           renderFracc();
           renderAjustes();
           renderEntrega();
+          cargarOrdenForm();
         }).catch(function () {
           $('estado-edicion').className = 'aviso rojo';
           $('estado-edicion').textContent = 'No pudimos leer la planilla. Revisá la conexión y recargá.';
@@ -2397,6 +2548,8 @@
           if (it.efectiva <= 0) return;   // faltante: no va en ningún lado
           (esFrio(it.id_producto) ? frio : amb).push({ it: it, k: k });
         });
+        amb.sort(compararPorCategoria);
+        frio.sort(compararPorCategoria);
         return { ambiente: amb, frio: frio };
       }
       function frioPendiente(p) {
@@ -2540,6 +2693,8 @@
               '<span class="chip-ped ' + claseEstado(est) + '">' + chipEstado(est) + '</span>' +
             '</div>' +
             '<div class="ped-cuerpo"></div>';
+          var tagsPed = tagsDePedido(p);
+          if (tagsPed) card.querySelector('.ped-head').insertAdjacentHTML('afterend', tagsPed);
           card.querySelector('.ped-nombre').textContent =
             'N° ' + p.correlativo + ' · ' + nombre +
             ' — $' + Math.round(p.total).toLocaleString('es-AR') +
@@ -2560,8 +2715,20 @@
           if (its.length && !partes.ambiente.length) {
             cuerpo.insertAdjacentHTML('beforeend', '<p class="muted" style="font-size:0.9rem;">Este pedido es todo refrigerado: no hay cajón que armar.</p>');
           }
+          var conCats = Object.keys(categoriaProd).length > 0, catPrev = null;
+          function subCategoria(it, clase) {
+            if (!conCats) return;
+            var cat = categoriaProd[it.id_producto] || 'Otros';
+            if (normCat(cat) === catPrev) return;
+            catPrev = normCat(cat);
+            var d = document.createElement('div');
+            d.className = 'cat-sub' + (clase ? ' ' + clase : '');
+            d.textContent = cat;
+            cuerpo.appendChild(d);
+          }
           partes.ambiente.forEach(function (x) {
             var it = x.it, k = x.k;
+            subCategoria(it);
             var marcado = est !== 'Pendiente' || ticks.indexOf(k) !== -1;
             var fila = document.createElement('label');
             fila.className = 'item-ped' + (marcado ? ' ok' : '');
@@ -2614,8 +2781,10 @@
           if (partes.frio.length) {
             cuerpo.insertAdjacentHTML('beforeend', '<div class="bloque-tit frio">❄ Refrigerados · puesto de frío' +
               (frioListo ? ' · entregados' : '') + '</div>');
+            catPrev = null;
             partes.frio.forEach(function (x) {
               var it = x.it;
+              subCategoria(it, 'frio');
               var fila = document.createElement('div');
               fila.className = 'item-frio' + (frioListo ? ' ok' : '');
               fila.innerHTML = '<span class="ico">' + (frioListo ? '✓' : '❄') + '</span><span class="txt"></span>';

@@ -11,279 +11,211 @@
   <link rel="stylesheet" href="../assets/styles.css">
   <link rel="icon" type="image/png" href="../assets/favicon-nodo.png">
   <style>
-    .wrap { max-width: 680px; }
+    /* 17/10 · página ancha y compacta: una fila por producto, sin cajas con
+       scroll propio, barra de acciones fija arriba. */
+    html { scroll-behavior: auto; }
+    .wrap { max-width: 1480px; padding-top: var(--s-5); padding-bottom: var(--s-6); }
+    @media (min-width: 768px) { .wrap { padding: var(--s-5) var(--s-5) var(--s-6); } }
+    .site-header { margin-bottom: var(--s-3); padding-bottom: var(--s-3); }
+    .intro { max-width: 820px; }
+    .intro h1 { margin: 0 0 4px; font-size: 1.7rem; }
+    .lead-corto { font-size: 0.92rem; line-height: 1.45; margin: 0 0 var(--s-2); color: var(--c-corteza); }
 
     .aviso {
       background: rgba(110, 142, 85, 0.10);
       border-left: 4px solid var(--c-oliva);
-      border-radius: 14px;
-      padding: var(--s-4) var(--s-5);
-      margin: var(--s-5) 0;
-      font-size: 0.95rem;
-      line-height: 1.5;
+      border-radius: 10px;
+      padding: 6px 12px;
+      margin: var(--s-2) 0 var(--s-3);
+      font-size: 0.82rem;
+      line-height: 1.4;
       color: var(--c-corteza);
     }
+    .aviso.rojo { background: rgba(166, 64, 43, 0.10); border-left-color: var(--c-rojo); }
 
-    .aviso.rojo {
-      background: rgba(166, 64, 43, 0.10);
-      border-left-color: var(--c-rojo);
+    /* ── Barra fija: clave, búsqueda, resumen y Guardar ─────────── */
+    .barra {
+      position: sticky; top: 0; z-index: 40;
+      display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
+      background: var(--c-crema-osc);
+      border: 1px solid rgba(74, 107, 58, 0.20);
+      border-radius: 0 0 12px 12px;
+      padding: 7px 10px;
+      margin: 0 0 var(--s-3);
+      box-shadow: 0 4px 12px rgba(44, 36, 24, 0.10);
+    }
+    .barra label { font-size: 0.75rem; font-weight: 800; color: var(--c-corteza); text-transform: uppercase; letter-spacing: 0.04em; }
+    .barra .input { width: auto; min-width: 0; padding: 5px 10px; font-size: 0.85rem; border-radius: 8px; }
+    .barra #clave { flex: 0 0 110px; width: 110px; }
+    .barra #buscar { flex: 0 1 210px; width: 210px; }
+    .resumen { margin: 0 0 4px; font-size: 0.8rem; color: var(--c-tierra); line-height: 1.3; }
+    .barra .btn { padding: 5px 13px; font-size: 0.82rem; white-space: nowrap; }
+    .estado-guardado { flex: 1 1 180px; min-width: 0; font-size: 0.8rem; font-weight: 700; color: var(--c-corteza); line-height: 1.25; }
+    .estado-guardado.error { color: var(--c-rojo); }
+    @media (max-width: 700px) {
+      .wrap { padding-left: 12px; padding-right: 12px; }
+      .barra { gap: 5px; padding: 6px; }
+      .barra label { display: none; }
+      .barra #clave { flex: 0 0 88px; width: 88px; }
+      .barra #buscar { flex: 1 1 100px; width: auto; }
+      .barra .btn { padding: 5px 10px; }
+      .barra #btn-guardar-todo { flex: 1 1 auto; }
+      .barra #btn-vista, .txt-largo { display: none; }
+      .estado-guardado { flex: 1 1 100%; order: 9; font-size: 0.75rem; }
+      .estado-guardado:empty { display: none; }
     }
 
-    .resumen {
-      font-size: 0.9rem;
-      color: var(--c-tierra);
-      font-style: italic;
-      margin: var(--s-3) 0 var(--s-4);
+    /* ── Secciones ───────────────────────────────────────────── */
+    .seccion {
+      display: block;
+      background: var(--c-leche);
+      border: 1px solid rgba(74, 107, 58, 0.16);
+      border-radius: 12px;
+      padding: 8px 10px 10px;
+      margin: 0 0 var(--s-3);
+    }
+    .seccion.curaduria { border: 2px solid var(--c-mostaza); background: #fbf4e6; }
+    .seccion h2 { font-size: 1.1rem; margin: 2px 0 4px; }
+    .seccion > summary { cursor: pointer; font-weight: 700; font-size: 0.95rem; padding: 2px 0; }
+    .seccion > summary.rojo { color: #A6402B; }
+    .nota { font-size: 0.78rem; color: var(--c-tierra); margin: 0 0 6px; line-height: 1.4; }
+    .badge-curaduria {
+      display: inline-block; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.06em;
+      color: #7a5a1c; background: rgba(196, 149, 67, 0.25); border-radius: var(--r-pill);
+      padding: 2px 9px; vertical-align: middle;
+    }
+    .swatch {
+      display: inline-block; width: 12px; height: 12px; border-radius: 3px;
+      vertical-align: -1px; margin-right: 2px; border: 1px solid rgba(0,0,0,0.18);
+    }
+    .sw-corregir { background: rgba(166, 64, 43, 0.35); }
+    .sw-nuevo { background: rgba(196, 149, 67, 0.55); }
+    .sw-sucia { background: #f3d58a; }
+
+    /* ── Tabla editable: una línea por producto ──────────────── */
+    table.tabla { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: 0.8rem; }
+    .tabla col.c-disp { width: 5.5%; }
+    .tabla col.c-nombre { width: 17%; }
+    .tabla col.c-productor { width: 7.5%; }
+    .tabla col.c-precio { width: 6%; }
+    .tabla col.c-unidad { width: 7%; }
+    .tabla col.c-origen { width: 8%; }
+    .tabla col.c-categoria { width: 8.5%; }
+    .tabla col.c-frac { width: 4.5%; }
+    .tabla col.c-fracciones { width: 7%; }
+    .tabla col.c-quien { width: 6.5%; }
+    .tabla col.c-oferta { width: 4.5%; }
+    .tabla col.c-stock { width: 4.5%; }
+    .tabla col.c-desc { width: 8%; }
+    .tabla col.c-estado { width: 5.5%; }
+    .tabla thead th {
+      position: sticky; top: var(--barra-h, 50px); z-index: 5;
+      background: #efe7d2;
+      font-size: 0.64rem; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase;
+      color: var(--c-corteza); text-align: left;
+      padding: 4px 3px; border-bottom: 2px solid rgba(122, 90, 28, 0.35);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .tabla td { padding: 2px 2px; border-bottom: 1px solid rgba(122, 90, 28, 0.13); vertical-align: middle; }
+    .tabla .input, .tabla .select {
+      width: 100%; min-width: 0; box-sizing: border-box; height: 27px;
+      font-size: 0.8rem; padding: 2px 5px; border-width: 1px; border-radius: 6px;
+    }
+    .tabla .select { padding-right: 14px; background-position: right 3px center; background-size: 9px; text-overflow: ellipsis; }
+    .tabla .input:disabled, .tabla .select:disabled { opacity: 0.55; }
+    .prod-txt { display: block; font-size: 0.72rem; color: var(--c-tierra); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .campo-sucio { border-color: #C49543 !important; box-shadow: 0 0 0 1px #C49543; background-color: #fff8e3 !important; }
+
+    tr.cat-fila th {
+      text-align: left; font-family: var(--f-display); font-size: 0.92rem; font-weight: 600;
+      color: var(--c-musgo); padding: 8px 4px 2px; border-bottom: 1px solid rgba(74, 107, 58, 0.25);
+    }
+    tr.cat-fila th span { font-family: var(--f-body); font-size: 0.75rem; color: var(--c-tierra); font-weight: 400; }
+
+    tr.fila-corregir { background: rgba(166, 64, 43, 0.09); }
+    tr.fila-nuevo { background: rgba(196, 149, 67, 0.15); }
+    tr.fila-sinconf { background: rgba(166, 64, 43, 0.04); }
+    tr.fila-fuera { background: rgba(0, 0, 0, 0.025); }
+    tr.fila.ok { background: rgba(76, 145, 65, 0.14); }
+    tr.fila.sucia { background: #fbecc0; }
+    tr.fila.enviando, tr.fila.esperando { background: rgba(110, 142, 85, 0.10); }
+    tr.fila.error, tr.fila.no-tomado { background: rgba(166, 64, 43, 0.16); }
+    tr.fila.ok > td:first-child { box-shadow: inset 4px 0 0 var(--c-verde-ok); }
+    tr.fila.sucia > td:first-child { box-shadow: inset 4px 0 0 #C49543; }
+    tr.sub > td {
+      font-size: 0.74rem; font-weight: 700; color: #A6402B; line-height: 1.35;
+      padding: 0 6px 4px; white-space: normal;
+    }
+    tr.fila + tr.sub:not([hidden]) { background: inherit; }
+    .c-estado { text-align: right; white-space: nowrap; }
+    .ic { display: inline-block; width: 1.1em; text-align: center; font-weight: 800; }
+    .ic-sucia { color: #C49543; }
+    .ic-ok { color: var(--c-verde-ok); }
+    .ic-error { color: var(--c-rojo); }
+    .btn-fila {
+      font-family: var(--f-body); font-size: 0.72rem; font-weight: 700;
+      padding: 3px 7px; border-radius: var(--r-pill);
+      border: 1.5px solid var(--c-musgo); background: var(--c-musgo); color: var(--c-crema);
+      cursor: pointer;
+    }
+    .btn-fila:disabled { background: transparent; color: var(--c-salvia); border-color: var(--c-salvia); cursor: default; }
+
+    /* Celular y tablet: cada producto es una tarjeta compacta (sin scroll lateral) */
+    @media (max-width: 1023px) {
+      table.tabla, .tabla tbody, .tabla tr, .tabla td, .tabla th { display: block; width: auto; }
+      .tabla colgroup, .tabla thead { display: none; }
+      .tabla tr.fila {
+        display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 3px 6px;
+        padding: 6px 8px; margin: 6px 0 0; border: 1px solid rgba(74, 107, 58, 0.20); border-radius: 10px;
+      }
+      .tabla tr.fila > td { border: none; padding: 0; box-shadow: none !important; }
+      .tabla tr.fila > td::before {
+        content: attr(data-l); display: block; font-size: 0.6rem; font-weight: 800;
+        text-transform: uppercase; letter-spacing: 0.04em; color: var(--c-corteza);
+      }
+      .tabla tr.fila > td.c-nombre::before, .tabla tr.fila > td.c-productor::before,
+      .tabla tr.fila > td.c-estado::before { display: none; }
+      .tabla tr.fila.sucia { box-shadow: inset 4px 0 0 #C49543; }
+      /* [disp|producto] [productor|estado] [precio|unidad|oferta] [origen|categoría] [fracc|fracciones|quién] [stock|descripción] */
+      .tabla td.c-disp { order: 1; grid-column: span 2; }
+      .tabla td.c-nombre { order: 2; grid-column: span 4; align-self: end; }
+      .tabla td.c-productor { order: 3; grid-column: span 4; align-self: center; }
+      .tabla td.c-estado { order: 4; grid-column: span 2; }
+      .tabla td.c-precio { order: 5; grid-column: span 2; }
+      .tabla td.c-unidad { order: 6; grid-column: span 2; }
+      .tabla td.c-oferta { order: 7; grid-column: span 2; }
+      .tabla td.c-origen { order: 8; grid-column: span 3; }
+      .tabla td.c-categoria { order: 9; grid-column: span 3; }
+      .tabla td.c-frac { order: 10; grid-column: span 2; }
+      .tabla td.c-fracciones { order: 11; grid-column: span 2; }
+      .tabla td.c-quien { order: 12; grid-column: span 2; }
+      .tabla td.c-stock { order: 13; grid-column: span 2; }
+      .tabla td.c-desc { order: 14; grid-column: span 4; }
+      .tabla .input, .tabla .select { height: 30px; font-size: 0.85rem; }
+      .tabla tr.sub { margin: 0; }
+      .tabla tr.sub > td { padding: 2px 8px 0; }
+      .tabla tr.cat-fila th { margin-top: 8px; }
     }
 
-    .cat-card { margin-top: var(--s-5); }
-
-    /* ── Tarjeta de producto en 3 líneas (igual que el form) ── */
+    /* ── Vista "como en el formulario" (solo lectura) ────────── */
+    .cat-card { margin-top: var(--s-3); }
+    .cat-card h2 { font-size: 1.15rem; }
+    .product { padding: var(--s-3) var(--s-4); }
+    .product-list { gap: var(--s-2); }
     .product__name { display: block; }
     .product__name .product__firma { font-weight: 400; color: var(--c-tierra, #7a6f58); }
     .product__price { display: block; margin-top: 2px; font-weight: 600; color: var(--c-corteza, #4a4234); }
     .product__meta { display: block; margin-top: 3px; }
-
-    /* ── Bloque de curaduría pendiente (tabla) ─────────────── */
-    .card.curaduria {
-      border: 2px solid var(--c-mostaza, #C49543);
-      background: rgba(196, 149, 67, 0.07);
-      /* se sale del ancho de lectura para que la tabla entre completa */
-      width: min(1400px, calc(100vw - 32px));
-      margin-left: 50%;
-      transform: translateX(-50%);
-      box-sizing: border-box;
-    }
-
-    .badge-curaduria {
-      display: inline-block;
-      font-size: 0.72rem;
-      font-weight: 800;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: #7a5a1c;
-      background: rgba(196, 149, 67, 0.25);
-      border-radius: var(--r-pill);
-      padding: 3px 10px;
-      vertical-align: middle;
-    }
-
-    /* ── Bloque "A corregir": productos YA publicados con datos que
-          el formulario no puede interpretar. Otro color para que no se
-          confundan con las altas nuevas. ─────────────────────────── */
-    .card.curaduria.corregir {
-      border-color: #A6402B;
-      background: rgba(166, 64, 43, 0.06);
-    }
-
-    .card.curaduria.corregir h2 { color: #7a2f20; }
-
-    .badge-corregir {
-      display: inline-block;
-      font-size: 0.72rem;
-      font-weight: 800;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: #fff;
-      background: #A6402B;
-      border-radius: var(--r-pill);
-      padding: 3px 10px;
-      vertical-align: middle;
-    }
-
-    tr.fila-corregir td { background: rgba(166, 64, 43, 0.11); }
-    tr.fila-nuevo td { background: rgba(196, 149, 67, 0.16); }
-
-    /* leyenda de colores del cuadro de curaduría */
-    .leyenda-cur { line-height: 1.55; }
-    .leyenda-cur .swatch {
-      display: inline-block; width: 14px; height: 14px; border-radius: 3px;
-      vertical-align: -2px; margin-right: 3px; border: 1px solid rgba(0,0,0,0.18);
-    }
-    .leyenda-cur .sw-corregir { background: rgba(166, 64, 43, 0.35); }
-    .leyenda-cur .sw-nuevo { background: rgba(196, 149, 67, 0.55); }
-
-    .motivos-corregir {
-      font-size: 0.76rem;
-      font-weight: 700;
-      color: #A6402B;
-      margin-top: 4px;
-      line-height: 1.35;
-      max-width: 230px;
-      white-space: normal;
-    }
-
-    .tabla-scroll {
-      overflow-x: auto;
-      margin-top: var(--s-3);
-      -webkit-overflow-scrolling: touch;
-    }
-
-    table.curaduria-tabla {
-      border-collapse: collapse;
-      min-width: 1100px;
-      width: 100%;
-      font-size: 0.85rem;
-    }
-
-    .curaduria-tabla th {
-      font-size: 0.7rem;
-      font-weight: 800;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      color: var(--c-corteza);
-      text-align: left;
-      padding: 6px 8px;
-      border-bottom: 2px solid rgba(122, 90, 28, 0.35);
-      white-space: nowrap;
-    }
-
-    .curaduria-tabla td {
-      padding: 8px 8px;
-      border-bottom: 1px solid rgba(122, 90, 28, 0.18);
-      vertical-align: top;
-      background: var(--c-leche, #fff);
-    }
-
-    .curaduria-tabla .input,
-    .curaduria-tabla .select {
-      width: 100%;
-      min-width: 90px;
-      box-sizing: border-box;
-      font-size: 0.85rem;
-      padding: 6px 8px;
-    }
-
-    .curaduria-tabla td.col-nombre { min-width: 190px; }
-    .curaduria-tabla td.col-nombre .quien-carga {
-      font-size: 0.75rem;
-      color: var(--c-tierra);
-      font-style: italic;
-      margin-top: 2px;
-    }
-    .curaduria-tabla td.col-precio .input { min-width: 80px; }
-    .curaduria-tabla td.col-stock .input { min-width: 70px; }
-    .curaduria-tabla td.col-desc .input { min-width: 150px; }
-    .curaduria-tabla td.col-disponible .select {
-      min-width: 75px;
-      font-weight: 700;
-    }
-
-    /* estado persistente: refleja disponible_edicion_actual de la planilla */
-    tr.estado-si td { background: rgba(76, 145, 65, 0.08); }
-    tr.estado-no td { background: rgba(166, 64, 43, 0.08); }
-
-    /* resultado tras guardar (más intenso, momentáneo hasta el refresco) */
-    tr.fila-ok td { background: rgba(76, 145, 65, 0.18) !important; }
-    tr.fila-no td { background: rgba(166, 64, 43, 0.16) !important; }
-    .product.fila-ok { background: rgba(76, 145, 65, 0.14) !important; border-color: var(--c-verde-ok, #2f7d32) !important; }
-    .product.fila-no { background: rgba(166, 64, 43, 0.12) !important; border-color: var(--c-rojo) !important; }
-
-    .hint-fila {
-      font-size: 0.76rem;
-      color: var(--c-rojo);
-      font-weight: 700;
-      margin-top: 3px;
-      display: block;
-      max-width: 160px;
-      white-space: normal;
-    }
-
-    /* ── Edición inline del catálogo ────────────────────────── */
-    .fila-acciones { margin-top: var(--s-2); text-align: right; }
-
+    .product.sucia { border-color: #C49543; background: #fff8e3; }
+    .fila-acciones { text-align: right; }
     .btn-editar {
-      display: inline-block;
-      font-family: var(--f-body);
-      font-size: 0.78rem;
-      font-weight: 700;
-      padding: 5px 12px;
-      border-radius: var(--r-pill);
-      border: 1.5px solid var(--c-salvia);
-      color: var(--c-tierra);
-      background: transparent;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      font-family: var(--f-body); font-size: 0.78rem; font-weight: 700;
+      padding: 4px 12px; border-radius: var(--r-pill); border: 1.5px solid var(--c-salvia);
+      color: var(--c-tierra); background: transparent; cursor: pointer; white-space: nowrap;
     }
+    .btn-editar:hover { border-color: var(--c-oliva); color: var(--c-musgo); background: rgba(110, 142, 85, 0.10); }
 
-    .btn-editar:hover {
-      border-color: var(--c-oliva);
-      color: var(--c-musgo);
-      background: rgba(110, 142, 85, 0.10);
-    }
-
-    .panel-edicion {
-      display: none;
-      width: 100%;
-      box-sizing: border-box;
-      margin-top: var(--s-3);
-      padding: var(--s-4);
-      border-radius: 14px;
-      background: var(--c-crema-osc, rgba(0,0,0,0.03));
-      border: 1px solid rgba(74, 107, 58, 0.14);
-    }
-
-    .panel-edicion.abierto { display: block; }
-
-    .grid-campos {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: var(--s-3);
-    }
-
-    @media (max-width: 600px) {
-      .grid-campos { grid-template-columns: 1fr 1fr; }
-    }
-
-    .campo label {
-      display: block;
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: var(--c-corteza);
-      margin-bottom: 3px;
-    }
-
-    .campo .input, .campo .select { width: 100%; box-sizing: border-box; }
-    .campo.ancho { grid-column: 1 / -1; }
-    .campo.principal label { color: var(--c-musgo); font-size: 0.78rem; }
-    .campo.principal .select { font-weight: 700; border-width: 2px; }
-
-    .acciones-panel {
-      display: flex;
-      gap: var(--s-2);
-      justify-content: flex-end;
-      align-items: center;
-      margin-top: var(--s-3);
-      flex-wrap: wrap;
-    }
-
-    .hint-guardar {
-      font-size: 0.8rem;
-      color: var(--c-tierra);
-      font-style: italic;
-      margin-right: auto;
-    }
-
-    .fila-clave {
-      display: flex;
-      gap: var(--s-2);
-      align-items: center;
-      flex-wrap: wrap;
-      margin: var(--s-4) 0;
-    }
-    .fila-clave .input { width: 180px; }
-    .fila-clave label { font-size: 0.85rem; font-weight: 700; color: var(--c-corteza); }
-
-    .nota-final {
-      font-size: 0.9rem;
-      color: var(--c-tierra);
-      font-style: italic;
-      line-height: 1.5;
-      margin-top: var(--s-6);
-    }
+    .nota-final { font-size: 0.85rem; color: var(--c-tierra); font-style: italic; line-height: 1.5; margin-top: var(--s-5); max-width: 820px; }
   </style>
 </head>
 <body>
@@ -299,35 +231,32 @@
       </a>
     </header>
 
-    <section class="fade-in" data-delay="1">
-      <p><a href="../" class="btn btn--ghost btn--small">← Volver a la guía</a></p>
+    <section class="intro fade-in" data-delay="1">
+      <p style="margin:0 0 6px;"><a href="../" class="btn btn--ghost btn--small">← Volver a la guía</a></p>
       <h1>Revisión del catálogo</h1>
-      <p class="lead">
-        Paso obligado antes de generar la edición. Los productos nuevos esperan
-        curaduría en la tabla de arriba: la decisión principal es si entran o no
-        a esta edición. En el catálogo, cualquier dato de cualquier producto se
-        corrige acá mismo con <strong>✏️ Editar</strong> — precio, nombre,
-        categoría, fracciones — sin abrir la página de ningún productor. Nada
-        se publica sin pasar por acá.
+      <p class="lead-corto">
+        Paso obligado antes de generar la edición. Cada producto es una fila:
+        cambiá lo que haga falta (la fila queda en <span class="swatch sw-sucia"></span> amarillo)
+        y al final tocá <strong>Guardar cambios</strong>, arriba: se guardan todos
+        juntos. Mientras haya cambios sin guardar, la página no se recarga sola ni
+        pierde lo que tocaste. ✔ = guardado y ya visto en la planilla.
       </p>
     </section>
 
     <div class="aviso" id="estado">Leyendo la planilla…</div>
+    <p class="resumen" id="resumen"></p>
 
-    <div class="fila-clave">
-      <label for="clave">Clave de equipo</label>
-      <input class="input" type="password" id="clave" placeholder="para guardar cambios">
-      <span style="font-size:0.8rem; color:var(--c-tierra); font-style:italic;">
-        se pide una vez y vale para todos los cambios de esta sesión
-      </span>
-    </div>
-
-    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-                justify-content:space-between; border-top:1px solid rgba(74,107,58,0.14);
-                padding-top:12px; margin-top:12px;">
-      <p class="resumen" id="resumen" style="margin:0;"></p>
+    <div class="barra" id="barra">
+      <label for="clave">Clave</label>
+      <input class="input" type="password" id="clave" placeholder="clave de equipo" autocomplete="off">
+      <input class="input" type="search" id="buscar" placeholder="🔎 Buscar producto o productor">
+      <span class="estado-guardado" id="estado-guardado"></span>
+      <button type="button" class="btn btn--primary btn--small" id="btn-guardar-todo" disabled>Sin cambios</button>
+      <button type="button" class="btn btn--ghost btn--small" id="btn-descartar" hidden>Descartar</button>
+      <button type="button" class="btn btn--ghost btn--small" id="btn-vista"
+        title="Muestra los publicados como los va a ver el consumidor">👁 Vista formulario</button>
       <button type="button" class="btn btn--ghost btn--small" id="btn-refrescar"
-        title="Vuelve a leer el catálogo desde la planilla">↻ Recargar catálogo</button>
+        title="Vuelve a leer el catálogo desde la planilla (no borra lo que estás editando)">↻<span class="txt-largo"> Recargar</span></button>
     </div>
 
     <div id="curaduria"></div>
@@ -475,43 +404,58 @@
       }
 
       // ── Cargar la planilla ───────────────────────────────────────
-      function cargar() {
-        $('estado').className = 'aviso';
-        $('estado').textContent = 'Leyendo la planilla…';
+      // silencioso = relectura de control después de guardar: no toca el
+      // aviso de arriba (para que la página no salte) y no vuelve a leer
+      // las listas auxiliares. Nunca pisa lo que se está editando: el
+      // render combina la planilla con los borradores locales.
+      var nombresProductor = {};
+      var auxCargado = false;
+      var cargaN = 0;
+      function cargar(silencioso, despues) {
+        var miCarga = ++cargaN;
+        marcarLectura(true);
 
-        // Nombres de productores (para los productos nuevos, que llegan sin
-        // nombre_productor en la columna Q). Si falla, se sigue con el id.
-        var nombresProductor = {};
-        gviz('sheet=Productores_API&range=A1:B2000&headers=1&_=' + Date.now())
-          .then(function (rp) {
-            (rp.table.rows || []).forEach(function (r) {
-              var id = String(celda(r, 0)).trim();
-              if (id) nombresProductor[id] = String(celda(r, 1)).trim();
-            });
-          })
-          .catch(function () {})
-          .then(function () {
-            // Listas maestras: orígenes desde Distancias!A (lo que tiene km) y
-            // unidades/categorías desde _Listas_Validacion (D y E). Se suman a
-            // lo que ya existe en Productos, así un origen nuevo aparece en el
-            // desplegable apenas se agrega a Distancias.
-            return Promise.all([
-              gviz('sheet=Distancias&range=A1:A200&headers=1&_=' + Date.now()).catch(function () { return null; }),
-              gviz('sheet=_Listas_Validacion&range=D2:E80&headers=1&_=' + Date.now()).catch(function () { return null; })
-            ]).then(function (rs) {
-              if (rs[0] && rs[0].table) rs[0].table.rows.forEach(function (r) {
-                var v = String(celda(r, 0) || '').trim(); if (v) maestras.origen[v] = true;
+        var aux;
+        if (silencioso && auxCargado) {
+          aux = Promise.resolve();
+        } else {
+          // Nombres de productores (para los productos nuevos, que llegan sin
+          // nombre_productor en la columna Q). Si falla, se sigue con el id.
+          aux = gviz('sheet=Productores_API&range=A1:B2000&headers=1&_=' + Date.now())
+            .then(function (rp) {
+              (rp.table.rows || []).forEach(function (r) {
+                var id = String(celda(r, 0)).trim();
+                if (id) nombresProductor[id] = String(celda(r, 1)).trim();
               });
-              if (rs[1] && rs[1].table) rs[1].table.rows.forEach(function (r) {
-                var u = String(celda(r, 0) || '').trim(); if (u) maestras.unidad[u] = true;
-                var c = String(celda(r, 1) || '').trim(); if (c) maestras.categoria[c] = true;
+            })
+            .catch(function () {})
+            .then(function () {
+              // Listas maestras: orígenes desde Distancias!A (lo que tiene km) y
+              // unidades/categorías desde _Listas_Validacion (D y E). Se suman a
+              // lo que ya existe en Productos, así un origen nuevo aparece en el
+              // desplegable apenas se agrega a Distancias.
+              return Promise.all([
+                gviz('sheet=Distancias&range=A1:A200&headers=1&_=' + Date.now()).catch(function () { return null; }),
+                gviz('sheet=_Listas_Validacion&range=D2:E80&headers=1&_=' + Date.now()).catch(function () { return null; })
+              ]).then(function (rs) {
+                if (rs[0] && rs[0].table) rs[0].table.rows.forEach(function (r) {
+                  var v = String(celda(r, 0) || '').trim(); if (v) maestras.origen[v] = true;
+                });
+                if (rs[1] && rs[1].table) rs[1].table.rows.forEach(function (r) {
+                  var u = String(celda(r, 0) || '').trim(); if (u) maestras.unidad[u] = true;
+                  var c = String(celda(r, 1) || '').trim(); if (c) maestras.categoria[c] = true;
+                });
+                auxCargado = true;
               });
             });
-          })
+        }
+
+        aux
           .then(function () {
             return gviz('sheet=Productos&range=A1:T5000&headers=1&_=' + Date.now());
           })
           .then(function (res) {
+            if (miCarga !== cargaN) return;   // llegó una lectura más nueva
             var disponibles = [];
             var pendientes = [];
             var fuera = [];
@@ -522,6 +466,7 @@
             hayConfirmacion = colT.indexOf('confirmado') !== -1;
             var aCorregir = [];
             var sets = { unidad: {}, origen: {}, categoria: {}, fracciones: {} };
+            var nuevos = {};
 
             res.table.rows.forEach(function (r) {
               var id = String(celda(r, 0)).trim();
@@ -548,6 +493,7 @@
                 quien_fracciona: String(celda(r, 18) || '').trim(),
                 confirmado: String(celda(r, 19) || '').trim() === 'Sí'
               };
+              nuevos[id] = p;
               if (p.unidad) sets.unidad[p.unidad] = true;
               if (p.origen) sets.origen[p.origen] = true;
               if (p.categoria) sets.categoria[p.categoria] = true;
@@ -560,8 +506,8 @@
                 // nadie lo confirmó: NO va al formulario
                 sinConfirmar.push(p);
               } else if (p.disponible) {
-                // publicado, pero si sus datos no se entienden va a la tabla
-                // de corrección (arriba) además de aparecer en el catálogo
+                // publicado; si sus datos no se entienden va a la tabla de
+                // corrección (arriba) en lugar de la lista de publicados
                 var probs = problemasDe(p);
                 if (probs.length) { p._problemas = probs; aCorregir.push(p); }
                 disponibles.push(p);
@@ -578,11 +524,23 @@
                 .sort(function (a, b) { return a.localeCompare(b, 'es'); });
             });
 
-            render(disponibles, pendientes, fuera, aCorregir, sinConfirmar);
+            datos = nuevos;
+            secciones = {
+              disponibles: disponibles, pendientes: pendientes, fuera: fuera,
+              aCorregir: aCorregir, sinConfirmar: sinConfirmar
+            };
+            verificarEnvios();
+            pedirRender();
           })
           .catch(function () {
+            if (miCarga !== cargaN) return;
             $('estado').className = 'aviso rojo';
-            $('estado').textContent = 'No pudimos leer la planilla. Revisá la conexión y recargá.';
+            $('estado').textContent = 'No pudimos leer la planilla. Revisá la conexión y tocá ↻ Recargar ' +
+              '(lo que estás editando no se pierde).';
+          })
+          .then(function () {
+            if (miCarga === cargaN) marcarLectura(false);
+            if (despues) despues();
           });
       }
 
@@ -595,230 +553,6 @@
         var nuevas = cats.filter(function (c) { return resultado.indexOf(c) === -1; });
         nuevas.sort(function (a, b) { return a.localeCompare(b, 'es'); });
         return resultado.concat(nuevas);
-      }
-
-      // ── Desplegables con opción "Otro…" ─────────────────────────
-      function selectConOtro(id, opciones, valor, conVacio) {
-        var h = '<select class="select" id="' + id + '" data-otro="1">';
-        if (conVacio) h += '<option value=""' + (!valor ? ' selected' : '') + '>—</option>';
-        var enLista = opciones.indexOf(valor) !== -1;
-        if (valor && !enLista) {
-          h += '<option value="' + escapeHtml(valor) + '" selected>' + escapeHtml(valor) + '</option>';
-        }
-        opciones.forEach(function (o) {
-          h += '<option value="' + escapeHtml(o) + '"' +
-            (o === valor ? ' selected' : '') + '>' + escapeHtml(o) + '</option>';
-        });
-        h += '<option value="' + OTRO + '">✏️ Otro…</option>';
-        h += '</select>';
-        return h;
-      }
-
-      // cambiar un select a input de texto cuando eligen "Otro…"
-      document.addEventListener('change', function (e) {
-        var el = e.target;
-        if (el.getAttribute && el.getAttribute('data-otro') === '1' && el.value === OTRO) {
-          var input = document.createElement('input');
-          input.className = 'input';
-          input.id = el.id;
-          input.placeholder = 'escribí el valor nuevo';
-          el.parentNode.replaceChild(input, el);
-          input.focus();
-        }
-      });
-
-      function selectSiNo(id, valor) {
-        return '<select class="select" id="' + id + '">' +
-          '<option value="Sí"' + (valor ? ' selected' : '') + '>Sí</option>' +
-          '<option value="No"' + (!valor ? ' selected' : '') + '>No</option>' +
-          '</select>';
-      }
-
-      // ── Tabla de curaduría pendiente ────────────────────────────
-      // modo 'nuevo'    = producto que cargó un productor y espera decisión
-      // modo 'corregir' = producto YA publicado cuyos datos el formulario no
-      //                   puede interpretar: se edita acá, no es un alta.
-      function filaPendiente(p, modo) {
-        var i = p.id_producto;
-        var corregir = (modo === 'corregir');
-        // Dos estados: No (rojo, valor por defecto — nada entra al catálogo
-        // sin una decisión explícita) · Sí = se publica (verde; al completar
-        // categoría pasa al catálogo de abajo y sale de esta tabla).
-        var esSi = p.disponible_raw === 'Sí';
-        var clase = corregir ? 'fila-corregir' : 'fila-nuevo';
-        var sel = '<select class="select" id="disponible-' + i + '">' +
-          '<option value="No"' + (!esSi ? ' selected' : '') + '>No</option>' +
-          '<option value="Sí"' + (esSi ? ' selected' : '') + '>Sí</option>' +
-          '</select>';
-        var motivos = '';
-        if (corregir && p._problemas && p._problemas.length) {
-          motivos = '<div class="motivos-corregir">⚠ ' +
-            p._problemas.map(escapeHtml).join('<br>⚠ ') + '</div>';
-        } else if (!corregir && problemaPresentacion(p)) {
-          // alta nueva: avisar antes de publicarla
-          motivos = '<div class="motivos-corregir">⚠ ' + escapeHtml(problemaPresentacion(p)) + '</div>';
-        }
-        return '<tr id="fila-' + i + '" class="' + clase + '">' +
-          '<td class="col-disponible">' + sel + '</td>' +
-          '<td class="col-nombre">' +
-          '  <input class="input" id="nombre-' + i + '" value="' + escapeHtml(p.nombre) + '">' +
-          '  <div class="quien-carga">' + escapeHtml(p.productor || p.id_productor) +
-          (p.productor ? ' <span style="opacity:.6">(' + escapeHtml(p.id_productor) + ')</span>' : '') +
-          '     · ' + formatMoney(p.precio) + '</div>' +
-          motivos +
-          '  <span class="hint-fila" id="hint-' + i + '"></span>' +
-          '</td>' +
-          '<td class="col-precio"><input class="input" type="number" min="0" step="any" id="precio-' + i + '" value="' + (p.precio || '') + '"></td>' +
-          '<td>' + selectConOtro('unidad-' + i, listas.unidad, p.unidad, false) + '</td>' +
-          '<td>' + selectConOtro('origen-' + i, listas.origen, p.origen, true) + '</td>' +
-          '<td>' + selectConOtro('categoria-' + i, listas.categoria, p.categoria, true) + '</td>' +
-          '<td>' + selectSiNo('fraccionable-' + i, p.fraccionable) + '</td>' +
-          '<td>' + selectConOtro('fracciones-' + i, listas.fracciones, p.fracciones_raw, true) + '</td>' +
-          '<td><select class="select" id="quien-' + i + '">' +
-          '  <option value=""' + (!p.quien_fracciona ? ' selected' : '') + '>—</option>' +
-          '  <option' + (p.quien_fracciona === 'Productor' ? ' selected' : '') + '>Productor</option>' +
-          '  <option' + (p.quien_fracciona === 'Galpón' ? ' selected' : '') + '>Galpón</option>' +
-          '</select></td>' +
-          '<td>' + selectSiNo('oferta-' + i, p.es_oferta) + '</td>' +
-          '<td class="col-stock"><input class="input" type="number" min="0" step="any" id="stock-' + i + '" value="' + escapeHtml(p.stock) + '" placeholder="—"></td>' +
-          '<td class="col-desc"><input class="input" id="descripcion-' + i + '" value="' + escapeHtml(p.descripcion) + '" placeholder="opcional"></td>' +
-          '<td><button type="button" class="btn btn--primary btn--small" data-guardar="' + i + '">Guardar</button></td>' +
-          '</tr>';
-      }
-
-      function encabezadosTabla() {
-        return '<thead><tr>' +
-          '<th>Disponible</th><th>Producto</th><th>Precio $</th><th>Unidad</th>' +
-          '<th>Origen</th><th>Categoría</th><th>Fracciona</th><th>Fracciones</th>' +
-          '<th>Quién</th><th>Oferta</th><th>Stock</th><th>Descripción</th><th></th>' +
-          '</tr></thead><tbody>';
-      }
-
-      function renderPendientes(pendientes, aCorregir) {
-        var contP = $('curaduria');
-        contP.innerHTML = '';
-        aCorregir = aCorregir || [];
-
-        if (!pendientes.length && !aCorregir.length) return;
-
-        // Un solo cuadro: adentro, las filas se distinguen por color según el
-        // tipo (a corregir = rojo · alta nueva = mostaza).
-        var total = aCorregir.length + pendientes.length;
-        var card = document.createElement('div');
-        card.className = 'card cat-card curaduria';
-
-        var h = '<h2>🧐 Curaduría pendiente <span class="badge-curaduria">' +
-          total + '</span></h2>';
-
-        h += '<p class="resumen leyenda-cur" style="margin-top:var(--s-2);">' +
-          'Las filas se distinguen por color:<br>' +
-          '<span class="swatch sw-corregir"></span> <strong>A corregir</strong> — ' +
-          'productos que <strong>ya están en el catálogo</strong> pero con datos que el ' +
-          'formulario no puede interpretar (por eso salen con precios o cantidades raros). ' +
-          'No son nuevos: se arreglan acá mismo. Recordá el criterio: las <strong>fracciones</strong> ' +
-          'son para kg y litro (1/4, 1/2, 1); una presentación con su propio peso (50 g, 200 gr, ' +
-          '½ pieza) va como <strong>producto aparte con su precio</strong>.<br>' +
-          '<span class="swatch sw-nuevo"></span> <strong>Alta nueva</strong> — productos ' +
-          '<strong>nuevos</strong> cargados por productores. La decisión principal es la primera ' +
-          'columna: <strong>¿entra a esta edición?</strong> Sí = se publica (pide categoría) · ' +
-          'No = queda rechazado para esta edición.</p>';
-
-        h += '<div class="tabla-scroll"><table class="curaduria-tabla">';
-        h += encabezadosTabla();
-        // primero lo que hay que corregir (más urgente), después las altas nuevas
-        aCorregir.forEach(function (p) { h += filaPendiente(p, 'corregir'); });
-        pendientes.forEach(function (p) { h += filaPendiente(p, 'nuevo'); });
-        h += '</tbody></table></div>';
-
-        card.innerHTML = h;
-        contP.appendChild(card);
-      }
-
-      // ── Catálogo publicado (tarjetas fieles + edición) ──────────
-      function controlFiel(p) {
-        var control = '<label class="product__ctl-label">Cantidad ';
-        control += '<select class="select" style="width:auto;">';
-        control += '<option>' + conUnidad('0', 0, p.unidad) + '</option>';
-        if (p.fraccionable && p.fracciones.length) {
-          opcionesFraccion(p).forEach(function (o) {
-            var texto = o.etiquetaFija ? o.etiqueta : conUnidad(o.etiqueta, o.valor, p.unidad);
-            control += '<option>' + texto + ' · ' + formatMoney(o.valor * (p.precio || 0)) + '</option>';
-          });
-        } else {
-          for (var i = 1; i <= 5; i++) {
-            control += '<option>' + conUnidad(String(i), i, p.unidad) + '</option>';
-          }
-        }
-        control += '</select></label>';
-        return control;
-      }
-
-      function campo(clase, etiqueta, inputHtml) {
-        return '<div class="campo ' + clase + '"><label>' + etiqueta + '</label>' + inputHtml + '</div>';
-      }
-
-      function panelEdicion(p) {
-        var i = p.id_producto;
-        var h = '<div class="panel-edicion" id="panel-' + i + '">';
-        h += '<div class="grid-campos">';
-        h += campo('principal', 'Disponible en esta edición', selectSiNo('disponible-' + i, p.disponible));
-        h += campo('', 'Precio ($)',
-          '<input class="input" type="number" min="0" step="any" id="precio-' + i + '" value="' + (p.precio || '') + '">');
-        h += campo('', 'Unidad de venta', selectConOtro('unidad-' + i, listas.unidad, p.unidad, false));
-        h += campo('ancho', 'Nombre',
-          '<input class="input" id="nombre-' + i + '" value="' + escapeHtml(p.nombre) + '">');
-        h += campo('', 'Origen', selectConOtro('origen-' + i, listas.origen, p.origen, true));
-        h += campo('', 'Categoría', selectConOtro('categoria-' + i, listas.categoria, p.categoria, true));
-        h += campo('', 'Es oferta', selectSiNo('oferta-' + i, p.es_oferta));
-        h += campo('', 'Fraccionable', selectSiNo('fraccionable-' + i, p.fraccionable));
-        h += campo('', 'Fracciones', selectConOtro('fracciones-' + i, listas.fracciones, p.fracciones_raw, true));
-        h += campo('', 'Quién fracciona',
-          '<select class="select" id="quien-' + i + '">' +
-          '<option value=""' + (!p.quien_fracciona ? ' selected' : '') + '>—</option>' +
-          '<option' + (p.quien_fracciona === 'Productor' ? ' selected' : '') + '>Productor</option>' +
-          '<option' + (p.quien_fracciona === 'Galpón' ? ' selected' : '') + '>Galpón</option>' +
-          '</select>');
-        h += campo('', 'Stock (futuro)',
-          '<input class="input" type="number" min="0" step="any" id="stock-' + i + '" value="' + escapeHtml(p.stock) + '" placeholder="—">');
-        h += campo('ancho', 'Descripción (opcional)',
-          '<input class="input" id="descripcion-' + i + '" value="' + escapeHtml(p.descripcion) + '">');
-        h += '</div>';
-        h += '<div class="acciones-panel">';
-        h += '<span class="hint-guardar" id="hint-' + i + '"></span>';
-        h += '<button type="button" class="btn btn--primary btn--small" data-guardar="' + i + '">Guardar cambios</button>';
-        h += '</div>';
-        h += '</div>';
-        return h;
-      }
-
-      function renderProductCard(p, sinControl) {
-        var tags = '';
-        if (p.es_oferta) tags += ' <span class="product__tag product__tag--oferta">Oferta</span>';
-
-        // Misma tarjeta en 3 líneas que el formulario de pedidos:
-        // 1) nombre · productor  2) precio  3) descripción · Origen: ciudad
-        var firma = p.productor
-          ? ' <span class="product__firma">&bull; ' + escapeHtml(p.productor) + '</span>'
-          : '';
-        var precioLinea = formatMoney(p.precio) + ' por ' + escapeHtml(unidadMostrada(p.unidad) || '—');
-        var partes = [];
-        if (p.descripcion) partes.push(escapeHtml(p.descripcion));
-        if (p.origen) partes.push('Origen: ' + escapeHtml(p.origen));
-        if (sinControl) partes.push(escapeHtml(p.categoria));
-        var meta = partes.join(' · ');
-
-        return '' +
-          '<div class="product" id="fila-' + p.id_producto + '">' +
-          '  <div class="product__head">' +
-          '    <span class="product__name">' + escapeHtml(p.nombre) + firma + tags + '</span>' +
-          '    <span class="product__name product__price">' + precioLinea + '</span>' +
-          (meta ? '    <span class="product__meta"><span>' + meta + '</span></span>' : '') +
-          '  </div>' +
-          '  <div class="fila-acciones">' +
-          '    <button type="button" class="btn-editar" data-editar="' + p.id_producto + '">✏️ Editar</button>' +
-          '  </div>' +
-          panelEdicion(p) +
-          '</div>';
       }
 
       // ── Control de coherencia del catálogo ──────────────────────
@@ -878,219 +612,818 @@
         return lista;
       }
 
-
+      // ── Estado local: sobrevive a cada lectura de la planilla ────
+      // Antes (hasta 09/10) cada Guardar recargaba TODA la página a los 2,5 s
+      // y a los 8 s: lo que se estaba editando en otras filas volvía a los
+      // valores de la planilla (Disponible otra vez en "No", categoría vacía)
+      // y al tocar Guardar en esas filas se mandaba el valor viejo → los
+      // productos quedaban rechazados. Ahora:
+      //   datos      id -> producto tal como está en la planilla (última lectura)
+      //   borradores id -> {campo: valor} lo tocado y todavía no guardado
+      //   envios     id -> {valores, t, estado} lo guardado: 'enviando' →
+      //              'esperando' (Make tarda unos segundos) → 'ok' cuando la
+      //              planilla ya lo muestra, o 'no-tomado' / 'error'.
+      // Cada render combina las tres cosas, así una relectura nunca borra
+      // lo tocado ni muestra un valor viejo de algo recién guardado.
+      var CAMPOS = ['disponible', 'nombre', 'precio', 'unidad', 'origen', 'categoria',
+        'fraccionable', 'fracciones', 'quien', 'oferta', 'stock', 'descripcion'];
+      var NOMBRE_CAMPO = {
+        disponible: 'disponible', nombre: 'nombre', precio: 'precio', unidad: 'unidad',
+        origen: 'origen', categoria: 'categoría', fraccionable: 'fraccionable',
+        fracciones: 'fracciones', quien: 'quién fracciona', oferta: 'oferta',
+        stock: 'stock', descripcion: 'descripción'
+      };
+      var ESPERA_CONFIRMACION = 90000;   // ms para ver el cambio en la planilla
+      var datos = {};
+      var secciones = null;
+      var seccionDe = {};
+      var borradores = {};
+      var envios = {};
+      var avisos = {};
+      var vista = 'tabla';
+      var abiertos = { sinconf: true, fuera: false };
+      var ultimaInteraccion = 0;
+      var enviando = false;
       var hayConfirmacion = false;
-      function render(disponibles, pendientes, fuera, aCorregir, sinConfirmar) {
-        sinConfirmar = sinConfirmar || [];
-        renderPendientes(pendientes, aCorregir || []);
 
-        var cont = $('catalogo');
-        cont.innerHTML = '';
+      function tiene(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
 
-        if (!disponibles.length && !pendientes.length && !(fuera && fuera.length) && !sinConfirmar.length) {
+      function valorPlanilla(p, campo) {
+        if (!p) return '';
+        switch (campo) {
+          case 'disponible': return p.disponible ? 'Sí' : (p.disponible_raw ? 'No' : '');
+          case 'nombre': return p.nombre;
+          case 'precio': return p.precio ? String(p.precio) : '';
+          case 'unidad': return p.unidad;
+          case 'origen': return p.origen;
+          case 'categoria': return p.categoria;
+          case 'fraccionable': return p.fraccionable ? 'Sí' : 'No';
+          case 'fracciones': return p.fracciones_raw;
+          case 'quien': return p.quien_fracciona;
+          case 'oferta': return p.es_oferta ? 'Sí' : 'No';
+          case 'stock': return p.stock;
+          case 'descripcion': return p.descripcion;
+        }
+        return '';
+      }
+
+      function enCurso(id) {
+        var e = envios[id];
+        return !!(e && (e.estado === 'enviando' || e.estado === 'esperando'));
+      }
+
+      // lo que hay "debajo" del borrador: lo recién guardado o la planilla
+      function valorBase(id, campo) {
+        if (enCurso(id) && tiene(envios[id].valores, campo)) return envios[id].valores[campo];
+        return valorPlanilla(datos[id], campo);
+      }
+
+      function valor(id, campo) {
+        var b = borradores[id];
+        if (b && tiene(b, campo)) return b[campo];
+        return valorBase(id, campo);
+      }
+
+      function normalizar(s) {
+        s = String(s || '').toLowerCase();
+        try { s = s.normalize('NFD').replace(/[̀-ͯ]/g, ''); } catch (e) {}
+        return s;
+      }
+
+      // ── Campos editables ────────────────────────────────────────
+      function claseCampo(id, campo, base) {
+        return base + ((borradores[id] && tiene(borradores[id], campo)) ? ' campo-sucio' : '');
+      }
+
+      function datosCampo(id, campo) {
+        return ' id="f-' + campo + '-' + escapeHtml(id) + '" data-id="' + escapeHtml(id) +
+          '" data-campo="' + campo + '"' +
+          ((envios[id] && envios[id].estado === 'enviando') ? ' disabled' : '');
+      }
+
+      function inputCampo(id, campo, numerico, extra) {
+        return '<input class="' + claseCampo(id, campo, 'input') + '"' + datosCampo(id, campo) +
+          (numerico ? ' type="number" min="0" step="any"' : '') +
+          ' value="' + escapeHtml(valor(id, campo)) + '"' + (extra || '') + '>';
+      }
+
+      // opciones: [[valor, texto], ...]
+      function selectCampo(id, campo, opciones, conOtro) {
+        var v = valor(id, campo);
+        var h = '<select class="' + claseCampo(id, campo, 'select') + '"' + datosCampo(id, campo) +
+          (conOtro ? ' data-otro="1"' : '') + ' title="' + escapeHtml(v) + '">';
+        var esta = false;
+        opciones.forEach(function (o) { if (o[0] === v) esta = true; });
+        if (!esta && v) h += '<option value="' + escapeHtml(v) + '" selected>' + escapeHtml(v) + '</option>';
+        opciones.forEach(function (o) {
+          h += '<option value="' + escapeHtml(o[0]) + '"' + (o[0] === v ? ' selected' : '') + '>' +
+            escapeHtml(o[1]) + '</option>';
+        });
+        if (conOtro) h += '<option value="' + OTRO + '">✏️ Otro…</option>';
+        return h + '</select>';
+      }
+
+      function opcionesLista(lista) {
+        var o = [['', '—']];
+        lista.forEach(function (x) { o.push([x, x]); });
+        return o;
+      }
+
+      // ── Filas ───────────────────────────────────────────────────
+      var COLS = [
+        ['c-disp', 'Disponible'], ['c-nombre', 'Producto'], ['c-productor', 'Productor'],
+        ['c-precio', 'Precio $'], ['c-unidad', 'Unidad'], ['c-origen', 'Origen'],
+        ['c-categoria', 'Categoría'], ['c-frac', 'Fracc.'], ['c-fracciones', 'Fracciones'],
+        ['c-quien', 'Quién fracc.'], ['c-oferta', 'Oferta'], ['c-stock', 'Stock'],
+        ['c-desc', 'Descripción'], ['c-estado', '']
+      ];
+
+      function inicioTabla() {
+        var h = '<table class="tabla"><colgroup>';
+        COLS.forEach(function (c) { h += '<col class="' + c[0] + '">'; });
+        h += '</colgroup><thead><tr>';
+        COLS.forEach(function (c) { h += '<th class="' + c[0] + '" title="' + c[1] + '">' + c[1] + '</th>'; });
+        return h + '</tr></thead><tbody>';
+      }
+
+      function td(clase, etiqueta, contenido) {
+        return '<td class="' + clase + '" data-l="' + etiqueta + '">' + contenido + '</td>';
+      }
+
+      function estadoFila(id) {
+        var e = envios[id];
+        var sucia = !!borradores[id];
+        var ic = '';
+        if (sucia) ic = '<span class="ic ic-sucia" title="Cambios sin guardar">●</span>';
+        else if (e && e.estado === 'enviando') ic = '<span class="ic" title="Enviando…">…</span>';
+        else if (e && e.estado === 'esperando') ic = '<span class="ic" title="Enviado: esperando que la planilla lo muestre">⏳</span>';
+        else if (e && e.estado === 'ok') ic = '<span class="ic ic-ok" title="Guardado y verificado en la planilla">✔</span>';
+        else if (e) ic = '<span class="ic ic-error" title="Revisar">⚠</span>';
+        return ic + '<button type="button" class="btn-fila" data-guardar-fila="' + escapeHtml(id) + '"' +
+          (sucia && !enCurso(id) ? '' : ' disabled') + ' title="Guardar solo este producto">Guardar</button>';
+      }
+
+      function claseFila(id, seccion) {
+        var c = 'fila fila-' + seccion;
+        if (borradores[id]) c += ' sucia';
+        if (envios[id]) c += ' ' + envios[id].estado;
+        return c;
+      }
+
+      function textoAviso(id) {
+        var p = datos[id];
+        var sec = seccionDe[id];
+        var partes = [];
+        if (avisos[id]) partes.push(escapeHtml(avisos[id]));
+        if (sec === 'corregir' && p && p._problemas) {
+          p._problemas.forEach(function (x) { partes.push('⚠ ' + escapeHtml(x)); });
+        } else if (sec === 'nuevo' && p && problemaPresentacion(p)) {
+          partes.push('⚠ ' + escapeHtml(problemaPresentacion(p)));
+        }
+        return partes.join('<br>');
+      }
+
+      function fila(p, seccion) {
+        var id = p.id_producto;
+        seccionDe[id] = seccion;
+        var opDisp = valorPlanilla(p, 'disponible') ? [['Sí', 'Sí'], ['No', 'No']] : [['', '—'], ['Sí', 'Sí'], ['No', 'No']];
+        var opSiNo = [['Sí', 'Sí'], ['No', 'No']];
+        var prodTxt = p.productor || p.id_productor;
+        var aviso = textoAviso(id);
+        var h = '<tr id="fila-' + escapeHtml(id) + '" data-id="' + escapeHtml(id) + '" class="' + claseFila(id, seccion) + '"' +
+          ' data-buscar="' + escapeHtml(normalizar(p.nombre + ' ' + p.productor + ' ' + p.id_productor + ' ' + id + ' ' + p.categoria)) + '">';
+        h += td('c-disp', 'Disponible', selectCampo(id, 'disponible', opDisp, false));
+        h += td('c-nombre', 'Producto', inputCampo(id, 'nombre', false, ' title="' + escapeHtml(valor(id, 'nombre')) + '"'));
+        h += td('c-productor', 'Productor', '<span class="prod-txt" title="' + escapeHtml(prodTxt + ' (' + p.id_productor + ') · ' + id) + '">' +
+          escapeHtml(prodTxt) + '</span>');
+        h += td('c-precio', 'Precio $', inputCampo(id, 'precio', true));
+        h += td('c-unidad', 'Unidad', selectCampo(id, 'unidad', opcionesLista(listas.unidad), true));
+        h += td('c-origen', 'Origen', selectCampo(id, 'origen', opcionesLista(listas.origen), true));
+        h += td('c-categoria', 'Categoría', selectCampo(id, 'categoria', opcionesLista(listas.categoria), true));
+        h += td('c-frac', 'Fracc.', selectCampo(id, 'fraccionable', opSiNo, false));
+        h += td('c-fracciones', 'Fracciones', selectCampo(id, 'fracciones', opcionesLista(listas.fracciones), true));
+        h += td('c-quien', 'Quién fracc.', selectCampo(id, 'quien', [['', '—'], ['Productor', 'Productor'], ['Galpón', 'Galpón']], false));
+        h += td('c-oferta', 'Oferta', selectCampo(id, 'oferta', opSiNo, false));
+        h += td('c-stock', 'Stock', inputCampo(id, 'stock', true, ' placeholder="—"'));
+        h += td('c-desc', 'Descripción', inputCampo(id, 'descripcion', false, ' placeholder="opcional" title="' + escapeHtml(valor(id, 'descripcion')) + '"'));
+        h += td('c-estado', '', estadoFila(id));
+        h += '</tr>';
+        h += '<tr class="sub" id="aviso-' + escapeHtml(id) + '"' + (aviso ? '' : ' hidden') +
+          '><td colspan="' + COLS.length + '">' + aviso + '</td></tr>';
+        return h;
+      }
+
+      // Repinta una sola fila (estado de guardado) sin tocar el resto.
+      function pintarFila(id) {
+        var tr = $('fila-' + id);
+        if (!tr || !datos[id]) return;
+        var foco = tomarFoco();
+        var tmp = document.createElement('tbody');
+        tmp.innerHTML = fila(datos[id], seccionDe[id]);
+        var nuevaFila = tmp.children[0];
+        var nuevoAviso = tmp.children[1];
+        var oculto = tr.style.display;
+        nuevaFila.style.display = oculto;
+        var sub = $('aviso-' + id);
+        tr.parentNode.replaceChild(nuevaFila, tr);
+        if (sub) {
+          if (oculto === 'none') nuevoAviso.style.display = 'none';
+          sub.parentNode.replaceChild(nuevoAviso, sub);
+        }
+        restaurarFoco(foco);
+      }
+
+      // ── Vista "como en el formulario" (solo lectura) ────────────
+      function tarjeta(id, conCat) {
+        var p = datos[id];
+        var pv = {
+          nombre: valor(id, 'nombre'), precio: parseFloat(valor(id, 'precio')) || 0,
+          unidad: valor(id, 'unidad'), origen: valor(id, 'origen'), categoria: valor(id, 'categoria'),
+          descripcion: valor(id, 'descripcion'), es_oferta: valor(id, 'oferta') === 'Sí'
+        };
+        var tags = pv.es_oferta ? ' <span class="product__tag product__tag--oferta">Oferta</span>' : '';
+        if (borradores[id]) tags += ' <span class="product__tag product__tag--nuevo">cambios sin guardar</span>';
+        // Misma tarjeta en 3 líneas que el formulario de pedidos:
+        // 1) nombre · productor  2) precio  3) descripción · Origen: ciudad
+        var firma = p.productor ? ' <span class="product__firma">&bull; ' + escapeHtml(p.productor) + '</span>' : '';
+        var partes = [];
+        if (pv.descripcion) partes.push(escapeHtml(pv.descripcion));
+        if (pv.origen) partes.push('Origen: ' + escapeHtml(pv.origen));
+        if (conCat) partes.push(escapeHtml(pv.categoria));
+        var meta = partes.join(' · ');
+        return '<div class="product' + (borradores[id] ? ' sucia' : '') + '" id="card-' + escapeHtml(id) + '" data-id="' + escapeHtml(id) + '"' +
+          ' data-buscar="' + escapeHtml(normalizar(p.nombre + ' ' + p.productor + ' ' + id + ' ' + p.categoria)) + '">' +
+          '<div class="product__head">' +
+          '<span class="product__name">' + escapeHtml(pv.nombre) + firma + tags + '</span>' +
+          '<span class="product__name product__price">' + formatMoney(pv.precio) + ' por ' + escapeHtml(unidadMostrada(pv.unidad) || '—') + '</span>' +
+          (meta ? '<span class="product__meta"><span>' + meta + '</span></span>' : '') +
+          '</div>' +
+          '<div class="fila-acciones"><button type="button" class="btn-editar" data-ir="' + escapeHtml(id) + '">✏️ Editar</button></div>' +
+          '</div>';
+      }
+
+      // ── Posición de la pantalla y foco (no saltar al recargar) ──
+      function altoBarra() {
+        var b = $('barra');
+        return b ? b.getBoundingClientRect().bottom : 0;
+      }
+
+      function medirBarra() {
+        var b = $('barra');
+        if (b) document.documentElement.style.setProperty('--barra-h', (b.offsetHeight - 1) + 'px');
+      }
+
+      function tomarAncla() {
+        var tope = altoBarra();
+        var els = document.querySelectorAll('tr.fila, .product[data-id]');
+        for (var i = 0; i < els.length; i++) {
+          var r = els[i].getBoundingClientRect();
+          if (r.height && r.bottom > tope) return { el: els[i].id, top: r.top, y: window.pageYOffset };
+        }
+        return { el: null, top: 0, y: window.pageYOffset };
+      }
+
+      function restaurarAncla(a) {
+        if (!a || !a.y) return;
+        var el = a.el ? $(a.el) : null;
+        if (el && el.getBoundingClientRect().height) {
+          window.scrollBy(0, el.getBoundingClientRect().top - a.top);
+        } else {
+          window.scrollTo(0, a.y);
+        }
+      }
+
+      function tomarFoco() {
+        var a = document.activeElement;
+        if (!a || !a.getAttribute || !a.getAttribute('data-campo')) return null;
+        var f = { id: a.id, s: null, e: null };
+        try { f.s = a.selectionStart; f.e = a.selectionEnd; } catch (e) {}
+        return f;
+      }
+
+      function restaurarFoco(f) {
+        if (!f) return;
+        var el = $(f.id);
+        if (!el || el === document.activeElement) return;
+        try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); }
+        try { if (f.s !== null && f.s !== undefined) el.setSelectionRange(f.s, f.e); } catch (e) {}
+      }
+
+      // No redibujar mientras alguien está escribiendo o con un desplegable abierto.
+      var timerRender = null;
+      function pedirRender() {
+        clearTimeout(timerRender);
+        var a = document.activeElement;
+        var enCampo = a && a.getAttribute && a.getAttribute('data-campo');
+        if (enCampo && Date.now() - ultimaInteraccion < 4000) {
+          timerRender = setTimeout(pedirRender, 1500);
+          return;
+        }
+        render();
+      }
+
+      // ── Render completo ─────────────────────────────────────────
+      function render() {
+        if (!secciones) return;
+        var s = secciones;
+        var ancla = tomarAncla();
+        var foco = tomarFoco();
+        seccionDe = {};
+
+        // 1) Curaduría pendiente: a corregir (rojo) + altas nuevas (mostaza)
+        var nCur = s.aCorregir.length + s.pendientes.length;
+        var h = '';
+        if (nCur) {
+          h += '<section class="seccion curaduria"><h2>🧐 Curaduría pendiente <span class="badge-curaduria">' + nCur + '</span></h2>';
+          h += '<p class="nota"><span class="swatch sw-corregir"></span> <strong>A corregir</strong>: ya están ' +
+            'publicados pero con datos que el formulario no entiende (el motivo va debajo de la fila). ' +
+            'Las <strong>fracciones</strong> son para kg y litro (1/4, 1/2, 1); una presentación con peso propio ' +
+            '(50 g, 200 gr) va como producto aparte con su precio. &nbsp; ' +
+            '<span class="swatch sw-nuevo"></span> <strong>Alta nueva</strong>: cargados por productores. ' +
+            'La primera columna decide: <strong>Sí</strong> = se publica (pide categoría) · <strong>No</strong> = rechazado para esta edición.</p>';
+          h += inicioTabla();
+          s.aCorregir.forEach(function (p) { h += fila(p, 'corregir'); });
+          s.pendientes.forEach(function (p) { h += fila(p, 'nuevo'); });
+          h += '</tbody></table></section>';
+        }
+        $('curaduria').innerHTML = h;
+
+        // 2) Publicados (van al formulario), por categoría
+        var porCat = {};
+        var nPub = 0;
+        s.disponibles.forEach(function (p) {
+          if (vista === 'tabla' && seccionDe[p.id_producto]) return;   // ya está arriba, a corregir
+          (porCat[p.categoria] = porCat[p.categoria] || []).push(p);
+          nPub++;
+        });
+        var orden = ordenCategorias(Object.keys(porCat));
+        var c = '';
+        if (vista === 'tabla') {
+          c += '<section class="seccion"><h2>✅ Publicados — van al formulario <span class="badge-curaduria">' + nPub + '</span></h2>';
+          if (s.aCorregir.length) {
+            c += '<p class="nota">Además de estos, los ' + s.aCorregir.length + ' «a corregir» de arriba también están publicados.</p>';
+          }
+          c += inicioTabla();
+          orden.forEach(function (cat) {
+            c += '<tr class="cat-fila"><th colspan="' + COLS.length + '">' + escapeHtml(cat) +
+              ' <span>(' + porCat[cat].length + ')</span></th></tr>';
+            porCat[cat].forEach(function (p) { c += fila(p, 'publicado'); });
+          });
+          c += '</tbody></table></section>';
+        } else {
+          orden.forEach(function (cat) {
+            c += '<div class="card cat-card"><h2>' + escapeHtml(cat) + '</h2><div class="product-list mt-3">';
+            porCat[cat].forEach(function (p) { c += tarjeta(p.id_producto); });
+            c += '</div></div>';
+          });
+        }
+
+        // 3) Sin confirmar en esta edición: quedaron disponibles de la anterior,
+        //    pero el productor todavía no mandó su carga. No salen en el form.
+        if (s.sinConfirmar.length) {
+          var porProd = {};
+          s.sinConfirmar.forEach(function (p) {
+            var k = p.productor || p.id_productor;
+            (porProd[k] = porProd[k] || []).push(p);
+          });
+          c += '<details class="seccion" data-sec="sinconf"' + (abiertos.sinconf ? ' open' : '') + '>' +
+            '<summary class="rojo">⏳ Sin confirmar en esta edición (' + s.sinConfirmar.length + ') — NO salen en el formulario</summary>';
+          c += '<p class="nota">Estaban disponibles en la edición anterior, pero en esta el productor todavía no envió su carga. ' +
+            'Entran cuando el productor la envía, o si la equipa lo confirma acá: Disponible en Sí → Guardar. ' +
+            '<strong>Faltan:</strong> ' + Object.keys(porProd).sort().map(function (k) {
+              return escapeHtml(k) + ' (' + porProd[k].length + ')';
+            }).join(' · ') + '</p>';
+          c += inicioTabla();
+          s.sinConfirmar.slice().sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); })
+            .forEach(function (p) { c += fila(p, 'sinconf'); });
+          c += '</tbody></table></details>';
+        }
+
+        // 4) Fuera de esta edición: rechazados y despublicados
+        if (s.fuera.length) {
+          c += '<details class="seccion" data-sec="fuera"' + (abiertos.fuera ? ' open' : '') + '>' +
+            '<summary>🚫 Fuera de esta edición (' + s.fuera.length + ') — tocá para ver</summary>';
+          c += '<p class="nota">Con categoría pero no disponibles: rechazados en curaduría o despublicados. ' +
+            'Para reactivar uno: Disponible en Sí → Guardar.</p>';
+          c += inicioTabla();
+          s.fuera.slice().sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); })
+            .forEach(function (p) { c += fila(p, 'fuera'); });
+          c += '</tbody></table></details>';
+        }
+        $('catalogo').innerHTML = c;
+
+        var total = s.disponibles.length + s.pendientes.length + s.fuera.length + s.sinConfirmar.length;
+        if (!total) {
           $('estado').className = 'aviso rojo';
           $('estado').textContent = 'No hay productos marcados como disponibles para la edición. ' +
             'Primero hay que hacer la carga de productos.';
-          $('resumen').textContent = '';
-          return;
+        } else {
+          var ordenElegido = false;
+          try { ordenElegido = !!localStorage.getItem(LS_KEY); } catch (e) {}
+          $('estado').className = hayConfirmacion ? 'aviso' : 'aviso rojo';
+          $('estado').innerHTML = (hayConfirmacion ? '' :
+            '⚠️ <strong>La hoja Productos no tiene la columna T <code>confirmado_edicion</code>.</strong> ' +
+            'Sin ella se muestra como publicado todo lo que quedó disponible de la edición anterior. ') +
+            'Datos <strong>actuales</strong> de la planilla: lo que guardes acá la cambia de verdad (pide la clave). ' +
+            'Orden de categorías: el elegido en Generar edición' +
+            (ordenElegido ? '' : ' (todavía no se eligió: alfabético)') + '.';
         }
+        $('resumen').textContent = s.disponibles.length + ' publicados' +
+          (s.sinConfirmar.length ? ' · ' + s.sinConfirmar.length + ' sin confirmar' : '') +
+          (nCur ? ' · ' + nCur + ' en curaduría' : '') +
+          (s.fuera.length ? ' · ' + s.fuera.length + ' fuera' : '') +
+          ' · ' + orden.length + ' categorías';
 
-        var porCat = {};
-        disponibles.forEach(function (p) {
-          (porCat[p.categoria] = porCat[p.categoria] || []).push(p);
+        medirBarra();
+        aplicarFiltro();
+        restaurarAncla(ancla);
+        restaurarFoco(foco);
+        actualizarBarra();
+      }
+
+      // ── Búsqueda ────────────────────────────────────────────────
+      function aplicarFiltro() {
+        var q = normalizar(($('buscar').value || '').trim());
+        document.querySelectorAll('table.tabla tbody').forEach(function (tb) {
+          var cat = null, catVisible = false;
+          for (var i = 0; i < tb.rows.length; i++) {
+            var tr = tb.rows[i];
+            if (tr.classList.contains('cat-fila')) {
+              if (cat) cat.style.display = catVisible ? '' : 'none';
+              cat = tr; catVisible = false;
+            } else if (tr.classList.contains('fila')) {
+              var ok = !q || (tr.getAttribute('data-buscar') || '').indexOf(q) !== -1;
+              tr.style.display = ok ? '' : 'none';
+              var sub = tb.rows[i + 1];
+              if (sub && sub.classList.contains('sub')) sub.style.display = ok ? '' : 'none';
+              if (ok) catVisible = true;
+            }
+          }
+          if (cat) cat.style.display = catVisible ? '' : 'none';
         });
-        var orden = ordenCategorias(Object.keys(porCat));
-
-        orden.forEach(function (cat) {
-          var card = document.createElement('div');
-          card.className = 'card cat-card';
-          var html = '<h2>' + escapeHtml(cat) + '</h2>';
-          html += '<div class="product-list mt-3">';
-          porCat[cat].forEach(function (p) { html += renderProductCard(p); });
-          html += '</div>';
-          card.innerHTML = html;
-          cont.appendChild(card);
-        });
-
-        // Sin confirmar en esta edición: quedaron disponibles de la anterior,
-        // pero el productor todavía no mandó su carga. No salen en el form.
-        if (sinConfirmar.length) {
-          var cardS = document.createElement('div');
-          cardS.className = 'card cat-card';
-          var hs = '<details open><summary style="cursor:pointer; font-weight:700; color:#A6402B;">' +
-            '⏳ Sin confirmar en esta edición (' + sinConfirmar.length + ') — NO salen en el formulario</summary>';
-          hs += '<p class="resumen" style="margin-top:var(--s-2);">Estaban disponibles en la edición anterior, ' +
-            'pero en esta el productor todavía no envió su carga de productos. Entran al formulario cuando ' +
-            'el productor la envía, o si la equipa lo confirma acá: ✏️ Editar → Disponible en Sí → Guardar.</p>';
-          var porProd = {};
-          sinConfirmar.forEach(function (p) { (porProd[p.productor || p.id_productor] = porProd[p.productor || p.id_productor] || []).push(p); });
-          hs += '<p class="resumen"><strong>Productores que faltan confirmar:</strong> ' +
-            Object.keys(porProd).sort().map(function (k) { return escapeHtml(k) + ' (' + porProd[k].length + ')'; }).join(' · ') + '</p>';
-          hs += '<div class="product-list mt-3">';
-          sinConfirmar.sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); })
-            .forEach(function (p) { hs += renderProductCard(p, true); });
-          hs += '</div></details>';
-          cardS.innerHTML = hs;
-          cont.appendChild(cardS);
-        }
-
-        // Fuera de esta edición: rechazados y despublicados, para no perderlos de vista
-        if (fuera && fuera.length) {
-          var cardF = document.createElement('div');
-          cardF.className = 'card cat-card';
-          var hf = '<details><summary style="cursor:pointer; font-weight:700; color:var(--c-corteza);">' +
-            '🚫 Fuera de esta edición (' + fuera.length + ') — tocá para ver</summary>';
-          hf += '<p class="resumen" style="margin-top:var(--s-2);">Con categoría pero no disponibles: ' +
-            'rechazados en curaduría o despublicados. Para reactivar uno: ✏️ Editar → Disponible en Sí.</p>';
-          hf += '<div class="product-list mt-3">';
-          fuera.sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); })
-            .forEach(function (p) { hf += renderProductCard(p, true); });
-          hf += '</div></details>';
-          cardF.innerHTML = hf;
-          cont.appendChild(cardF);
-        }
-
-        $('estado').className = hayConfirmacion ? 'aviso' : 'aviso rojo';
-        $('estado').innerHTML = (hayConfirmacion ? '' :
-          '⚠️ <strong>La hoja Productos no tiene la columna T <code>confirmado_edicion</code>.</strong> ' +
-          'Sin ella se muestra como publicado todo lo que quedó disponible de la edición anterior. ') +
-          'Catálogo con los datos <strong>actuales</strong> de la planilla. ' +
-          'Todo lo que guardes acá cambia la planilla de verdad (pide la clave de equipo). ' +
-          'El orden de las categorías es el elegido en Generar edición' +
-          (localStorage.getItem(LS_KEY) ? '' : ' (todavía no se eligió: se muestra alfabético)') + '.';
-
-        $('resumen').textContent = orden.length + ' categorías · ' +
-          disponibles.length + ' productos publicados (van al formulario)' +
-          (sinConfirmar.length ? ' · ' + sinConfirmar.length + ' sin confirmar' : '') +
-          (pendientes.length ? ' · ' + pendientes.length + ' esperando curaduría' : '') +
-          (fuera && fuera.length ? ' · ' + fuera.length + ' fuera de la edición' : '');
-
-        document.querySelectorAll('[data-editar]').forEach(function (b) {
-          b.addEventListener('click', function () {
-            var panel = $('panel-' + b.getAttribute('data-editar'));
-            if (panel) panel.classList.toggle('abierto');
-          });
-        });
-        document.querySelectorAll('[data-guardar]').forEach(function (b) {
-          b.addEventListener('click', function () { guardar(b.getAttribute('data-guardar'), b); });
+        document.querySelectorAll('.product[data-buscar]').forEach(function (el) {
+          el.style.display = (!q || el.getAttribute('data-buscar').indexOf(q) !== -1) ? '' : 'none';
         });
       }
 
-      // ── Guardar un producto ──────────────────────────────────────
-      function guardar(id, btn) {
-        var hint = $('hint-' + id);
-        var clave = $('clave').value.trim();
-        if (!clave) {
-          hint.textContent = '⚠️ Falta la clave de equipo (arriba de todo).';
-          $('clave').focus();
-          return;
-        }
+      // ── Barra: contadores y botón Guardar ───────────────────────
+      var lecturaEnCurso = false;
+      function marcarLectura(si) { lecturaEnCurso = si; actualizarBarra(); }
 
-        var val = function (campoId) {
-          var el = $(campoId + '-' + id);
-          if (!el) return '';
-          if (el.value === OTRO) return '';
-          return el.value.trim();
-        };
+      var msgBarra = '', msgBarraError = false, timerMsg = null;
+      function mensajeBarra(txt, esError) {
+        msgBarra = txt; msgBarraError = !!esError;
+        clearTimeout(timerMsg);
+        timerMsg = setTimeout(function () { msgBarra = ''; actualizarBarra(); }, 8000);
+        actualizarBarra();
+      }
 
-        var disponible = val('disponible');
-        var categoria = val('categoria');
-        if (disponible === 'Sí' && !categoria) {
-          hint.textContent = '⚠️ Para publicarlo falta la categoría (o poné Disponible en No).';
+      function actualizarBarra() {
+        var nB = Object.keys(borradores).length;
+        var n = { enviando: 0, esperando: 0, ok: 0, mal: 0 };
+        Object.keys(envios).forEach(function (id) {
+          var e = envios[id].estado;
+          if (e === 'enviando') n.enviando++;
+          else if (e === 'esperando') n.esperando++;
+          else if (e === 'ok') n.ok++;
+          else n.mal++;
+        });
+        var b = $('btn-guardar-todo');
+        b.disabled = !nB || enviando;
+        b.textContent = enviando ? 'Guardando…' : (nB ? 'Guardar cambios (' + nB + ')' : 'Sin cambios');
+        $('btn-descartar').hidden = !nB || enviando;
+        var t = [];
+        if (msgBarra) t.push(msgBarra);
+        if (nB) t.push('● ' + nB + ' sin guardar');
+        if (n.enviando) t.push('… ' + n.enviando + ' enviando');
+        if (n.esperando) t.push('⏳ ' + n.esperando + ' esperando la planilla');
+        if (n.ok) t.push('✔ ' + n.ok + ' guardados');
+        if (n.mal) t.push('⚠ ' + n.mal + ' para revisar');
+        if (lecturaEnCurso && datos && Object.keys(datos).length) t.push('↻ leyendo…');
+        var el = $('estado-guardado');
+        el.textContent = t.join(' · ');
+        el.className = 'estado-guardado' + (msgBarraError ? ' error' : '');
+        medirBarra();
+      }
+
+      // ── Registrar lo que se toca ────────────────────────────────
+      function registrar(el) {
+        var id = el.getAttribute('data-id');
+        var campo = el.getAttribute('data-campo');
+        if (!id || !campo || !datos[id]) return;
+        var v = String(el.value === undefined || el.value === null ? '' : el.value);
+        if (v === OTRO) return;
+        v = v.trim();
+        var b = borradores[id] || {};
+        if (v === String(valorBase(id, campo) || '').trim()) delete b[campo];
+        else b[campo] = v;
+        if (Object.keys(b).length) borradores[id] = b; else delete borradores[id];
+        if (avisos[id] && !borradores[id]) delete avisos[id];
+        el.classList.toggle('campo-sucio', tiene(b, campo));
+        if (el.tagName === 'SELECT') el.title = v;
+        var tr = $('fila-' + id);
+        if (tr) {
+          tr.classList.toggle('sucia', !!borradores[id]);
+          var celdaEstado = tr.querySelector('.c-estado');
+          if (celdaEstado) celdaEstado.innerHTML = estadoFila(id);
+        }
+        actualizarBarra();
+      }
+
+      document.addEventListener('input', function (e) {
+        var el = e.target;
+        if (el.getAttribute && el.getAttribute('data-campo')) {
+          ultimaInteraccion = Date.now();
+          registrar(el);
+        }
+      });
+
+      document.addEventListener('change', function (e) {
+        var el = e.target;
+        if (!el.getAttribute || !el.getAttribute('data-campo')) return;
+        ultimaInteraccion = Date.now();
+        // "Otro…": el desplegable pasa a ser un campo de texto
+        if (el.getAttribute('data-otro') === '1' && el.value === OTRO) {
+          var input = document.createElement('input');
+          input.className = 'input';
+          input.id = el.id;
+          input.setAttribute('data-id', el.getAttribute('data-id'));
+          input.setAttribute('data-campo', el.getAttribute('data-campo'));
+          input.placeholder = 'escribí el valor nuevo';
+          el.parentNode.replaceChild(input, el);
+          input.focus();
           return;
         }
-        if (val('fraccionable') === 'Sí' && !val('fracciones')) {
-          hint.textContent = '⚠️ Marcaste fraccionable: elegí o escribí las fracciones.';
-          return;
-        }
+        registrar(el);
+      });
+
+      ['focusin', 'mousedown', 'keydown', 'touchstart'].forEach(function (ev) {
+        document.addEventListener(ev, function (e) {
+          if (e.target && e.target.getAttribute && e.target.getAttribute('data-campo')) ultimaInteraccion = Date.now();
+        }, true);
+      });
+
+      document.addEventListener('toggle', function (e) {
+        var d = e.target;
+        if (d && d.getAttribute && d.getAttribute('data-sec')) abiertos[d.getAttribute('data-sec')] = d.open;
+      }, true);
+
+      document.addEventListener('click', function (e) {
+        var t = e.target && e.target.closest ? e.target.closest('[data-guardar-fila],[data-ir]') : null;
+        if (!t) return;
+        if (t.getAttribute('data-guardar-fila')) guardarVarios([t.getAttribute('data-guardar-fila')]);
+        else irAFila(t.getAttribute('data-ir'));
+      });
+
+      function irAFila(id) {
+        vista = 'tabla';
+        $('btn-vista').textContent = '👁 Vista formulario';
+        render();
+        var el = $('fila-' + id);
+        if (!el) return;
+        window.scrollTo(0, el.getBoundingClientRect().top + window.pageYOffset - altoBarra() - 60);
+        var primero = el.querySelector('[data-campo="precio"]');
+        if (primero) try { primero.focus({ preventScroll: true }); } catch (e) { primero.focus(); }
+      }
+
+      // ── Guardar ─────────────────────────────────────────────────
+      function valoresFila(id) {
+        var v = {};
+        CAMPOS.forEach(function (c) {
+          var x = valor(id, c);
+          v[c] = (x === OTRO || x === null || x === undefined) ? '' : String(x).trim();
+        });
+        return v;
+      }
+
+      function validar(v) {
+        if (v.disponible === 'Sí' && !v.categoria) return 'Para publicarlo falta la categoría (o poné Disponible en No).';
+        if (v.disponible === 'Sí' && !v.unidad) return 'Para publicarlo falta la unidad de venta.';
+        if (v.fraccionable === 'Sí' && !v.fracciones) return 'Marcaste fraccionable: elegí o escribí las fracciones.';
         // Precio en pesos enteros y creíble: un "1.500" tipeado con punto de
         // miles llega como 1,5 y el producto saldría a $ 2 en el formulario.
-        var precioNum = Math.round(parseFloat(String(val('precio')).replace(',', '.')));
-        if (disponible === 'Sí' && !(precioNum >= 50)) {
-          hint.textContent = '⚠️ El precio (' + (val('precio') || 'vacío') + ') no parece correcto. ' +
-            'Escribilo en pesos, sin puntos ni comas (ej.: 1500).';
-          return;
+        var precioNum = Math.round(parseFloat(String(v.precio).replace(',', '.')));
+        if (v.disponible === 'Sí' && !(precioNum >= 50)) {
+          return 'El precio (' + (v.precio || 'vacío') + ') no parece correcto. Escribilo en pesos, sin puntos ni comas (ej.: 1500).';
         }
         // Fracciones: solo las que el formulario y la planilla calculan igual
         // (1/2, 1/4, 200g, 500ml, 2…). Cualquier otra cosa ("1.5", "½", "medio")
         // haría que el consumidor vea un precio y la planilla cobre otro.
-        var frRaw = val('fracciones');
-        if (frRaw) {
-          var frMalas = frRaw.split(',').map(function (x) { return x.trim(); }).filter(function (x) {
+        if (v.fracciones) {
+          var frMalas = v.fracciones.split(',').map(function (x) { return x.trim(); }).filter(function (x) {
             return x && !/^\d+$/.test(x) && !/^\d+\/\d+$/.test(x) &&
               !/^\d+\s*(g|gr|grs|gramos|ml|cc)$/i.test(x);
           });
           if (frMalas.length) {
-            hint.textContent = '⚠️ Fracción no válida: «' + frMalas.join('», «') + '». ' +
-              'Usá 1/2, 1/4, 200g, 500ml o enteros, separados por coma.';
-            return;
+            return 'Fracción no válida: «' + frMalas.join('», «') + '». Usá 1/2, 1/4, 200g, 500ml o enteros, separados por coma.';
           }
         }
+        return '';
+      }
 
-        var payload = {
+      // Se manda la fila completa con los valores vigentes (planilla + lo
+      // tocado): A4 escribe C–L, N, P y S de esa fila buscándola por id.
+      function armarPayload(id, v, clave) {
+        var precioNum = Math.round(parseFloat(String(v.precio).replace(',', '.')));
+        return {
           tipo: 'curaduria',
           clave: clave,
           id_producto: id,
-          nombre: val('nombre'),
-          unidad: val('unidad'),
+          nombre: v.nombre,
+          unidad: v.unidad,
           // pesos enteros (la planilla en español toma "1500.5" como fecha)
-          precio: precioNum || 0,
-          origen: val('origen'),
-          categoria: categoria,
-          fraccionable: val('fraccionable'),
-          fracciones: val('fracciones'),
-          quien_fracciona: val('quien'),
-          es_oferta: val('oferta'),
-          disponible: disponible,
-          stock: String(val('stock')).replace('.', ','),
-          descripcion: val('descripcion')
+          precio: isNaN(precioNum) ? '' : precioNum,
+          origen: v.origen,
+          categoria: v.categoria,
+          fraccionable: v.fraccionable,
+          fracciones: v.fracciones,
+          quien_fracciona: v.quien,
+          es_oferta: v.oferta,
+          disponible: v.disponible,
+          stock: String(v.stock).replace('.', ','),
+          descripcion: v.descripcion
         };
+      }
 
-        btn.disabled = true;
-        btn.textContent = 'Guardando…';
-
-        var envio;
+      function enviarUno(payload) {
         if (/PEGAR_AQUI|REEMPLAZAR|TEST_LOCAL/.test(WEBHOOK_CURADURIA)) {
           console.log('[NodoMatriz · modo dev] Curaduría que se enviaría:', payload);
-          envio = Promise.resolve();
-        } else {
-          envio = fetch(WEBHOOK_CURADURIA, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify(payload)
-          });
+          return Promise.resolve();
         }
-
-        envio.then(function () {
-          btn.textContent = disponible === 'Sí' ? '✔ Publicado' :
-                            (disponible === 'No' ? '✔ Rechazado' : '✔ Guardado');
-          var fila = $('fila-' + id);
-          if (fila) {
-            fila.classList.remove('fila-ok', 'fila-no');
-            if (disponible === 'Sí') fila.classList.add('fila-ok');
-            else if (disponible === 'No') fila.classList.add('fila-no');
-          }
-          hint.textContent = '';
-          // ~2 s de flash y la página se realinea con la planilla:
-          // los publicados pasan al catálogo, los rechazados quedan rojos.
-          // (segunda pasada a los 8 s por si Make tardó en escribir)
-          setTimeout(cargar, 2500);
-          setTimeout(cargar, 8000);
-        }).catch(function () {
-          btn.disabled = false;
-          btn.textContent = 'Guardar';
-          hint.textContent = '⚠️ No se pudo enviar. Probá de nuevo.';
+        return fetch(WEBHOOK_CURADURIA, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload)
         });
       }
 
-      $('btn-refrescar').addEventListener('click', cargar);
-      cargar();
+      function guardarVarios(ids) {
+        var clave = $('clave').value.trim();
+        if (!clave) {
+          $('clave').classList.add('is-invalid');
+          mensajeBarra('⚠️ Falta la clave de equipo (acá a la izquierda).', true);
+          $('clave').focus();
+          return;
+        }
+        $('clave').classList.remove('is-invalid');
+        try { sessionStorage.setItem('nm_clave_equipo', clave); } catch (e) {}
+
+        var cola = [];
+        var conError = 0;
+        ids.forEach(function (id) {
+          if (!borradores[id] || !datos[id] || enCurso(id)) return;
+          var v = valoresFila(id);
+          var err = validar(v);
+          if (err) {
+            avisos[id] = '⚠️ ' + err;
+            conError++;
+            pintarFila(id);
+            return;
+          }
+          delete avisos[id];
+          envios[id] = { valores: v, t: Date.now(), estado: 'enviando', payload: armarPayload(id, v, clave) };
+          delete borradores[id];       // lo tocado pasa a "enviado": ya no se pierde
+          pintarFila(id);
+          cola.push(id);
+        });
+        if (conError) {
+          mensajeBarra('⚠️ ' + conError + ' producto(s) sin guardar: falta algo (ver el aviso rojo debajo de la fila).', true);
+        }
+        actualizarBarra();
+        if (cola.length) enviarCola(cola);
+      }
+
+      // De a uno, con una pausa corta: Make procesa cada envío por separado.
+      function enviarCola(cola) {
+        enviando = true;
+        actualizarBarra();
+        var i = 0;
+        function siguiente() {
+          if (i >= cola.length) {
+            enviando = false;
+            actualizarBarra();
+            programarVerificacion(0);
+            return;
+          }
+          var id = cola[i++];
+          var e = envios[id];
+          enviarUno(e.payload).then(function () {
+            e.estado = 'esperando';
+            e.t = Date.now();
+          }, function () {
+            e.estado = 'error';
+            devolverABorrador(id, e.valores);
+            avisos[id] = '⚠️ No se pudo enviar (¿conexión?). Quedó marcado para volver a guardar.';
+          }).then(function () {
+            pintarFila(id);
+            actualizarBarra();
+            setTimeout(siguiente, 250);
+          });
+        }
+        siguiente();
+      }
+
+      function devolverABorrador(id, valores, soloCampos) {
+        var b = borradores[id] || {};
+        (soloCampos || CAMPOS).forEach(function (c) {
+          if (!tiene(b, c) && String(valores[c]) !== String(valorPlanilla(datos[id], c))) b[c] = valores[c];
+        });
+        if (Object.keys(b).length) borradores[id] = b;
+      }
+
+      // ── Verificación contra la planilla ─────────────────────────
+      // El webhook no responde nada útil (mode no-cors): la única forma de
+      // saber que Make escribió es volver a leer la planilla y comparar.
+      function igual(campo, enviado, planilla) {
+        if (enviado === '' || enviado === null || enviado === undefined) return true;   // vacío: no verificable
+        if (campo === 'precio') return Math.round(parseFloat(enviado)) === Math.round(parseFloat(planilla));
+        if (campo === 'stock') {
+          return parseFloat(String(enviado).replace(',', '.')) === parseFloat(String(planilla).replace(',', '.'));
+        }
+        return String(enviado).trim() === String(planilla === null || planilla === undefined ? '' : planilla).trim();
+      }
+
+      function verificarEnvios() {
+        var ahora = Date.now();
+        Object.keys(envios).forEach(function (id) {
+          var e = envios[id];
+          if (e.estado !== 'esperando') return;
+          var p = datos[id];
+          var distintos = CAMPOS.filter(function (c) { return !igual(c, e.valores[c], valorPlanilla(p, c)); });
+          if (p && !distintos.length) {
+            e.estado = 'ok';
+            delete avisos[id];
+          } else if (ahora - e.t > ESPERA_CONFIRMACION) {
+            e.estado = 'no-tomado';
+            if (p) devolverABorrador(id, e.valores, distintos);
+            avisos[id] = '⚠ La planilla no tomó este cambio (' +
+              distintos.map(function (c) { return NOMBRE_CAMPO[c]; }).join(', ') +
+              '). ¿Clave correcta? Quedó marcado para volver a guardar.';
+          }
+        });
+      }
+
+      function hayEsperando() {
+        return Object.keys(envios).some(function (id) { return envios[id].estado === 'esperando'; });
+      }
+
+      // relecturas de control: 6 s, 15 s, 30 s, 60 s y 100 s después del último envío
+      var timerVerif = null;
+      var PLAN_VERIF = [6000, 9000, 15000, 30000, 40000];
+      function programarVerificacion(paso) {
+        clearTimeout(timerVerif);
+        if (paso >= PLAN_VERIF.length || !hayEsperando()) return;
+        timerVerif = setTimeout(function () {
+          cargar(true, function () {
+            if (hayEsperando()) programarVerificacion(paso + 1);
+          });
+        }, PLAN_VERIF[paso]);
+      }
+
+      // ── Botones de la barra ─────────────────────────────────────
+      $('btn-guardar-todo').addEventListener('click', function () {
+        guardarVarios(Object.keys(borradores));
+      });
+
+      $('btn-descartar').addEventListener('click', function () {
+        var n = Object.keys(borradores).length;
+        if (!n || !window.confirm('¿Descartar los cambios sin guardar de ' + n + ' producto(s)?')) return;
+        Object.keys(borradores).forEach(function (id) { delete avisos[id]; });
+        borradores = {};
+        render();
+      });
+
+      $('btn-vista').addEventListener('click', function () {
+        vista = vista === 'tabla' ? 'form' : 'tabla';
+        $('btn-vista').textContent = vista === 'tabla' ? '👁 Vista formulario' : '✏️ Tabla editable';
+        render();
+      });
+
+      $('btn-refrescar').addEventListener('click', function () { cargar(false); });
+
+      var timerBuscar = null;
+      $('buscar').addEventListener('input', function () {
+        clearTimeout(timerBuscar);
+        timerBuscar = setTimeout(aplicarFiltro, 120);
+      });
+
+      window.addEventListener('resize', medirBarra);
+
+      window.addEventListener('beforeunload', function (e) {
+        if (Object.keys(borradores).length || enviando) {
+          e.preventDefault();
+          e.returnValue = '';
+          return '';
+        }
+      });
+
+      cargar(false);
     })();
     // El precio solo acepta dígitos: un "." de miles lo convertiría en decimal.
     document.addEventListener('keydown', function (e) {
       var t = e.target;
-      if (t && t.id && t.id.indexOf('precio-') === 0 &&
+      if (t && t.getAttribute && t.getAttribute('data-campo') === 'precio' &&
           ['e', 'E', '+', '-', '.', ','].indexOf(e.key) !== -1) e.preventDefault();
     });
   </script>
@@ -1100,6 +1433,6 @@
             font-weight:700; font-size:0.9rem; padding:10px 18px;
             border-radius:999px; text-decoration:none;
             box-shadow:0 4px 14px rgba(0,0,0,0.25);">🏠 Guía</a>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 09/10 06:42</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 17/10</p>
 </body>
 </html>
