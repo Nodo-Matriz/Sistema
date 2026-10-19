@@ -180,4 +180,4 @@ Este sistema se libera con licencia [MIT](LICENSE) para que otros nodos lo pueda
 
 ## Contacto
 
-Nodo Matriz Agroecológico · Unquillo, Sierras Chicas · Córdoba, Argentina
+Nodo Matriz Agroecológico · Unquillo, Sierras Chicas · Córdoba, Argentina 
