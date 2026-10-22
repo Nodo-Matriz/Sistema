@@ -917,6 +917,7 @@
         se registra como <strong>no recibido</strong> (cantidad 0).
       </p>
       <div class="aviso rojo" id="aviso-dup" style="display:none;"></div>
+      <div class="aviso" id="aviso-borrador" style="display:none;"></div>
       <div id="lista-items"></div>
       <p class="progreso" id="progreso"></p>
 
@@ -2255,6 +2256,7 @@
           return ' ✓ recibido' + (recibidosVivo[idProd] ? ' por ' + recibidosVivo[idProd] : '');
         }
         if (registrados[idProd]) return ' ✓ registrado';
+        if (hayBorrador(idProd)) return ' · 📝 en curso (sin registrar)';
         return '';
       }
 
@@ -2322,9 +2324,98 @@
           });
       });
 
+      // ── Borradores: recibir a varios productores a la vez ────────
+      // Lo cargado de un productor que todavía no se registró se guarda solo
+      // (en este teléfono) y vuelve al elegirlo otra vez. Nada se manda a la
+      // planilla ni cuenta como faltante hasta tocar "Registrar recepción".
+      var BORR_PREF = 'nm_borrador_rec_';
+      function claveBorrador(idProd) { return BORR_PREF + idEdicion + '_' + idProd; }
+      function leerBorrador(idProd) {
+        try { var t = localStorage.getItem(claveBorrador(idProd)); return t ? JSON.parse(t) : null; } catch (e) { return null; }
+      }
+      function borrarBorrador(idProd) { try { localStorage.removeItem(claveBorrador(idProd)); } catch (e) {} }
+      function hayBorrador(idProd) { return !!(idEdicion && leerBorrador(idProd)); }
+      function guardarBorrador() {
+        var card = $('card-items'), idProd = card.dataset.idProd;
+        if (!idProd || !idEdicion || bloqueadoPorRegistro || card.style.display === 'none') return;
+        if (recibidosVivo[idProd] || registrados[idProd]) return;
+        var filas = [], algo = false;
+        Array.prototype.forEach.call($('lista-items').querySelectorAll('.item'), function (div) {
+          var inp = div.querySelector('.cant');
+          var f = { key: div.dataset.key, chk: div.querySelector('.chk').checked, cant: inp.value,
+                    cal: div.querySelector('.calidad').value, obs: div.querySelector('.obs').value,
+                    tc: inp.dataset.tocado || '' };
+          var dep = div.querySelector('.in-dep');
+          if (dep) {
+            f.dep = dep.value; f.ext = div.querySelector('.in-extra').value;
+            f.aj = div.querySelector('.caja-ajuste').style.display !== 'none';
+          }
+          if (f.chk || f.obs || f.aj) algo = true;
+          filas.push(f);
+        });
+        if (!algo) { borrarBorrador(idProd); return; }
+        try { localStorage.setItem(claveBorrador(idProd), JSON.stringify({ ts: Date.now(), filas: filas })); } catch (e) {}
+      }
+      function restaurarBorrador(idProd) {
+        var b = leerBorrador(idProd);
+        if (!b || !b.filas) return null;
+        var porKey = {};
+        b.filas.forEach(function (f) { porKey[f.key] = f; });
+        Array.prototype.forEach.call($('lista-items').querySelectorAll('.item'), function (div) {
+          var f = porKey[div.dataset.key];
+          if (!f) return;
+          var caja = div.querySelector('.caja-ajuste');
+          if (f.aj && caja && caja.style.display === 'none') div.querySelector('.link-ajuste').click();
+          if (f.dep !== undefined && div.querySelector('.in-dep')) {
+            div.querySelector('.in-dep').value = f.dep;
+            div.querySelector('.in-extra').value = f.ext;
+            if (div._recalcAjuste) div._recalcAjuste();
+          }
+          var inp = div.querySelector('.cant');
+          inp.value = f.cant;
+          if (f.tc) inp.dataset.tocado = f.tc;
+          div.querySelector('.calidad').value = f.cal;
+          div.querySelector('.obs').value = f.obs;
+          var chk = div.querySelector('.chk');
+          if (chk.checked !== f.chk) {
+            chk.checked = f.chk;
+            chk.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        });
+        return b;
+      }
+      function mostrarAvisoBorrador(b, idProd) {
+        var caja = $('aviso-borrador');
+        if (!b) { caja.style.display = 'none'; caja.innerHTML = ''; return; }
+        var h = new Date(b.ts);
+        caja.style.display = 'block';
+        caja.innerHTML = '📝 <strong>Recepción en curso, todavía sin registrar</strong> (guardada a las ' +
+          ('0' + h.getHours()).slice(-2) + ':' + ('0' + h.getMinutes()).slice(-2) + ' en este teléfono). ' +
+          'Seguí donde quedaste y tocá <strong>Registrar recepción</strong> al terminar. ' +
+          '<button type="button" class="link-ajuste" id="btn-descartar-borrador">Descartar y empezar de nuevo</button>';
+        $('btn-descartar-borrador').addEventListener('click', function () {
+          if (this.dataset.confirmar !== '1') {
+            this.dataset.confirmar = '1';
+            this.textContent = '¿Seguro? Tocá otra vez para descartar';
+            return;
+          }
+          borrarBorrador(idProd);
+          renderItems(idProd);
+          armarSelect();
+        });
+      }
+      // se guarda solo con cada cambio
+      ['input', 'change', 'click'].forEach(function (ev) {
+        $('lista-items').addEventListener(ev, function () { setTimeout(guardarBorrador, 0); });
+      });
+      window.addEventListener('pagehide', guardarBorrador);
+      document.addEventListener('visibilitychange', function () { if (document.hidden) guardarBorrador(); });
+
       // ── render de la lista del productor elegido ─────────────────
       $('sel-productor').addEventListener('change', function () {
+        guardarBorrador();   // el productor anterior queda en curso, no como faltante
         var id = this.value;
+        armarSelect();       // marca "📝 en curso" en la lista
         if (!id) { $('card-items').style.display = 'none'; return; }
         renderItems(id);
       });
@@ -2344,6 +2435,7 @@
           var div = document.createElement('div');
           div.className = 'item no-llego';
           div.dataset.idx = String(i);
+          div.dataset.key = l.id_producto + '|' + (l.fraccion || '');
           div.innerHTML =
             '<input type="checkbox" class="chk" aria-label="Recibido">' +
             '<div class="cuerpo">' +
@@ -2464,6 +2556,11 @@
           cont.appendChild(div);
         });
 
+        $('card-items').dataset.idProd = idProd;
+        var borr = null;
+        if (recibidosVivo[idProd] || registrados[idProd]) borrarBorrador(idProd);
+        else borr = restaurarBorrador(idProd);
+        mostrarAvisoBorrador(borr, idProd);
         marcarTodos();
         $('titulo-productor').textContent = productores[idProd] || idProd;
         $('card-items').style.display = 'block';
@@ -2743,6 +2840,8 @@
           $('ok-box').style.display = 'block';
           registrados[idProd] = true;
           recibidosVivo[idProd] = valorQuien('recibido-por');
+          borrarBorrador(idProd);
+          mostrarAvisoBorrador(null);
           armarSelect();
           $('sel-productor').value = idProd;
           // queda en modo consulta: botón "Ya registrada ✓" apagado y
@@ -4681,6 +4780,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 22/10 c</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 22/10 d</p>
 </body>
 </html>
