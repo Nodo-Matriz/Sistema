@@ -218,6 +218,36 @@
     .tabla-sobrantes { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
     .tabla-sobrantes th, .tabla-sobrantes td { padding: 6px 8px; border-bottom: 1px solid rgba(0,0,0,0.08); text-align: left; vertical-align: top; }
     .tabla-sobrantes td.num, .tabla-sobrantes th.num { text-align: right; white-space: nowrap; }
+    /* Venta de sobrantes (D7) */
+    .tabla-sobrantes .precio-venta { color: #24496f; font-weight: 700; }
+    .tabla-sobrantes .quedan-0 { color: #8A8A7A; }
+    .tabla-sobrantes tr.agotado td { opacity: .55; }
+    .btn-vender { border: 1.5px solid #5b7a3a; background: #fff; color: #3f5a26; border-radius: 999px; padding: 5px 12px; font-weight: 700; font-size: .85rem; cursor: pointer; white-space: nowrap; }
+    .btn-vender:hover { background: rgba(110, 142, 85, 0.10); }
+    .btn-vender:disabled { opacity: .5; cursor: default; }
+    .fila-venta td { background: rgba(110, 142, 85, 0.07); }
+    .venta-sob { position: sticky; left: 0; max-width: min(520px, calc(100vw - 100px)); display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; align-items: end; }
+    .venta-sob label { display: block; font-size: .8rem; font-weight: 700; margin-bottom: 3px; }
+    .venta-sob input, .venta-sob select { width: 100%; box-sizing: border-box; padding: 7px 8px; font-size: 1rem; border: 1.5px solid rgba(0,0,0,0.18); border-radius: 8px; background: #fff; }
+    .venta-sob .vs-full { grid-column: 1 / -1; }
+    .venta-sob .vs-monto { font-size: 1.05rem; }
+    .venta-sob .vs-botones { display: flex; gap: 8px; flex-wrap: wrap; }
+    .venta-sob .btn-resolver { margin: 0; flex: 1 1 180px; }
+    .venta-sob .btn-resolver.confirmar, .cierre-sob .btn-resolver.confirmar { background: #A6402B; border-color: #A6402B; color: #fff; }
+    .vs-cancel { background: none; border: none; color: #6f6a5c; text-decoration: underline; cursor: pointer; font-size: .85rem; }
+    .vs-aviso { grid-column: 1 / -1; font-size: .88rem; color: #A6402B; }
+    .vs-pend { display: block; font-size: .74rem; color: #2f5d8c; font-weight: 400; white-space: normal; line-height: 1.25; }
+    .vs-pend.tarde { color: #A6402B; }
+    .tabla-sobrantes .solo-movil { display: none; }
+    .cierre-sob { margin-top: 18px; padding-top: 12px; border-top: 1px dashed rgba(0,0,0,0.15); }
+    @media (max-width: 600px) {
+      .tabla-sobrantes .col-sec { display: none; }
+      .tabla-sobrantes .solo-movil { display: block; }
+      .tabla-sobrantes { font-size: .86rem; }
+      .tabla-sobrantes th, .tabla-sobrantes td { padding: 6px 3px; }
+      .tabla-sobrantes .txt-btn, .tabla-sobrantes .det { display: none; }
+      .btn-vender { padding: 5px 9px; }
+    }
     .item.nada .nota-novedad { display: block; color: #A6402B; }
     .item .detalle input.cant { width: 62px; font-size: 1.05rem; text-align: center; }
 
@@ -998,13 +1028,41 @@
         <h2>📦 Sobrantes de la edición</h2>
         <p class="muted">
           Lo que los productores trajeron <strong>de más</strong> respecto de lo pedido, según lo
-          registrado en Recepción. No se entrega a nadie: queda en el Nodo para
-          <strong>stockear y ofrecer</strong>. Separalo de los pedidos y rotulalo apenas llega.
+          registrado en Recepción. No se entrega a nadie: el Nodo se lo <strong>compra al
+          productor</strong> y lo <strong>vende</strong> (precio de productor + 20 %). Separalo de
+          los pedidos y rotulalo apenas llega.
         </p>
+        <p class="muted" style="font-size:0.88rem;">
+          Cómo se vende: copiá la lista y pegala en el grupo de WhatsApp → la gente reserva por
+          WhatsApp → retira y paga en el galpón → acá tocás <strong>🛒 Vender</strong> y lo que
+          queda baja solo. La plata va a la <strong>Caja Nodo</strong>.
+        </p>
+
+        <div class="campo">
+          <label for="vendido-por">¿Quién registra las ventas? *</label>
+          <select id="vendido-por">
+            <option value="">— Elegí tu nombre —</option>
+          </select>
+          <input type="text" id="vendido-por-otro" placeholder="Nombre de quien ayuda hoy"
+                 autocomplete="name" style="display:none; margin-top:8px;">
+        </div>
+        <div class="campo">
+          <label for="clave-sobrantes">Clave de equipo *</label>
+          <input type="password" id="clave-sobrantes" placeholder="La clave compartida del equipo">
+        </div>
+
+        <div class="aviso" id="aviso-sobrantes" style="display:none;margin-bottom:10px;"></div>
         <div id="lista-sobrantes"><p class="muted">Leyendo las recepciones…</p></div>
         <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
           <button type="button" class="btn btn--ghost btn--small" id="btn-copiar-sobrantes">📋 Copiar lista para ofrecer</button>
           <span class="muted" id="ok-copiar-sobrantes" style="font-size:0.85rem;"></span>
+        </div>
+
+        <div class="cierre-sob" id="cierre-sobrantes">
+          <h3 style="margin:0 0 6px;font-size:1rem;">🧺 Al final: cerrar la venta de sobrantes</h3>
+          <p class="muted" id="cierre-sob-texto" style="margin:0 0 8px;"></p>
+          <button type="button" class="btn-resolver" id="btn-cerrar-sobrantes">Cerrar venta de sobrantes → donación/merma</button>
+          <div class="aviso" id="aviso-cierre-sob" style="display:none;margin-top:10px;"></div>
         </div>
       </div>
     </div>
@@ -1107,6 +1165,9 @@
       var WEBHOOK_D5     = 'https://hook.us2.make.com/ny5kuoplx4algk8ptgssu3224c57e9m6';
       // D5b · Resolver un no retirado (botones en la tarjeta del pedido)
       var WEBHOOK_D5B    = 'https://hook.us2.make.com/panfqk3ruawq5q9kdt3fdkwp7y12fyr5';
+      // D7 · Venta de sobrantes (solapa 📦 Sobrantes): cada venta y el cierre
+      // (donación/merma) van a Movimientos_Stock. Pegar acá la dirección del webhook.
+      var WEBHOOK_D7     = 'https://hook.us2.make.com/1vgo1q9prjhkrx8pir4r6k6wkroerf0s';
       var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
 
       var $ = function (id) { return document.getElementById(id); };
@@ -1269,12 +1330,16 @@
       });
       document.getElementById('btn-copiar-sobrantes').addEventListener('click', function () {
         var ok = document.getElementById('ok-copiar-sobrantes');
-        if (!sobrantesActuales.length) { ok.textContent = 'No hay sobrantes para copiar.'; return; }
-        var txt = '🌿 *Disponibles en el Nodo* (' + idEdicion + ')\n\n' + sobrantesActuales.map(function (s) {
-          return '• ' + s.producto + ' — ' + numeroAmable(s.sobrante) + ' ' + s.unidad +
-            (s.precio ? ' · $ ' + Math.round(s.precio).toLocaleString('es-AR') + ' por ' + s.unidad : '');
-        }).join('\n');
-        var hecho = function () { ok.textContent = '✅ Copiada. Revisá los precios antes de publicarla.'; };
+        var conStock = sobrantesActuales.filter(function (s) { return s.quedan > 0.0005; });
+        if (!conStock.length) { ok.textContent = 'No quedan sobrantes para ofrecer.'; return; }
+        var nroEd = (String(idEdicion).match(/-(\d+)$/) || [])[1] || idEdicion;
+        var txt = '🧺 *Sobrantes del Nodo · edición ' + nroEd + '* — reservá por WhatsApp y retirá en el galpón\n\n' +
+          conStock.map(function (s) {
+            return emojiProducto(s.producto) + ' ' + s.producto + ' — ' +
+              (s.precio_venta ? pesos(s.precio_venta) + sufijoPrecio(s.unidad) : 'consultá el precio') +
+              ' · quedan ' + numeroAmable(s.quedan) + ' ' + unidadCantidad(s.unidad, s.quedan);
+          }).join('\n');
+        var hecho = function () { ok.textContent = '✅ Copiada (con precio de venta). Pegala en el grupo de WhatsApp.'; };
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(txt).then(hecho, function () { window.prompt('Copiá la lista:', txt); });
         } else { window.prompt('Copiá la lista:', txt); }
@@ -1333,7 +1398,7 @@
       }
 
       // ── equipo: desplegables de "¿quién?" ────────────────────────
-      var QUIEN_IDS = ['recibido-por', 'preparado-por', 'aprobado-por', 'entregado-por'];
+      var QUIEN_IDS = ['recibido-por', 'preparado-por', 'aprobado-por', 'entregado-por', 'vendido-por'];
 
       function armarSelectsEquipo() {
         QUIEN_IDS.forEach(function (id) {
@@ -1524,24 +1589,111 @@
 
       // ── Sobrantes: recibido de más respecto de lo pedido ─────────
       // Sale de Recepciones (suma por producto de la edición): recibida (H) −
-      // pedida (G) > 0. No toca ningún escenario: la planilla ya guarda las
-      // dos cantidades. Lo rechazado no cuenta (se registra con 0 recibido).
+      // pedida (G) > 0. Lo rechazado no cuenta (se registra con 0 recibido).
+      // Venta (D7, 22/10): el Nodo le compra todo el sobrante al productor y lo
+      // vende a precio de productor + 20 % (redondeado a $100). Cada venta y el
+      // cierre (donación/merma) quedan en Movimientos_Stock; "Quedan" =
+      // sobrante − ventas − merma de esta edición.
       var sobrantesActuales = [];
+      var precioProd = {};      // id_producto -> precio_unitario (Productos!G), si no hay ítem
+      var unidadProd = {};      // id_producto -> unidad_venta (Productos!D)
+      var estadoEdicionVig = '';// Ediciones!D de la edición en curso
+      var movSobrantes = {};    // id_producto -> {venta, merma, monto, n} (Movimientos_Stock de la edición)
+      var ventasLocales = {};   // id_producto -> [{tipo, cant, monto, ts, esperado}] enviadas, sin ver aún en la planilla
+      var ventaForm = {};       // id_producto -> {abierto, cant, comprador, medio, conf} (sobrevive al refresco)
+      var cierreSobConf = 0, renderSobPendiente = false;
+      var MEDIOS_PAGO = ['Efectivo', 'Transferencia'];
+
       function unidadDeProducto(id) {
         for (var i = 0; i < lineas.length; i++) {
           if (lineas[i].id_producto === id) return lineas[i].unidad || '';
         }
-        return '';
+        return unidadProd[id] || '';
       }
       function precioDeProducto(id) {
         for (var i = 0; i < itemsEd.length; i++) {
           if (itemsEd[i].id_producto === id && itemsEd[i].precio) return itemsEd[i].precio;
         }
-        return 0;
+        return precioProd[id] || 0;
       }
+      // precio de productor + 20 %, redondeado a los $100 más cercanos (3.300 → 3.960 → 4.000)
+      function precioVenta(p) { return p > 0 ? Math.round(p * 1.2 / 100) * 100 : 0; }
+      function esPorPeso(u) { return /^(kg|kgs|kilos?|g|gr|grs|gramos?|l|lt|lts|litros?|ml|cc)$/i.test(String(u || '').trim()); }
+      function sufijoPrecio(u) {
+        u = String(u || '').trim();
+        if (!u) return '';
+        if (/^unidad(es)?$/i.test(u)) return ' c/u';
+        return '/' + unidadMostrada(u);
+      }
+      function unidadCantidad(u, n) {
+        u = String(u || '').trim();
+        if (/^unidad(es)?$/i.test(u)) return n === 1 ? 'unidad' : 'unidades';
+        return unidadMostrada(u);
+      }
+      function emojiProducto(nombre) {
+        var n = normCat(nombre);
+        var tabla = [
+          [/banan/, '🍌'], [/limon/, '🍋'], [/mandarin|naranj|pomelo/, '🍊'], [/manzan/, '🍎'],
+          [/pera\b|peras/, '🍐'], [/palta/, '🥑'], [/jengibre|curcuma/, '🫚'], [/papa|papin|batata/, '🥔'],
+          [/cebolla/, '🧅'], [/ajo\b|ajos/, '🧄'], [/brocoli|coliflor/, '🥦'], [/berenjena/, '🍆'],
+          [/tomate/, '🍅'], [/zanahoria/, '🥕'], [/zapall|calabaz/, '🎃'], [/lechuga|acelga|espinaca|hinojo|repollo|kale/, '🥬'],
+          [/pan\b|panes|pan /, '🍞'], [/huevo/, '🥚'], [/uva/, '🍇'], [/frutill/, '🍓'], [/kiwi/, '🥝'],
+          [/poroto|garbanz|arveja|lenteja|maiz|pisingallo/, '🫘']
+        ];
+        for (var i = 0; i < tabla.length; i++) if (tabla[i][0].test(n)) return tabla[i][1];
+        return '🌿';
+      }
+
+      // Movimientos_Stock (A id_mov … D id_producto, E tipo, F cantidad, H monto, J id_edicion)
+      function parseMovimientos(res) {
+        if (!res || !res.table || !res.table.cols || res.table.cols.length < 10) return false;
+        // si la hoja no existe, gviz devuelve OTRA hoja: se exige el encabezado
+        if (!/id_mov/i.test(String(res.table.cols[0].label || ''))) return false;
+        var m = {};
+        res.table.rows.forEach(function (r) {
+          if (String(celda(r, 9)).trim() !== idEdicion) return;
+          var tipo = String(celda(r, 4)).trim().toLowerCase();
+          var esV = tipo === 'venta sobrante', esM = tipo === 'merma sobrante';
+          if (!esV && !esM) return;
+          var idP = String(celda(r, 3)).trim();
+          if (!idP) return;
+          var c = celda(r, 5);
+          c = (typeof c === 'number') ? c : parseFloat(String(c).replace(',', '.'));
+          if (!isFinite(c)) c = 0;
+          var mo = celda(r, 7);
+          mo = (typeof mo === 'number') ? mo : parseFloat(String(mo).replace(/\./g, '').replace(',', '.'));
+          var a = m[idP] || (m[idP] = { venta: 0, merma: 0, monto: 0, n: 0 });
+          if (esV) { a.venta += c; a.monto += isFinite(mo) ? mo : 0; } else { a.merma += c; }
+          a.n++;
+        });
+        movSobrantes = m;
+        // lo enviado desde este teléfono que la planilla ya muestra, se suelta
+        Object.keys(ventasLocales).forEach(function (k) {
+          var n = m[k] ? m[k].n : 0;
+          ventasLocales[k] = ventasLocales[k].filter(function (v) { return n < v.esperado; });
+          if (!ventasLocales[k].length) delete ventasLocales[k];
+        });
+        return true;
+      }
+      function parseEstadoEdicion(res) {
+        if (!res || !idEdicion) return;
+        res.table.rows.forEach(function (r) {
+          if (String(celda(r, 0)).trim() === idEdicion) estadoEdicionVig = String(celda(r, 3) || '').trim();
+        });
+      }
+      function puedeCerrarSobrantes() {
+        var e = normCat(estadoEdicionVig);
+        if (['entrega', 'liquidacion', 'cierre', 'cerrada'].indexOf(e) !== -1) return true;
+        try { return pedidos.length > 0 && pendientesDeRetiro().length === 0; } catch (x) { return false; }
+      }
+
       function renderSobrantes() {
         var cont = document.getElementById('lista-sobrantes');
         if (!cont) return;
+        // alguien está escribiendo una venta: se redibuja cuando suelte el campo
+        var act = document.activeElement;
+        if (act && cont.contains(act) && /^(INPUT|SELECT)$/.test(act.tagName)) { renderSobPendiente = true; return; }
+        renderSobPendiente = false;
         var lista = [];
         Object.keys(recepPorProducto).forEach(function (k) {
           if (recepCorruptas[k]) return;
@@ -1549,8 +1701,20 @@
           var extra = Math.round((a.recibida - a.pedida) * 1000) / 1000;
           if (extra <= 0.0005) return;
           var precio = precioDeProducto(k);
+          var mv = movSobrantes[k] || { venta: 0, merma: 0, monto: 0, n: 0 };
+          var pend = ventasLocales[k] || [];
+          var pendCant = 0, pendMonto = 0, pendViejo = false;
+          pend.forEach(function (v) {
+            pendCant += v.cant;
+            if (v.tipo === 'venta_sobrante') pendMonto += v.monto;
+            if (Date.now() - v.ts > 180000) pendViejo = true;
+          });
+          var vendido = Math.round((mv.venta + pend.filter(function (v) { return v.tipo === 'venta_sobrante'; })
+            .reduce(function (t, v) { return t + v.cant; }, 0)) * 1000) / 1000;
+          var quedan = Math.max(0, Math.round((extra - mv.venta - mv.merma - pendCant) * 1000) / 1000);
           lista.push({
             id_producto: k,
+            id_productor: a.id_productor,
             producto: nombreProducto(k),
             productor: productores[a.id_productor] || a.id_productor,
             pedida: Math.round(a.pedida * 1000) / 1000,
@@ -1558,7 +1722,15 @@
             sobrante: extra,
             unidad: unidadDeProducto(k),
             precio: precio,
-            valor: Math.round(extra * precio)
+            precio_venta: precioVenta(precio),
+            valor: Math.round(extra * precio),
+            valor_venta: Math.round(extra * precioVenta(precio)),
+            vendido: vendido,
+            cobrado: Math.round(mv.monto + pendMonto),
+            merma: Math.round(mv.merma * 1000) / 1000,
+            quedan: quedan,
+            pendientes: pend.length,
+            pendViejo: pendViejo
           });
         });
         lista.sort(function (x, y) { return x.productor === y.productor ? (x.producto < y.producto ? -1 : 1) : (x.productor < y.productor ? -1 : 1); });
@@ -1567,25 +1739,251 @@
         if (tab) tab.textContent = '📦 Sobrantes' + (lista.length ? ' (' + lista.length + ')' : '');
         if (!lista.length) {
           cont.innerHTML = '<p class="muted">No hay sobrantes registrados en esta edición. Cuando en Recepción se carga más de lo pedido, aparece acá.</p>';
+          renderCierreSobrantes();
           return;
         }
-        var total = 0;
+        var total = 0, totalVenta = 0, totalCobrado = 0;
         var h = '<div style="overflow-x:auto;"><table class="tabla-sobrantes"><thead><tr>' +
-          '<th>Producto</th><th>Productor</th><th class="num">Pedido</th><th class="num">Llegó</th>' +
-          '<th class="num">Sobrante</th><th class="num">Valor*</th></tr></thead><tbody>';
+          '<th>Producto</th>' +
+          '<th class="num col-sec">Sobrante</th><th class="num">Quedan</th><th class="num">Precio venta</th>' +
+          '<th></th></tr></thead><tbody>';
         lista.forEach(function (s) {
           total += s.valor;
-          h += '<tr><td><strong>' + escH(s.producto) + '</strong></td><td>' + escH(s.productor) + '</td>' +
-            '<td class="num">' + numeroAmable(s.pedida) + '</td><td class="num">' + numeroAmable(s.recibida) + '</td>' +
-            '<td class="num"><strong>+' + numeroAmable(s.sobrante) + ' ' + escH(s.unidad) + '</strong></td>' +
-            '<td class="num">' + (s.precio ? pesos(s.valor) : '—') + '</td></tr>';
+          totalVenta += s.valor_venta;
+          totalCobrado += s.cobrado;
+          var f = ventaForm[s.id_producto] || {};
+          var agotado = s.quedan <= 0.0005;
+          var detalle = [];
+          if (s.vendido > 0) detalle.push('vendido ' + numeroAmable(s.vendido));
+          if (s.merma > 0) detalle.push('merma ' + numeroAmable(s.merma));
+          h += '<tr class="' + (agotado ? 'agotado' : '') + '">' +
+            '<td><strong>' + escH(s.producto) + '</strong>' +
+              '<span class="vs-pend" style="color:#6f6a5c;">' + escH(s.productor) + '</span>' +
+              (s.pendientes ? '<span class="vs-pend' + (s.pendViejo ? ' tarde' : '') + '">' +
+                (s.pendViejo ? '⚠ ' + s.pendientes + ' registro(s) no aparecen todavía en la planilla: revisá D7 en Make'
+                             : '⏳ ' + s.pendientes + ' registro(s) guardándose…') + '</span>' : '') +
+            '</td>' +
+            '<td class="num col-sec"><strong>+' + numeroAmable(s.sobrante) + ' ' + escH(s.unidad) + '</strong>' +
+              '<span class="vs-pend det" style="color:#6f6a5c;">pedido ' + numeroAmable(s.pedida) + ' · llegó ' + numeroAmable(s.recibida) + '</span></td>' +
+            '<td class="num ' + (agotado ? 'quedan-0' : '') + '"><strong>' + numeroAmable(s.quedan) + '</strong>' +
+              '<span class="vs-pend solo-movil" style="color:#6f6a5c;">de +' + numeroAmable(s.sobrante) + ' ' + escH(s.unidad) + '</span>' +
+              (detalle.length ? '<span class="vs-pend" style="color:#6f6a5c;">' + detalle.join(' · ') + '</span>' : '') + '</td>' +
+            '<td class="num"><span class="precio-venta">' + (s.precio_venta ? pesos(s.precio_venta) + escH(sufijoPrecio(s.unidad)) : '—') + '</span>' +
+              (s.precio ? '<span class="vs-pend det" style="color:#6f6a5c;">productor ' + pesos(s.precio) + ' · valor* ' + pesos(s.valor) + '</span>' : '') + '</td>' +
+            '<td class="num"><button type="button" class="btn-vender vs-abrir" data-id="' + escH(s.id_producto) + '"' +
+              (agotado || !s.precio_venta ? ' disabled' : '') + ' title="' + (f.abierto ? 'Cerrar' : 'Vender') + '">' +
+              (f.abierto ? '✕<span class="txt-btn"> Cerrar</span>' : '🛒<span class="txt-btn"> Vender</span>') + '</button></td></tr>';
+          if (f.abierto && !agotado && s.precio_venta) {
+            var cantN = aNumero(f.cant || '');
+            var montoTxt = (cantN && cantN > 0) ? pesos(Math.round(cantN * s.precio_venta)) : '—';
+            var confirmando = f.conf && (Date.now() - f.conf < 6000);
+            h += '<tr class="fila-venta"><td colspan="5"><div class="venta-sob" data-id="' + escH(s.id_producto) + '">' +
+              '<div><label>Cantidad (' + escH(unidadCantidad(s.unidad, 2)) + ')</label>' +
+                '<input class="vs-cant" inputmode="decimal" autocomplete="off" placeholder="' + (esPorPeso(s.unidad) ? 'ej. 1,5' : 'ej. 2') + '" value="' + escH(f.cant || '') + '"></div>' +
+              '<div><label>Medio de pago</label><select class="vs-medio"><option value="">— Elegí —</option>' +
+                MEDIOS_PAGO.map(function (m) { return '<option' + (f.medio === m ? ' selected' : '') + '>' + m + '</option>'; }).join('') +
+              '</select></div>' +
+              '<div class="vs-full"><label>Comprador/a (opcional)</label>' +
+                '<input class="vs-comp" autocomplete="off" placeholder="Nombre" value="' + escH(f.comprador || '') + '"></div>' +
+              '<div class="vs-full vs-monto">Cobrar: <strong class="vs-monto-num">' + montoTxt + '</strong>' +
+                ' <span class="muted" style="font-size:.82rem;">(' + pesos(s.precio_venta) + escH(sufijoPrecio(s.unidad)) +
+                ' · quedan ' + numeroAmable(s.quedan) + ')</span></div>' +
+              '<div class="vs-full vs-botones"><button type="button" class="btn-resolver vs-conf' + (confirmando ? ' confirmar' : '') + '">' +
+                (confirmando ? '¿Confirmás? Tocá de nuevo' : '✔ Registrar venta') + '</button>' +
+                '<button type="button" class="vs-cancel">Cancelar</button></div>' +
+              '<div class="vs-aviso">' + escH(f.aviso || '') + '</div>' +
+              '</div></td></tr>';
+          }
         });
-        h += '</tbody><tfoot><tr><td colspan="5"><strong>Total a precio de productor</strong></td>' +
-          '<td class="num"><strong>' + pesos(total) + '</strong></td></tr></tfoot></table></div>' +
+        h += '</tbody><tfoot>' +
+          '<tr><td colspan="3"><strong>Total a precio de productor</strong> <span class="muted" style="font-size:.8rem;">(lo que el Nodo le paga al productor)</span></td>' +
+          '<td class="num" colspan="2"><strong>' + pesos(total) + '</strong></td></tr>' +
+          '<tr><td colspan="3"><strong>Total a precio de venta</strong> <span class="muted" style="font-size:.8rem;">(si se vende todo)</span></td>' +
+          '<td class="num" colspan="2"><strong>' + pesos(totalVenta) + '</strong></td></tr>' +
+          (totalCobrado > 0 ? '<tr><td colspan="3"><strong>Vendido hasta ahora</strong> <span class="muted" style="font-size:.8rem;">(Caja Nodo)</span></td>' +
+            '<td class="num" colspan="2"><strong>' + pesos(totalCobrado) + '</strong></td></tr>' : '') +
+          '</tfoot></table></div>' +
           '<p class="muted" style="font-size:0.8rem; margin-top:6px;">* Al precio que el productor fijó en esta edición, sin aporte. ' +
-          'Lo que se decida hacer con cada sobrante (vender, guardar, devolver) se anota en la hoja <em>Sobrantes</em>.</p>';
+          'Precio venta = precio de productor + 20 %, redondeado a $100. Cada venta queda en la hoja <em>Movimientos_Stock</em>.</p>';
         cont.innerHTML = h;
+        renderCierreSobrantes();
       }
+
+      function renderCierreSobrantes() {
+        var txt = $('cierre-sob-texto'), btn = $('btn-cerrar-sobrantes');
+        if (!txt || !btn) return;
+        var quedan = sobrantesActuales.filter(function (s) { return s.quedan > 0.0005; });
+        if (!quedan.length) {
+          txt.textContent = sobrantesActuales.length ? 'No queda nada sin vender: no hay que cerrar nada.' : 'Todavía no hay sobrantes.';
+          btn.style.display = 'none';
+          return;
+        }
+        btn.style.display = '';
+        var nombres = quedan.map(function (s) { return s.producto + ' ' + numeroAmable(s.quedan) + ' ' + unidadCantidad(s.unidad, s.quedan); }).join(', ');
+        if (!puedeCerrarSobrantes()) {
+          txt.textContent = 'Se habilita cuando la edición está en Entrega o ya se entregaron todos los pedidos. ' +
+            'Ahora quedan sin vender: ' + nombres + '.';
+          btn.disabled = true;
+          btn.classList.remove('confirmar');
+          btn.textContent = 'Cerrar venta de sobrantes → donación/merma';
+          return;
+        }
+        btn.disabled = false;
+        txt.textContent = 'Cuando ya no se vende más: lo que queda (' + nombres + ') se registra como ' +
+          'donación/merma y la tabla queda en 0. No toca la plata ni lo que se le paga al productor.';
+        var conf = cierreSobConf && (Date.now() - cierreSobConf < 6000);
+        btn.classList.toggle('confirmar', !!conf);
+        btn.textContent = conf ? '¿Confirmás? Tocá de nuevo (' + quedan.length + ' producto' + (quedan.length === 1 ? '' : 's') + ')'
+                               : 'Cerrar venta de sobrantes → donación/merma';
+      }
+
+      function avisoSob(id, msg, ok) {
+        var caja = $(id);
+        if (!caja) return;
+        if (!msg) { caja.style.display = 'none'; return; }
+        caja.style.display = 'block';
+        caja.style.background = ok ? 'rgba(110, 142, 85, 0.12)' : 'rgba(166, 64, 43, 0.10)';
+        caja.style.color = ok ? 'var(--c-corteza, #4a4234)' : '#A6402B';
+        caja.textContent = msg;
+      }
+      function sobPorId(id) {
+        for (var i = 0; i < sobrantesActuales.length; i++) if (sobrantesActuales[i].id_producto === id) return sobrantesActuales[i];
+        return null;
+      }
+      function enviarMovSobrante(s, tipo, cant, precio, comprador, medio, quien, clave) {
+        var monto = Math.round(cant * precio);
+        var n = movSobrantes[s.id_producto] ? movSobrantes[s.id_producto].n : 0;
+        var lst = ventasLocales[s.id_producto] || (ventasLocales[s.id_producto] = []);
+        lst.push({ tipo: tipo, cant: cant, monto: monto, ts: Date.now(), esperado: n + lst.length + 1 });
+        return fetch(WEBHOOK_D7, {
+          method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            tipo: tipo,
+            clave: clave,
+            id_edicion: idEdicion,
+            id_producto: s.id_producto,
+            producto: s.producto,
+            id_productor: s.id_productor,
+            cantidad: cant,
+            precio: precio,
+            monto: monto,
+            comprador: comprador,
+            medio_pago: medio,
+            registrado_por: quien
+          })
+        }).catch(function () {});
+      }
+
+      (function () {
+        var cont = document.getElementById('lista-sobrantes');
+        if (!cont) return;
+        cont.addEventListener('focusout', function () {
+          setTimeout(function () {
+            var act = document.activeElement;
+            if (renderSobPendiente && !(act && cont.contains(act) && /^(INPUT|SELECT)$/.test(act.tagName))) renderSobrantes();
+          }, 250);
+        });
+        function guardarCampo(e) {
+          var box = e.target.closest('.venta-sob');
+          if (!box) return;
+          var f = ventaForm[box.dataset.id] || (ventaForm[box.dataset.id] = { abierto: true });
+          if (e.target.classList.contains('vs-cant')) f.cant = e.target.value;
+          else if (e.target.classList.contains('vs-comp')) f.comprador = e.target.value;
+          else if (e.target.classList.contains('vs-medio')) f.medio = e.target.value;
+          f.conf = 0;
+          var b = box.querySelector('.vs-conf');
+          if (b) { b.classList.remove('confirmar'); b.textContent = '✔ Registrar venta'; }
+          var s = sobPorId(box.dataset.id), m = box.querySelector('.vs-monto-num');
+          if (s && m) {
+            var c = aNumero(f.cant || '');
+            m.textContent = (c && c > 0) ? pesos(Math.round(c * s.precio_venta)) : '—';
+          }
+        }
+        cont.addEventListener('input', guardarCampo);
+        cont.addEventListener('change', guardarCampo);
+        cont.addEventListener('click', function (e) {
+          var t = (e.target.closest && e.target.closest('button')) || e.target;
+          if (t.classList.contains('vs-abrir')) {
+            var id = t.dataset.id, f = ventaForm[id] || {};
+            f.abierto = !f.abierto; f.conf = 0; f.aviso = '';
+            ventaForm[id] = f;
+            avisoSob('aviso-sobrantes', '');
+            renderSobrantes();
+            if (f.abierto) { var inp = cont.querySelector('.venta-sob[data-id="' + id + '"] .vs-cant'); if (inp) inp.focus(); }
+            return;
+          }
+          var box = t.closest('.venta-sob');
+          if (!box) return;
+          var idP = box.dataset.id, fo = ventaForm[idP] || (ventaForm[idP] = { abierto: true });
+          if (t.classList.contains('vs-cancel')) { ventaForm[idP] = { abierto: false }; renderSobrantes(); return; }
+          if (!t.classList.contains('vs-conf')) return;
+          var s = sobPorId(idP);
+          if (!s) return;
+          function mal(msg) { fo.aviso = msg; fo.conf = 0; var a = box.querySelector('.vs-aviso'); if (a) a.textContent = msg; t.classList.remove('confirmar'); t.textContent = '✔ Registrar venta'; }
+          fo.aviso = '';
+          if (!webhookListo(WEBHOOK_D7, 'D7 · Venta de sobrantes', 'aviso-sobrantes')) { mal('Falta configurar la venta de sobrantes: no se guardó nada.'); return; }
+          var quien = valorQuien('vendido-por'), clave = $('clave-sobrantes').value.trim();
+          if (!quien) { mal('Antes, elegí tu nombre arriba (¿Quién registra las ventas?).'); return; }
+          if (!clave) { mal('Falta la clave de equipo (arriba).'); return; }
+          var cant = aNumero(fo.cant || '');
+          if (!cant || cant <= 0) { mal('Escribí la cantidad que se lleva.'); return; }
+          cant = Math.round(cant * 1000) / 1000;
+          if (!esPorPeso(s.unidad) && cant % 1 !== 0) { mal('Este producto se vende por ' + unidadCantidad(s.unidad, 1) + ': la cantidad va sin decimales.'); return; }
+          if (cant > s.quedan + 0.0005) { mal('Quedan solo ' + numeroAmable(s.quedan) + ' ' + unidadCantidad(s.unidad, s.quedan) + '.'); return; }
+          if (!fo.medio) { mal('Elegí el medio de pago (efectivo o transferencia).'); return; }
+          if (!fo.conf || Date.now() - fo.conf > 6000) {
+            fo.conf = Date.now();
+            t.classList.add('confirmar');
+            t.textContent = '¿Confirmás? Tocá de nuevo';
+            setTimeout(function () {
+              if (fo.conf && Date.now() - fo.conf >= 6000) { fo.conf = 0; if (t.isConnected) { t.classList.remove('confirmar'); t.textContent = '✔ Registrar venta'; } }
+            }, 6100);
+            return;
+          }
+          var monto = Math.round(cant * s.precio_venta);
+          enviarMovSobrante(s, 'venta_sobrante', cant, s.precio_venta, (fo.comprador || '').trim(), fo.medio, quien, clave);
+          ventaForm[idP] = { abierto: false };
+          avisoSob('aviso-sobrantes', '✓ Venta registrada: ' + numeroAmable(cant) + ' ' + unidadCantidad(s.unidad, cant) + ' de ' +
+            s.producto + ' · ' + pesos(monto) + ' (' + fo.medio + ')' + (fo.comprador ? ' · ' + fo.comprador.trim() : '') +
+            '. Cobrá y entregá. En unos segundos aparece en la planilla.', true);
+          renderSobrantes();
+        });
+      })();
+
+      $('btn-cerrar-sobrantes').addEventListener('click', function () {
+        avisoSob('aviso-cierre-sob', '');
+        if (!puedeCerrarSobrantes()) { renderCierreSobrantes(); return; }
+        if (!webhookListo(WEBHOOK_D7, 'D7 · Venta de sobrantes', 'aviso-cierre-sob')) return;
+        var quien = valorQuien('vendido-por'), clave = $('clave-sobrantes').value.trim();
+        if (!quien) { avisoSob('aviso-cierre-sob', 'Antes, elegí tu nombre arriba (¿Quién registra las ventas?).'); return; }
+        if (!clave) { avisoSob('aviso-cierre-sob', 'Falta la clave de equipo (arriba).'); return; }
+        var quedan = sobrantesActuales.filter(function (s) { return s.quedan > 0.0005; });
+        if (!quedan.length) { renderCierreSobrantes(); return; }
+        if (!cierreSobConf || Date.now() - cierreSobConf > 6000) {
+          cierreSobConf = Date.now();
+          renderCierreSobrantes();
+          setTimeout(function () { if (cierreSobConf && Date.now() - cierreSobConf >= 6000) { cierreSobConf = 0; renderCierreSobrantes(); } }, 6100);
+          return;
+        }
+        cierreSobConf = 0;
+        var btn = this;
+        btn.disabled = true;
+        btn.textContent = 'Registrando…';
+        // uno por producto, de a uno (Make los procesa en orden)
+        var i = 0;
+        (function siguiente() {
+          if (i >= quedan.length) {
+            avisoSob('aviso-cierre-sob', '✓ Listo: ' + quedan.length + ' producto' + (quedan.length === 1 ? '' : 's') +
+              ' registrados como donación/merma. En unos segundos se ven en la planilla.', true);
+            renderSobrantes();
+            return;
+          }
+          var s = quedan[i++];
+          enviarMovSobrante(s, 'merma_sobrante', s.quedan, 0, '', '', quien, clave)
+            .then(function () { setTimeout(siguiente, 400); });
+        })();
+      });
+
       function escH(t) {
         return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
           return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -1618,7 +2016,9 @@
           // Orden físico del galpón para armar (hoja Orden_Armado, opcional)
           gviz('sheet=Orden_Armado&range=A1:B300&headers=1').catch(function () { return null; }),
           // Respuestas "en el grupo" / "primera vez" que guarda B1 (Pedidos AA:AB, opcional)
-          gviz('sheet=Pedidos&headers=1&tq=' + encodeURIComponent('select A, AA, AB')).catch(function () { return null; })
+          gviz('sheet=Pedidos&headers=1&tq=' + encodeURIComponent('select A, AA, AB')).catch(function () { return null; }),
+          // Movimientos_Stock: ventas y merma de sobrantes (D7), opcional
+          gviz('sheet=Movimientos_Stock&range=A1:L20000&headers=1').catch(function () { return null; })
         ]).then(function (res) {
           // Edición en curso = última fila de Ediciones con id ED####-##
           var edVigente = '';
@@ -1641,6 +2041,16 @@
             res[10].table.rows.forEach(function (r) {
               var idP = String(celda(r, 0)).trim();
               if (idP) categoriaProd[idP] = String(celda(r, 8) || '').trim();
+            });
+          }
+          // Productos!G precio y D unidad: respaldo para los sobrantes
+          if (res[10]) {
+            res[10].table.rows.forEach(function (r) {
+              var idP = String(celda(r, 0)).trim();
+              if (!idP) return;
+              var pr = parseFloat(String(celda(r, 6)).replace(',', '.'));
+              if (pr > 0) precioProd[idP] = pr;
+              unidadProd[idP] = String(celda(r, 3) || '').trim();
             });
           }
           parseOrdenArmado(res[12]);
@@ -1746,6 +2156,8 @@
           // Ítems de los pedidos de esta edición
           parseItems(res[7]);
 
+          parseEstadoEdicion(res[11]);
+          parseMovimientos(res[14]);
           parseEquipo(res[8]);
           parseRecepciones(res[9]);
           calcularFaltantes();
@@ -3519,9 +3931,15 @@
           gviz('sheet=Recepciones&range=A1:L50000&headers=1').catch(function () { return null; }),
           gviz('sheet=Pedidos&range=A1:U20000&headers=1').catch(function () { return null; }),
           gviz('sheet=Items&range=A1:M50000&headers=1').catch(function () { return null; }),
-          gviz('sheet=Plan_Fraccionamiento&range=A1:L20000&headers=1').catch(function () { return null; })
+          gviz('sheet=Plan_Fraccionamiento&range=A1:L20000&headers=1').catch(function () { return null; }),
+          gviz('sheet=Movimientos_Stock&range=A1:L20000&headers=1').catch(function () { return null; }),
+          gviz('sheet=Ediciones&range=A1:D1000&headers=1').catch(function () { return null; })
         ]).then(function (res) {
           var ocupado = hayTrabajoSinGuardar();
+
+          // sobrantes: ventas/merma (D7) y estado de la edición (habilita el cierre)
+          parseMovimientos(res[4]);
+          parseEstadoEdicion(res[5]);
 
           // quién ya fue recibido (marca ✓ en el select de productores)
           if (res[0]) {
@@ -3532,6 +3950,7 @@
 
           // pedidos y entrega: siempre seguro de re-renderizar
           if (res[1]) { parsePedidos(res[1]); renderEntrega(); }
+          try { renderSobrantes(); } catch (e) {}
 
           // ajustes: faltantes recalculados con lo recibido y los ítems de
           // hoy; solo si nadie está cargando recortes
@@ -4124,6 +4543,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 14/10 11:15</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 22/10</p>
 </body>
 </html>
