@@ -303,6 +303,12 @@
       line-height: 1.3;
     }
 
+    .ajuste-pedido { margin-top: 4px; }
+    .link-ajuste { background: none; border: none; padding: 2px 0; color: #4a5d33; font-size: .82rem; text-decoration: underline; cursor: pointer; }
+    .caja-ajuste { margin-top: 6px; padding: 8px 10px; background: #f4f1e6; border-radius: 8px; font-size: .85rem; }
+    .caja-ajuste label { display: inline-flex; align-items: center; gap: 6px; margin: 0 12px 6px 0; }
+    .caja-ajuste input { width: 70px; padding: 4px 6px; }
+    .txt-ajuste { color: #6f6a5c; font-size: .8rem; }
     .item .detalle {
       display: flex;
       flex-wrap: wrap;
@@ -1608,7 +1614,12 @@
             var idProdRec = String(celda(r, 5)).trim();
             if (idProdRec) {
               var acc = recepPorProducto[idProdRec];
-              if (!acc) acc = recepPorProducto[idProdRec] = { id_producto: idProdRec, id_productor: idP, pedida: 0, recibida: 0 };
+              if (!acc) acc = recepPorProducto[idProdRec] = { id_producto: idProdRec, id_productor: idP, pedida: 0, recibida: 0, deposito: 0 };
+              // lo que se tomó del depósito para cubrir pedidos (no lo trajo el productor)
+              var txtDep = '';
+              for (var cd = 8; cd <= 11; cd++) txtDep += ' ' + String(celda(r, cd) || '');
+              var mDep = txtDep.match(/(?:Del depósito|Stock del Nodo):\s*([\d.,]+)/);
+              if (mDep) acc.deposito += parseFloat(mDep[1].replace(',', '.')) || 0;
               var cp = leerCantidad(r, 6), cr = leerCantidad(r, 7);
               if (!cp.ok || !cr.ok) {
                 recepCorruptas[idProdRec] = {
@@ -2367,6 +2378,54 @@
           }
           var inp = div.querySelector('.cant');
           inp.value = numeroAmable(esperado);
+          // ✏️ Lo que efectivamente se le pidió al productor (sin tocar los pedidos)
+          if (!l.fraccion) {
+            var aj = document.createElement('div');
+            aj.className = 'ajuste-pedido';
+            aj.innerHTML =
+              '<button type="button" class="link-ajuste">✏️ Se le pidió otra cantidad al productor</button>' +
+              '<div class="caja-ajuste" style="display:none;">' +
+                '<label>📦 Tomado del depósito <input type="text" class="in-dep" inputmode="decimal" value="' + numeroAmable(deStock) + '"></label>' +
+                '<label>➕ Extra para venta <input type="text" class="in-extra" inputmode="decimal" value="0"></label>' +
+                '<div class="txt-ajuste"></div>' +
+              '</div>';
+            div.querySelector('.linea-nombre').insertAdjacentElement('afterend', aj);
+            (function (l, div, inp) {
+              function recalc() {
+                var dep = Math.min(l.cant_efectiva, Math.max(0, aNumero(div.querySelector('.in-dep').value) || 0));
+                var ext = Math.max(0, aNumero(div.querySelector('.in-extra').value) || 0);
+                var pedido = Math.round((Math.max(0, l.cant_efectiva - dep) + ext) * 1000) / 1000;
+                div.querySelector('.txt-ajuste').textContent = 'Los pedidos suman ' + numeroAmable(l.cant_efectiva) +
+                  ' → se le pidió al productor ' + numeroAmable(pedido) + ' ' + etiquetaUnidad(l, pedido) +
+                  '. Los pedidos de la gente no cambian; el extra va a Sobrantes para vender.';
+                div.querySelector('.linea-nombre').textContent = (l.producto || l.id_producto) +
+                  ' — esperado: ' + numeroAmable(pedido) + ' ' + etiquetaUnidad(l, pedido);
+                inp.dataset.max = String(pedido);
+                if (!inp.dataset.tocado && !inp.disabled) inp.value = numeroAmable(pedido);
+                if (!inp.disabled) { try { marcarNovedad(div); } catch (e) {} }
+              }
+              div._recalcAjuste = recalc;
+              div.querySelector('.link-ajuste').addEventListener('click', function () {
+                var c = div.querySelector('.caja-ajuste');
+                var abrir = c.style.display === 'none';
+                c.style.display = abrir ? 'block' : 'none';
+                if (!abrir && !div.querySelector('.in-dep').disabled) {
+                  // cerrar = cancelar: vuelve a lo que calcula el sistema
+                  div.querySelector('.in-dep').value = numeroAmable(l.fraccion ? 0 : (l.de_stock || 0));
+                  div.querySelector('.in-extra').value = '0';
+                }
+                this.textContent = abrir ? '✖ Cancelar el ajuste (vuelve a lo que calcula el sistema)'
+                                         : '✏️ Se le pidió otra cantidad al productor';
+                recalc();
+              });
+              div.querySelector('.in-dep').addEventListener('input', recalc);
+              div.querySelector('.in-extra').addEventListener('input', recalc);
+              inp.addEventListener('input', function () { inp.dataset.tocado = '1'; });
+              Array.prototype.forEach.call(div.querySelectorAll('.step-btn'), function (b) {
+                b.addEventListener('click', function () { inp.dataset.tocado = '1'; });
+              });
+            })(l, div, inp);
+          }
           inp.dataset.max = String(esperado);   // lo solicitado (ya no es tope: lo de más es sobrante)
           inp.dataset.paso = '1';                // − / + suman de a una unidad vendible
           div.querySelector('.detalle .muted').textContent = etiquetaUnidad(l, 0);
@@ -2387,7 +2446,16 @@
               if (det.calidad && CALIDADES.indexOf(det.calidad) !== -1 && det.calidad !== 'No llegó') {
                 selCal.value = det.calidad;
               }
+              var mD = det.obs.match(/Del depósito:\s*([\d.,]+)/), mE = det.obs.match(/Extra para venta:\s*([\d.,]+)/);
+              if ((mD || mE) && div.querySelector('.caja-ajuste')) {
+                div.querySelector('.caja-ajuste').style.display = 'block';
+                if (mD) div.querySelector('.in-dep').value = mD[1];
+                if (mE) div.querySelector('.in-extra').value = mE[1];
+                inp.dataset.tocado = '1';   // lo recibido es lo registrado
+                if (div._recalcAjuste) div._recalcAjuste();
+              }
               var obsTxt = det.obs.replace(/ · Rechazado: no se recibe$/, '')
+                                  .replace(/\s*·?\s*(Del depósito|Extra para venta|Sobrante): [^·]*/g, '')
                                   .replace(/ · [\d.,]+ × .*$/, '');
               div.querySelector('.obs').value = obsTxt;
             }
@@ -2605,6 +2673,15 @@
           var factor = l.fraccion ? factorFraccion(l.fraccion) : 1;
           // lo que cubre el stock del Nodo no se le pidió al productor
           var deStockEf = l.fraccion ? 0 : (l.de_stock || 0);
+          var extraEf = 0;
+          if (!l.fraccion && div.querySelector('.in-dep')) {
+            deStockEf = Math.min(l.cant_efectiva, Math.max(0, aNumero(div.querySelector('.in-dep').value) || 0));
+            extraEf = Math.max(0, aNumero(div.querySelector('.in-extra').value) || 0);
+          }
+          deStockEf = Math.round(deStockEf * 1000) / 1000;
+          extraEf = Math.round(extraEf * 1000) / 1000;
+          // cantidad_pedida = lo que necesitan los pedidos del productor (sin
+          // lo del depósito). El extra NO entra: llega como sobrante para vender.
           var pedidaEf = Math.max(0, Math.round((l.cant_efectiva - deStockEf) * 1000) / 1000);
           // lo rechazado no se recibe: cuenta como faltante completo
           var recibidaMostrada = (tildado && calidad !== 'Rechazado')
@@ -2615,7 +2692,8 @@
           if (tildado && recibidaEf <= 0 && calidad !== 'Rechazado') calidad = 'No llegó';
 
           var obs = tildado ? div.querySelector('.obs').value.trim() : 'No recibido';
-          if (deStockEf > 0) obs = (obs ? obs + ' · ' : '') + 'Stock del Nodo: ' + String(deStockEf).replace('.', ',');
+          if (deStockEf > 0) obs = (obs ? obs + ' · ' : '') + 'Del depósito: ' + String(deStockEf).replace('.', ',');
+          if (extraEf > 0) obs = (obs ? obs + ' · ' : '') + 'Extra para venta: ' + String(extraEf).replace('.', ',');
           if (calidad === 'Rechazado') {
             obs = (obs ? obs + ' · ' : '') + 'Rechazado: no se recibe';
           }
@@ -2719,7 +2797,9 @@
           vistos[k] = true;
           var ahora = dem[k] || { porciones: 0, unidades: 0 };
           var plan = parseFloat(String(p.porciones).replace(',', '.')) || 0;
-          var rec = recepPorProducto[p.id_producto];
+          var rec0 = recepPorProducto[p.id_producto];
+          // lo tomado del depósito cuenta como llegado para armar
+          var rec = rec0 ? { recibida: rec0.recibida + (rec0.deposito || 0) } : null;
           var total = redondear3(totProd[p.id_producto] || 0);
           var r = {
             p: p, plan: plan,
@@ -4102,8 +4182,10 @@
           return {
             id_producto: a.id_producto,
             id_productor: a.id_productor,
-            pedida: Math.round(a.pedida * 10000) / 10000,
-            recibida: Math.round(a.recibida * 10000) / 10000,
+            // pedida/recibida "para los pedidos": se suma lo tomado del depósito
+            pedida: Math.round((a.pedida + (a.deposito || 0)) * 10000) / 10000,
+            recibida: Math.round((a.recibida + (a.deposito || 0)) * 10000) / 10000,
+            deposito: Math.round((a.deposito || 0) * 10000) / 10000,
             detalle: nombreProducto(a.id_producto) + ' · ' + (productores[a.id_productor] || a.id_productor),
             id_propuesta: '',
             ids: []
@@ -4264,6 +4346,7 @@
           var html = '<div class="prop-card">';
           html += '<h3>⚠️ ' + (pr.detalle || pr.id_producto) + '</h3>';
           html += '<p class="prop-sub">Se pidieron ' + pr.pedida + ', llegaron ' + pr.recibida +
+            (pr.deposito > 0.0001 ? ' (incluye ' + numeroAmable(pr.deposito) + ' del depósito)' : '') +
             (pr.ya_recortado > 0.0001
               ? ' (ya se recortaron ' + numeroAmable(pr.ya_recortado) + ' antes)'
               : '') +
@@ -4598,6 +4681,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 22/10 b</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 22/10 c</p>
 </body>
 </html>
