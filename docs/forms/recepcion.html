@@ -1161,6 +1161,8 @@
       // CONFIGURACIÓN — completar antes de publicar
       // ============================================================
       var WEBHOOK_D1     = 'https://hook.us2.make.com/wh4waco8hddd4qvggwfpul8wxyo2s9xo';
+      // D1b · Corregir recepción: reescribe UNA fila de Recepciones (G, H, I, J, L)
+      var WEBHOOK_D1B    = 'https://hook.us2.make.com/krnrjrrdraxttdkk136b9xeg8m5n77nu';
       var WEBHOOK_FRAC   = 'https://hook.us2.make.com/pnu4revwv7cpba73qpnif4bsa0cuw86i';
       var WEBHOOK_RETIRO = 'https://hook.us2.make.com/gd5qh8wry0v9wmnsqfwp96vjmua55e36';
       var WEBHOOK_D3     = 'https://hook.us2.make.com/8w3cb9fk11gf9rj9352ai7k4pixpmm1n';
@@ -1610,6 +1612,7 @@
             if (String(celda(r, 1)).trim() !== idEdicion) return;
             var idR0 = String(celda(r, 0)).trim();
             if (idR0 && ultimaFila[idR0] !== i) return;   // repetida: vale la última
+            r = aplicarCorreccion(idR0, r);   // corrección recién enviada (D1b) manda hasta que la planilla la muestre
             var idP = String(celda(r, 2)).trim();
             if (idP && !recibidosVivo[idP]) {
               recibidosVivo[idP] = String(celda(r, 4)).trim();
@@ -1654,6 +1657,24 @@
           });
         } catch (e) { recibidosVivo = {}; recepDetalle = {}; recepPorProducto = {}; recepCorruptas = {}; }
         try { renderSobrantes(); } catch (e) {}
+      }
+
+      // ── Correcciones de recepción (D1b) ──────────────────────────
+      // Lo corregido se muestra enseguida; manda sobre la planilla hasta que
+      // ella lo confirme (o 3 minutos, y entonces avisa que no llegó).
+      var correccionesLocales = {};   // id_recepcion -> {pedida, recibida, dif, calidad, obs, ts}
+      var correccionesFallidas = {};
+      function aplicarCorreccion(idR, r) {
+        var o = correccionesLocales[idR];
+        if (!o) return r;
+        var hoja = { h: parseFloat(String(celda(r, 7)).replace(',', '.')) || 0, j: String(celda(r, 9) || '').trim() };
+        if (Math.abs(hoja.h - o.recibida) < 0.0005 && hoja.j === o.calidad) { delete correccionesLocales[idR]; return r; }
+        if (Date.now() - o.ts > 180000) { delete correccionesLocales[idR]; correccionesFallidas[idR] = true; return r; }
+        var c = r.c.slice();
+        while (c.length < 12) c.push(null);
+        c[6] = { v: o.pedida }; c[7] = { v: o.recibida }; c[8] = { v: o.dif };
+        c[9] = { v: o.calidad }; c[11] = { v: o.obs };
+        return { c: c };
       }
 
       // ── Sobrantes: recibido de más respecto de lo pedido ─────────
@@ -2304,10 +2325,131 @@
         btn.disabled = true;
         btn.textContent = 'Ya registrada ✓';
         // dejar los renglones en modo consulta
-        Array.prototype.forEach.call($('lista-items').querySelectorAll('input, select'), function (el) {
-          el.disabled = true;
+        Array.prototype.forEach.call($('lista-items').querySelectorAll('.item'), function (div) {
+          if (div.classList.contains('corrigiendo')) return;   // se está corrigiendo: queda editable
+          Array.prototype.forEach.call(div.querySelectorAll('input, select'), function (el) { el.disabled = true; });
+          var z = div.querySelector('.zona-corregir');
+          if (z) z.style.display = 'block';
+          var idR = idRecepcionDiv(idProd, div);
+          var nota = div.querySelector('.caja-corregir');
+          if (correccionesLocales[idR] && nota) {
+            nota.style.display = 'block';
+            nota.dataset.estado = 'esperando';
+            nota.innerHTML = '⏳ Corrección enviada: esperando que la planilla la muestre…';
+          } else if (correccionesFallidas[idR] && nota) {
+            nota.style.display = 'block';
+            nota.dataset.estado = 'fallida';
+            nota.innerHTML = '⚠ La corrección no aparece en la planilla: revisá D1b en Make (o la clave) y volvé a corregir.';
+          } else if (nota && nota.dataset.estado === 'esperando') {
+            nota.dataset.estado = 'ok';
+            nota.innerHTML = '✅ Corregido y guardado en la planilla.';
+          }
         });
       }
+
+      // ── ✏️ Corregir un producto ya registrado (D1b) ───────────────
+      // Reescribe SOLO la fila de ese producto en Recepciones: nada se
+      // duplica y los demás productos no se tocan.
+      function idRecepcionDiv(idProd, div) {
+        var k = String(div.dataset.key || '').split('|');
+        return 'REC' + idEdicion + '-' + idProd + '-' + k[0] + (k[1] ? '-' + k[1] : '');
+      }
+      function yaRepartido(idProducto) {
+        // ya se recortó a alguien por faltante de este producto (Ajustes)
+        return itemsEd.some(function (it) {
+          return it.id_producto === idProducto && /^(Faltante|Descontado)$/i.test(it.estado) &&
+            it.obs.indexOf('Recorte en armado') !== 0;
+        });
+      }
+      $('lista-items').addEventListener('click', function (e) {
+        var b = e.target.closest ? e.target.closest('.btn-corregir, .btn-guardar-corr, .btn-cancelar-corr') : null;
+        if (!b) return;
+        var div = b.closest('.item');
+        var idProd = $('card-items').dataset.idProd;
+        var propias = lineas.filter(function (l) { return l.id_productor === idProd; });
+        var l = propias[parseInt(div.dataset.idx, 10)];
+        var caja = div.querySelector('.caja-corregir');
+        if (!l) return;
+
+        if (b.classList.contains('btn-corregir')) {
+          if (yaRepartido(l.id_producto)) {
+            caja.style.display = 'block';
+            caja.innerHTML = '⛔ El faltante de este producto <strong>ya se repartió en Ajustes</strong> (a alguien se le ' +
+              'recortó). Corregir ahora no le devuelve el producto a nadie: avisale a quien administra el sistema.';
+            return;
+          }
+          div.classList.add('corrigiendo');
+          Array.prototype.forEach.call(div.querySelectorAll('input, select'), function (el) { el.disabled = false; });
+          b.style.display = 'none';
+          caja.style.display = 'block';
+          caja.innerHTML = '<p style="margin:6px 0;">Corregí lo que corresponda (tildá si llegó, cantidad, calidad) y guardá. ' +
+            'Usa el <strong>Recibido por</strong> y la <strong>clave</strong> de arriba.</p>' +
+            '<button type="button" class="btn-conf btn-guardar-corr">Guardar corrección</button> ' +
+            '<button type="button" class="link-ajuste btn-cancelar-corr">Cancelar</button>' +
+            '<div class="msg-corr" style="margin-top:6px;"></div>';
+          return;
+        }
+        if (b.classList.contains('btn-cancelar-corr')) {
+          div.classList.remove('corrigiendo');
+          renderItems(idProd);
+          return;
+        }
+        // guardar
+        var msg = caja.querySelector('.msg-corr');
+        var quien = valorQuien('recibido-por'), clave = $('clave').value.trim();
+        if (!quien || !clave) { msg.textContent = '⚠ Falta elegir quién corrige (Recibido por) o la clave.'; return; }
+        if (!webhookListo(WEBHOOK_D1B, 'D1b · Corregir recepción', 'aviso-dup')) return;
+        if (b.dataset.conf !== '1') {
+          b.dataset.conf = '1';
+          b.textContent = '¿Seguro? Tocá otra vez para guardar';
+          return;
+        }
+        var item = itemDeLinea(l, div, idProd);
+        var antes = recepDetalle[item.id_recepcion] || {};
+        var h = new Date();
+        var cuando = ('0' + h.getDate()).slice(-2) + '/' + ('0' + (h.getMonth() + 1)).slice(-2) + ' ' +
+          ('0' + h.getHours()).slice(-2) + ':' + ('0' + h.getMinutes()).slice(-2);
+        item.observaciones = (item.observaciones ? item.observaciones + ' · ' : '') + 'Corregido por ' + quien + ' el ' + cuando +
+          ' (antes: recibido ' + String(antes.recibida === undefined ? '?' : antes.recibida).replace('.', ',') +
+          (antes.calidad ? ', ' + antes.calidad : '') + ')';
+        b.disabled = true;
+        b.textContent = 'Guardando…';
+        var payload = {
+          tipo: 'corregir_recepcion',
+          clave: clave,
+          id_edicion: idEdicion,
+          id_productor: idProd,
+          corregido_por: quien,
+          id_recepcion: item.id_recepcion,
+          id_producto: item.id_producto,
+          cantidad_pedida: item.cantidad_pedida,
+          cantidad_recibida: item.cantidad_recibida,
+          diferencia: item.diferencia,
+          calidad: item.calidad,
+          observaciones: item.observaciones
+        };
+        function aNum(x) { return parseFloat(String(x).replace(',', '.')) || 0; }
+        fetch(WEBHOOK_D1B, {
+          method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload)
+        }).then(fin).catch(fin);
+        function fin() {
+          correccionesLocales[item.id_recepcion] = {
+            pedida: aNum(item.cantidad_pedida), recibida: aNum(item.cantidad_recibida), dif: aNum(item.diferencia),
+            calidad: item.calidad, obs: item.observaciones, ts: Date.now()
+          };
+          delete correccionesFallidas[item.id_recepcion];
+          div.classList.remove('corrigiendo');
+          // volver a leer y mostrar ya corregido (Ajustes y Sobrantes incluidos)
+          gviz('sheet=Recepciones&range=A1:L50000&headers=1&_=' + Date.now())
+            .then(function (res) { parseRecepciones(res); }).catch(function () {})
+            .then(function () {
+              renderItems(idProd);
+              calcularFaltantes();
+              renderAjustes();
+            });
+        }
+      });
 
       // ↻ vuelve a leer la hoja Recepciones sin recargar la página
       $('btn-refrescar').addEventListener('click', function () {
@@ -2458,6 +2600,10 @@
                 '<input type="text" class="obs" placeholder="Observación (opcional)">' +
               '</div>' +
               '<div class="nota-novedad"></div>' +
+              '<div class="zona-corregir" style="display:none;">' +
+                '<button type="button" class="link-ajuste btn-corregir">✏️ Corregir este producto (error al registrar)</button>' +
+                '<div class="caja-corregir" style="display:none;"></div>' +
+              '</div>' +
             '</div>';
 
           div.querySelector('.linea-nombre').textContent =
@@ -2757,16 +2903,8 @@
         } catch (e) {}
       }
 
-      // ── envío ────────────────────────────────────────────────────
-      $('btn-confirmar').addEventListener('click', function () {
-        if (bloqueadoPorRegistro || this.dataset.enviando) return;   // doble toque
-        var idProd = $('card-items').dataset.idProd;
-        var propias = lineas.filter(function (l) { return l.id_productor === idProd; });
-        var divs = $('lista-items').querySelectorAll('.item');
-
-        var items = [];
-        propias.forEach(function (l, i) {
-          var div = divs[i];
+      // Un renglón de recepción → la fila que va a Recepciones (D1 y D1b)
+      function itemDeLinea(l, div, idProd) {
           var tildado = div.querySelector('.chk').checked;
           var calidad = tildado ? div.querySelector('.calidad').value : 'No llegó';
           var factor = l.fraccion ? factorFraccion(l.fraccion) : 1;
@@ -2804,7 +2942,7 @@
             obs = (obs ? obs + ' · ' : '') + 'Sobrante: +' + String(sobranteEf).replace('.', ',') + ' ' + (l.unidad || '');
           }
 
-          items.push({
+          return {
             id_recepcion: 'REC' + idEdicion + '-' + idProd + '-' + l.id_producto + (l.fraccion ? '-' + l.fraccion : ''),
             id_producto: l.id_producto,
             producto: l.producto,
@@ -2814,7 +2952,19 @@
             diferencia: numPlanilla(Math.round((recibidaEf - pedidaEf) * 1000) / 1000),
             calidad: calidad,
             observaciones: obs
-          });
+          };
+      }
+
+      // ── envío ────────────────────────────────────────────────────
+      $('btn-confirmar').addEventListener('click', function () {
+        if (bloqueadoPorRegistro || this.dataset.enviando) return;   // doble toque
+        var idProd = $('card-items').dataset.idProd;
+        var propias = lineas.filter(function (l) { return l.id_productor === idProd; });
+        var divs = $('lista-items').querySelectorAll('.item');
+
+        var items = [];
+        propias.forEach(function (l, i) {
+          items.push(itemDeLinea(l, divs[i], idProd));
         });
 
         var payload = {
@@ -4828,6 +4978,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 22/10 f</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 22/10 g</p>
 </body>
 </html>
