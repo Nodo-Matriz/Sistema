@@ -1227,12 +1227,67 @@
         if (ordenForm.hasOwnProperty(c)) return [1, ordenForm[c], c];
         return [2, 0, c];
       }
+      // Orden fijo de verdulería para armar el cajón (pedido por la equipa, 22/10).
+      // Hortalizas y Frutas van juntas, en el lugar de Hortalizas, en este orden.
+      // 'FRUTAS' es sólo el separador de los dos sub-títulos.
+      var ORDEN_VERDULERIA = [
+        'Papa', 'Boniato', 'Batata morada', 'Cebolla cobriza', 'Ajo', 'Zanahoria',
+        'Zapallo brasilero', 'Zapallo anco', 'Palta hass', 'Palta torre', 'Berenjena',
+        'Tomate perita', 'Pimiento rojo', 'Pimiento verde', 'Tomate cherry',
+        'Repollito bruselas', 'Coliflor', 'Brocoli', 'Repollo', 'Nabo', 'Remolacha',
+        'Rabanito', 'Achicoria', 'Lechuga morada', 'Lechuguin', 'Rucula', 'Espinaca',
+        'Acelga', 'Apio', 'Verdeo', 'Puerro', 'Cilantro', 'Hinojo', 'Perejil',
+        'FRUTAS',
+        'Curcuma', 'Jengibre', 'Arandanos', 'Banana', 'Limon', 'Pomelo', 'Naranja',
+        'Naranja jugo', 'Naranja sanguina', 'Manzana crisp pink'
+      ];
+      var CATS_VERDULERIA = { 'hortalizas': 1, 'frutas': 1 };
+      var IDX_FRUTAS = ORDEN_VERDULERIA.indexOf('FRUTAS');
+      var verdPalabras = ORDEN_VERDULERIA.map(function (e) { return normCat(e).split(' '); });
+      var cacheVerd = {};
+      // posición en la lista (o -1). Cada palabra de la lista tiene que ser el
+      // comienzo de una palabra del nombre ("Berenjena" → "Berenjenas"); si
+      // coinciden varias, gana la más específica ("Naranja de Jugo" → "Naranja jugo").
+      function posVerduleria(id) {
+        if (cacheVerd.hasOwnProperty(id)) return cacheVerd[id];
+        var pal = normCat(infoProducto(id).nombre).replace(/[^a-z0-9 ]/g, ' ').split(/\s+/);
+        var mejor = -1, largo = 0;
+        verdPalabras.forEach(function (ws, i) {
+          if (i === IDX_FRUTAS || ws.length <= largo) return;
+          var ok = ws.every(function (w) { return pal.some(function (q) { return q.indexOf(w) === 0; }); });
+          if (ok) { mejor = i; largo = ws.length; }
+        });
+        if (lineas.length) cacheVerd[id] = mejor;
+        return mejor;
+      }
+      function esVerduleria(id) { return CATS_VERDULERIA.hasOwnProperty(normCat(categoriaProd[id])); }
+      // sub-título que se muestra en el cajón
+      function etiquetaCategoria(id) {
+        var cat = categoriaProd[id] || 'Otros';
+        if (!esVerduleria(id)) return cat;
+        var pos = posVerduleria(id);
+        if (pos === -1) return normCat(cat) === 'frutas' ? 'Otras frutas' : 'Otras hortalizas';
+        return pos < IDX_FRUTAS ? 'Hortalizas' : 'Frutas';
+      }
       function compararPorCategoria(a, b) {
-        var ra = rangoCategoria(categoriaProd[a.it.id_producto]);
-        var rb = rangoCategoria(categoriaProd[b.it.id_producto]);
+        var ida = a.it.id_producto, idb = b.it.id_producto;
+        var va = esVerduleria(ida), vb = esVerduleria(idb);
+        var ra = rangoCategoria(va ? 'Hortalizas' : categoriaProd[ida]);
+        var rb = rangoCategoria(vb ? 'Hortalizas' : categoriaProd[idb]);
         if (ra[0] !== rb[0]) return ra[0] - rb[0];
         if (ra[1] !== rb[1]) return ra[1] - rb[1];
         if (ra[2] !== rb[2]) return ra[2] < rb[2] ? -1 : 1;
+        if (va && vb) {
+          var pa = posVerduleria(ida), pb = posVerduleria(idb);
+          var oa = pa === -1 ? 1000 : pa, ob = pb === -1 ? 1000 : pb;
+          if (oa !== ob) return oa - ob;
+          if (pa === -1) {   // no están en la lista: hortalizas, luego frutas, por nombre
+            var ca = normCat(categoriaProd[ida]), cb = normCat(categoriaProd[idb]);
+            if (ca !== cb) return ca === 'hortalizas' ? -1 : 1;
+            var c = String(infoProducto(ida).nombre).localeCompare(String(infoProducto(idb).nombre), 'es');
+            if (c) return c;
+          }
+        }
         return a.k - b.k;   // dentro de la categoría, el orden del pedido
       }
       function parseOrdenArmado(res) {
@@ -3130,7 +3185,7 @@
           var conCats = Object.keys(categoriaProd).length > 0, catPrev = null;
           function subCategoria(it, clase) {
             if (!conCats) return;
-            var cat = categoriaProd[it.id_producto] || 'Otros';
+            var cat = etiquetaCategoria(it.id_producto);
             if (normCat(cat) === catPrev) return;
             catPrev = normCat(cat);
             var d = document.createElement('div');
@@ -4543,6 +4598,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 22/10</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 22/10 b</p>
 </body>
 </html>
