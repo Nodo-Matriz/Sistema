@@ -207,6 +207,47 @@
       margin-top: 4px;
     }
     .item.parcial .nota-novedad { display: block; color: #8a6614; }
+    /* llegó MÁS de lo pedido: azul, queda como sobrante del Nodo */
+    .item.sobra,
+    .item.tildado.sobra {
+      background: rgba(58, 110, 165, 0.10);
+      border-color: #3A6EA5;
+    }
+    .item.sobra .linea-nombre { color: #24496f; }
+    .item.sobra .nota-novedad { display: block; color: #2f5d8c; }
+    .tabla-sobrantes { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+    .tabla-sobrantes th, .tabla-sobrantes td { padding: 6px 8px; border-bottom: 1px solid rgba(0,0,0,0.08); text-align: left; vertical-align: top; }
+    .tabla-sobrantes td.num, .tabla-sobrantes th.num { text-align: right; white-space: nowrap; }
+    /* Venta de sobrantes (D7) */
+    .tabla-sobrantes .precio-venta { color: #24496f; font-weight: 700; }
+    .tabla-sobrantes .quedan-0 { color: #8A8A7A; }
+    .tabla-sobrantes tr.agotado td { opacity: .55; }
+    .btn-vender { border: 1.5px solid #5b7a3a; background: #fff; color: #3f5a26; border-radius: 999px; padding: 5px 12px; font-weight: 700; font-size: .85rem; cursor: pointer; white-space: nowrap; }
+    .btn-vender:hover { background: rgba(110, 142, 85, 0.10); }
+    .btn-vender:disabled { opacity: .5; cursor: default; }
+    .fila-venta td { background: rgba(110, 142, 85, 0.07); }
+    .venta-sob { position: sticky; left: 0; max-width: min(520px, calc(100vw - 100px)); display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; align-items: end; }
+    .venta-sob label { display: block; font-size: .8rem; font-weight: 700; margin-bottom: 3px; }
+    .venta-sob input, .venta-sob select { width: 100%; box-sizing: border-box; padding: 7px 8px; font-size: 1rem; border: 1.5px solid rgba(0,0,0,0.18); border-radius: 8px; background: #fff; }
+    .venta-sob .vs-full { grid-column: 1 / -1; }
+    .venta-sob .vs-monto { font-size: 1.05rem; }
+    .venta-sob .vs-botones { display: flex; gap: 8px; flex-wrap: wrap; }
+    .venta-sob .btn-resolver { margin: 0; flex: 1 1 180px; }
+    .venta-sob .btn-resolver.confirmar, .cierre-sob .btn-resolver.confirmar { background: #A6402B; border-color: #A6402B; color: #fff; }
+    .vs-cancel { background: none; border: none; color: #6f6a5c; text-decoration: underline; cursor: pointer; font-size: .85rem; }
+    .vs-aviso { grid-column: 1 / -1; font-size: .88rem; color: #A6402B; }
+    .vs-pend { display: block; font-size: .74rem; color: #2f5d8c; font-weight: 400; white-space: normal; line-height: 1.25; }
+    .vs-pend.tarde { color: #A6402B; }
+    .tabla-sobrantes .solo-movil { display: none; }
+    .cierre-sob { margin-top: 18px; padding-top: 12px; border-top: 1px dashed rgba(0,0,0,0.15); }
+    @media (max-width: 600px) {
+      .tabla-sobrantes .col-sec { display: none; }
+      .tabla-sobrantes .solo-movil { display: block; }
+      .tabla-sobrantes { font-size: .86rem; }
+      .tabla-sobrantes th, .tabla-sobrantes td { padding: 6px 3px; }
+      .tabla-sobrantes .txt-btn, .tabla-sobrantes .det { display: none; }
+      .btn-vender { padding: 5px 9px; }
+    }
     .item.nada .nota-novedad { display: block; color: #A6402B; }
     .item .detalle input.cant { width: 62px; font-size: 1.05rem; text-align: center; }
 
@@ -262,6 +303,12 @@
       line-height: 1.3;
     }
 
+    .ajuste-pedido { margin-top: 4px; }
+    .link-ajuste { background: none; border: none; padding: 2px 0; color: #4a5d33; font-size: .82rem; text-decoration: underline; cursor: pointer; }
+    .caja-ajuste { margin-top: 6px; padding: 8px 10px; background: #f4f1e6; border-radius: 8px; font-size: .85rem; }
+    .caja-ajuste label { display: inline-flex; align-items: center; gap: 6px; margin: 0 12px 6px 0; }
+    .caja-ajuste input { width: 70px; padding: 4px 6px; }
+    .txt-ajuste { color: #6f6a5c; font-size: .8rem; }
     .item .detalle {
       display: flex;
       flex-wrap: wrap;
@@ -505,6 +552,23 @@
       border-radius: 999px; vertical-align: middle; white-space: nowrap;
     }
     .item-ped.no-va .tag-productor { opacity: 0.5; }
+
+    /* Etiquetas del pedido (primera vez / grupo de WhatsApp): visibles con la tarjeta cerrada */
+    .ped-tags { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 var(--s-4) var(--s-3); margin-top: -4px; }
+    .tag-ped {
+      display: inline-block; padding: 3px 10px; border-radius: 999px;
+      font-size: 0.8rem; font-weight: 700; line-height: 1.3;
+    }
+    .tag-ped.primera { background: rgba(201, 150, 60, 0.22); color: #6b4e12; }
+    .tag-ped.grupo { background: rgba(37, 160, 90, 0.14); color: #1f5e36; }
+    .tag-ped.correo { background: transparent; color: var(--c-tierra); font-weight: 400; font-style: italic; padding-left: 2px; }
+    /* Subtítulo de categoría en el armado (orden físico del galpón) */
+    .cat-sub {
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--c-tierra); opacity: 0.8; margin: 8px 0 0; padding-top: 4px;
+      border-top: 1px dotted rgba(107, 93, 79, 0.22);
+    }
+    .item-frio + .cat-sub, .cat-sub.frio { color: #2f6b8f; }
     .item-ped {
       display: flex;
       align-items: center;
@@ -530,6 +594,40 @@
       opacity: 0.45;
       font-style: italic;
     }
+
+    /* ── Recorte en armado ── */
+    .btn-recorte {
+      margin-left: auto; flex-shrink: 0; border: 1px solid rgba(166,64,43,.35); background: transparent;
+      color: #A6402B; border-radius: 999px; padding: 2px 10px; font: inherit; font-size: .78rem; font-weight: 700; cursor: pointer;
+    }
+    .btn-recorte:hover { background: rgba(166,64,43,.08); }
+    .btn-modificar {
+      display: block; width: 100%; margin: 8px 0 4px; padding: 9px 12px; border-radius: 999px; cursor: pointer;
+      font: inherit; font-weight: 700; font-size: .88rem; background: transparent; color: #A6402B;
+      border: 1.5px dashed rgba(166,64,43,.55);
+    }
+    .btn-modificar:hover { background: rgba(166,64,43,.06); }
+    .form-recorte {
+      margin: 2px 0 8px 32px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(166,64,43,.06); border: 1px solid rgba(166,64,43,.2); font-size: .88rem;
+    }
+    .form-recorte select, .form-recorte input { font: inherit; padding: 4px 6px; border-radius: 8px; border: 1px solid rgba(74,107,58,.3); }
+    .form-recorte .fila { margin: 6px 0; }
+    .form-recorte .acciones { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+    .form-recorte .acciones button { font: inherit; font-size: .85rem; padding: 6px 12px; border-radius: 999px; cursor: pointer; }
+    .form-recorte .rc-aplicar { background: #A6402B; color: #fff; border: 0; font-weight: 700; }
+    .form-recorte .rc-cancelar { background: transparent; border: 1px solid rgba(0,0,0,.2); }
+    .form-recorte .rc-msg { color: #A6402B; font-size: .82rem; margin-top: 6px; }
+    .tag-recorte { display: inline-block; margin-left: 8px; padding: 1px 8px; font-size: .74rem; font-weight: 700;
+      color: #A6402B; background: rgba(166,64,43,.10); border-radius: 999px; white-space: nowrap; }
+
+    .item-ped.coincide, .item-frio.coincide, .item-ped.no-va.coincide { background: rgba(232, 196, 90, 0.28); border-radius: 6px; }
+    .resumen-busqueda { background: rgba(232,196,90,.16); border: 1px solid rgba(232,196,90,.5); border-radius: 12px;
+      padding: 10px 14px; margin-bottom: 12px; font-size: .9rem; }
+    .resumen-busqueda h4 { margin: 0 0 6px; font-size: .95rem; }
+    .resumen-busqueda ul { margin: 0; padding-left: 18px; }
+    .resumen-busqueda li { margin: 2px 0; }
+    .resumen-busqueda .rb-ped { cursor: pointer; text-decoration: underline; }
 
     .prog-control {
       font-size: 0.8rem;
@@ -728,6 +826,14 @@
       transition: border-color 0.15s, color 0.15s;
     }
 
+    .btn-resolver {
+      width: 100%; padding: 10px 12px; margin: 4px 0; border-radius: 10px;
+      border: 1px solid #A8B894; background: #fff; color: var(--c-corteza, #4a4234);
+      font: inherit; font-weight: 600; cursor: pointer; text-align: left;
+    }
+    .btn-resolver:hover { border-color: #5b7a3a; background: rgba(110, 142, 85, 0.08); }
+    .btn-resolver:disabled { opacity: .6; cursor: default; }
+    .btn-resolver small { display: block; font-weight: 400; font-size: .82rem; color: #6f6a5c; margin-top: 2px; }
     .btn-deshacer:hover { border-color: var(--c-arcilla-oscuro); color: var(--c-arcilla-oscuro); }
 
     .ped-head .caret {
@@ -779,6 +885,7 @@
       <button type="button" id="tab-fracc">🔪 Fraccionamiento</button>
       <button type="button" id="tab-ajustes">⚖️ Ajustes</button>
       <button type="button" id="tab-entrega">🛍 Entrega</button>
+      <button type="button" id="tab-sobrantes">📦 Sobrantes</button>
     </div>
 
     <div id="vista-recepcion">
@@ -810,6 +917,7 @@
         se registra como <strong>no recibido</strong> (cantidad 0).
       </p>
       <div class="aviso rojo" id="aviso-dup" style="display:none;"></div>
+      <div class="aviso" id="aviso-borrador" style="display:none;"></div>
       <div id="lista-items"></div>
       <p class="progreso" id="progreso"></p>
 
@@ -821,7 +929,10 @@
       <button type="button" class="btn-conf" id="btn-confirmar" disabled>Registrar recepción</button>
 
       <div class="ok-box" id="ok-box">
-        ✅ Recepción registrada. Podés elegir el próximo productor que llegue.
+        ✅ Recepción registrada.
+        <button type="button" class="btn-conf" id="btn-otro-productor" style="margin-top:12px;">
+          ↑ Recibir de otro productor
+        </button>
       </div>
     </div>
 
@@ -845,6 +956,9 @@
                  autocomplete="name" style="display:none; margin-top:8px;">
         </div>
 
+        <input type="search" id="buscar-fracc" placeholder="🔍 Buscar producto (ej.: arroz, lentejas)"
+               autocomplete="off" style="width:100%; margin:6px 0 10px; padding:10px 12px; font-size:1rem;
+               border:1px solid rgba(0,0,0,0.2); border-radius:10px;">
         <div id="lista-fracc"></div>
         <p class="progreso" id="progreso-fracc"></p>
 
@@ -900,15 +1014,62 @@
         </div>
 
         <button type="button" class="btn-conf" id="btn-ajustes" disabled>
-          ENVIAR PEDIDOS ACTUALIZADOS
+          APLICAR RECORTES
         </button>
         <p class="muted" style="font-size:0.85rem; margin-top:8px;">
-          Aplica los recortes en la planilla y le manda a cada consumidor
-          afectado el detalle nuevo de su pedido y el total actualizado.
+          Aplica los recortes en la planilla (cantidades y totales de cada
+          pedido). <strong>No manda correos:</strong> el aviso a los consumidores
+          se envía una sola vez desde la guía, cuando estén todas las
+          recepciones registradas.
         </p>
 
         <div class="ok-box" id="ok-ajustes">
           ✅ Ajustes aplicados. Los pedidos quedaron actualizados.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Vista Sobrantes ── -->
+    <div id="vista-sobrantes" style="display:none;">
+      <div class="card-eq">
+        <h2>📦 Sobrantes de la edición</h2>
+        <p class="muted">
+          Lo que los productores trajeron <strong>de más</strong> respecto de lo pedido, según lo
+          registrado en Recepción. No se entrega a nadie: el Nodo se lo <strong>compra al
+          productor</strong> y lo <strong>vende</strong> (precio de productor + 20 %). Separalo de
+          los pedidos y rotulalo apenas llega.
+        </p>
+        <p class="muted" style="font-size:0.88rem;">
+          Cómo se vende: copiá la lista y pegala en el grupo de WhatsApp → la gente reserva por
+          WhatsApp → retira y paga en el galpón → acá tocás <strong>🛒 Vender</strong> y lo que
+          queda baja solo. La plata va a la <strong>Caja Nodo</strong>.
+        </p>
+
+        <div class="campo">
+          <label for="vendido-por">¿Quién registra las ventas? *</label>
+          <select id="vendido-por">
+            <option value="">— Elegí tu nombre —</option>
+          </select>
+          <input type="text" id="vendido-por-otro" placeholder="Nombre de quien ayuda hoy"
+                 autocomplete="name" style="display:none; margin-top:8px;">
+        </div>
+        <div class="campo">
+          <label for="clave-sobrantes">Clave de equipo *</label>
+          <input type="password" id="clave-sobrantes" placeholder="La clave compartida del equipo">
+        </div>
+
+        <div class="aviso" id="aviso-sobrantes" style="display:none;margin-bottom:10px;"></div>
+        <div id="lista-sobrantes"><p class="muted">Leyendo las recepciones…</p></div>
+        <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="btn btn--ghost btn--small" id="btn-copiar-sobrantes">📋 Copiar lista para ofrecer</button>
+          <span class="muted" id="ok-copiar-sobrantes" style="font-size:0.85rem;"></span>
+        </div>
+
+        <div class="cierre-sob" id="cierre-sobrantes">
+          <h3 style="margin:0 0 6px;font-size:1rem;">🧺 Al final: cerrar la venta de sobrantes</h3>
+          <p class="muted" id="cierre-sob-texto" style="margin:0 0 8px;"></p>
+          <button type="button" class="btn-resolver" id="btn-cerrar-sobrantes">Cerrar venta de sobrantes → donación/merma</button>
+          <div class="aviso" id="aviso-cierre-sob" style="display:none;margin-top:10px;"></div>
         </div>
       </div>
     </div>
@@ -967,13 +1128,20 @@
         <div class="resumen-frio" id="resumen-frio" style="display:none;"></div>
 
         <div class="campo">
-          <label for="buscar-entrega">Buscar por nombre o N° de pedido</label>
-          <input type="text" id="buscar-entrega" placeholder="Escribí parte del nombre o el número…">
+          <label for="buscar-entrega">Buscar por nombre, N° de pedido o producto</label>
+          <input type="text" id="buscar-entrega" placeholder="Ej.: Laura · 74 · repollo">
         </div>
 
         <div class="aviso rojo" id="aviso-entrega" style="display:none;"></div>
 
         <div id="lista-entrega"></div>
+
+        <div id="cierre-entrega" style="margin-top:22px;padding:14px 16px;border:1px dashed #A8B894;border-radius:10px;">
+          <h3 style="margin:0 0 6px;font-size:1.05rem;">⏸ Cerrar la entrega</h3>
+          <p class="muted" id="cierre-texto" style="margin:0 0 10px;">Leyendo los pedidos…</p>
+          <button type="button" class="btn btn--ghost" id="btn-cerrar-entrega" style="display:none;">Cerrar la entrega</button>
+          <div class="aviso" id="aviso-cierre" style="display:none;margin-top:10px;"></div>
+        </div>
       </div>
     </div>
 
@@ -994,9 +1162,19 @@
       var WEBHOOK_FRAC   = 'https://hook.us2.make.com/pnu4revwv7cpba73qpnif4bsa0cuw86i';
       var WEBHOOK_RETIRO = 'https://hook.us2.make.com/gd5qh8wry0v9wmnsqfwp96vjmua55e36';
       var WEBHOOK_D3     = 'https://hook.us2.make.com/8w3cb9fk11gf9rj9352ai7k4pixpmm1n';
+      // D3b · avisos de ajuste (el mismo que usa la guía, paso 6): después de un
+      // recorte en armado se dispara solo, para ese pedido.
+      var WEBHOOK_D3B    = 'https://hook.us2.make.com/4a2eptxftvx5b3wn7vptjljkjxx3og14';
       // Escenario A5 (cambios de estado): al entregar el último pedido, la
       // edición pasa a "Liquidación" y la guía avanza al paso 7.
       var WEBHOOK_A5     = 'https://hook.us2.make.com/qyqw5eh5f6gcbdd558o4t21krx4k72hy';
+      // D5 · No retirados (botón "Cerrar la entrega")
+      var WEBHOOK_D5     = 'https://hook.us2.make.com/ny5kuoplx4algk8ptgssu3224c57e9m6';
+      // D5b · Resolver un no retirado (botones en la tarjeta del pedido)
+      var WEBHOOK_D5B    = 'https://hook.us2.make.com/panfqk3ruawq5q9kdt3fdkwp7y12fyr5';
+      // D7 · Venta de sobrantes (solapa 📦 Sobrantes): cada venta y el cierre
+      // (donación/merma) van a Movimientos_Stock. Pegar acá la dirección del webhook.
+      var WEBHOOK_D7     = 'https://hook.us2.make.com/1vgo1q9prjhkrx8pir4r6k6wkroerf0s';
       var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
 
       var $ = function (id) { return document.getElementById(id); };
@@ -1034,8 +1212,172 @@
       }
       var itemsEd = [];       // ítems de los pedidos de la edición
 
+      // ── Orden de armado por categoría ────────────────────────────
+      // Los renglones de cada pedido se muestran en el orden físico del
+      // galpón: 1) hoja Orden_Armado (A categoria, B orden), que edita el
+      // equipo; 2) las categorías que no estén ahí van al final, en el orden
+      // del formulario de la edición (orden_categorias); 3) si tampoco, por
+      // orden alfabético. Sin categoría conocida, al final de todo.
+      var categoriaProd = {};   // id_producto -> categoría (Productos!I)
+      var ordenArmado = {};     // categoría normalizada -> número (hoja Orden_Armado)
+      var ordenForm = {};       // categoría normalizada -> posición en el formulario
+      var consPrevios = {};     // id_consumidor -> true si pidió en una edición anterior
+      var extrasPed = {};       // id_pedido -> {grupo, primera} (Pedidos AA/AB, si existen)
+      function normCat(t) {
+        return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .replace(/\s+/g, ' ').trim();
+      }
+      function rangoCategoria(cat) {
+        var c = normCat(cat);
+        if (!c) return [3, 0, ''];
+        if (ordenArmado.hasOwnProperty(c)) return [0, ordenArmado[c], c];
+        if (ordenForm.hasOwnProperty(c)) return [1, ordenForm[c], c];
+        return [2, 0, c];
+      }
+      // Orden fijo de verdulería para armar el cajón (pedido por la equipa, 22/10).
+      // Hortalizas y Frutas van juntas, en el lugar de Hortalizas, en este orden.
+      // 'FRUTAS' es sólo el separador de los dos sub-títulos.
+      var ORDEN_VERDULERIA = [
+        'Papa', 'Boniato', 'Batata morada', 'Cebolla cobriza', 'Ajo', 'Zanahoria',
+        'Zapallo brasilero', 'Zapallo anco', 'Palta hass', 'Palta torre', 'Berenjena',
+        'Tomate perita', 'Pimiento rojo', 'Pimiento verde', 'Tomate cherry',
+        'Repollito bruselas', 'Coliflor', 'Brocoli', 'Repollo', 'Nabo', 'Remolacha',
+        'Rabanito', 'Achicoria', 'Lechuga morada', 'Lechuguin', 'Rucula', 'Espinaca',
+        'Acelga', 'Apio', 'Verdeo', 'Puerro', 'Cilantro', 'Hinojo', 'Perejil',
+        'FRUTAS',
+        'Curcuma', 'Jengibre', 'Arandanos', 'Banana', 'Limon', 'Pomelo', 'Naranja',
+        'Naranja jugo', 'Naranja sanguina', 'Manzana crisp pink'
+      ];
+      var CATS_VERDULERIA = { 'hortalizas': 1, 'frutas': 1 };
+      var IDX_FRUTAS = ORDEN_VERDULERIA.indexOf('FRUTAS');
+      var verdPalabras = ORDEN_VERDULERIA.map(function (e) { return normCat(e).split(' '); });
+      var cacheVerd = {};
+      // posición en la lista (o -1). Cada palabra de la lista tiene que ser el
+      // comienzo de una palabra del nombre ("Berenjena" → "Berenjenas"); si
+      // coinciden varias, gana la más específica ("Naranja de Jugo" → "Naranja jugo").
+      function posVerduleria(id) {
+        if (cacheVerd.hasOwnProperty(id)) return cacheVerd[id];
+        var pal = normCat(infoProducto(id).nombre).replace(/[^a-z0-9 ]/g, ' ').split(/\s+/);
+        var mejor = -1, largo = 0;
+        verdPalabras.forEach(function (ws, i) {
+          if (i === IDX_FRUTAS || ws.length <= largo) return;
+          var ok = ws.every(function (w) { return pal.some(function (q) { return q.indexOf(w) === 0; }); });
+          if (ok) { mejor = i; largo = ws.length; }
+        });
+        if (lineas.length) cacheVerd[id] = mejor;
+        return mejor;
+      }
+      function esVerduleria(id) { return CATS_VERDULERIA.hasOwnProperty(normCat(categoriaProd[id])); }
+      // sub-título que se muestra en el cajón
+      function etiquetaCategoria(id) {
+        var cat = categoriaProd[id] || 'Otros';
+        if (!esVerduleria(id)) return cat;
+        var pos = posVerduleria(id);
+        if (pos === -1) return normCat(cat) === 'frutas' ? 'Otras frutas' : 'Otras hortalizas';
+        return pos < IDX_FRUTAS ? 'Hortalizas' : 'Frutas';
+      }
+      function compararPorCategoria(a, b) {
+        var ida = a.it.id_producto, idb = b.it.id_producto;
+        var va = esVerduleria(ida), vb = esVerduleria(idb);
+        var ra = rangoCategoria(va ? 'Hortalizas' : categoriaProd[ida]);
+        var rb = rangoCategoria(vb ? 'Hortalizas' : categoriaProd[idb]);
+        if (ra[0] !== rb[0]) return ra[0] - rb[0];
+        if (ra[1] !== rb[1]) return ra[1] - rb[1];
+        if (ra[2] !== rb[2]) return ra[2] < rb[2] ? -1 : 1;
+        if (va && vb) {
+          var pa = posVerduleria(ida), pb = posVerduleria(idb);
+          var oa = pa === -1 ? 1000 : pa, ob = pb === -1 ? 1000 : pb;
+          if (oa !== ob) return oa - ob;
+          if (pa === -1) {   // no están en la lista: hortalizas, luego frutas, por nombre
+            var ca = normCat(categoriaProd[ida]), cb = normCat(categoriaProd[idb]);
+            if (ca !== cb) return ca === 'hortalizas' ? -1 : 1;
+            var c = String(infoProducto(ida).nombre).localeCompare(String(infoProducto(idb).nombre), 'es');
+            if (c) return c;
+          }
+        }
+        return a.k - b.k;   // dentro de la categoría, el orden del pedido
+      }
+      function parseOrdenArmado(res) {
+        ordenArmado = {};
+        if (!res || !res.table || !res.table.cols || !res.table.cols.length) return;
+        // si la hoja no existe, gviz devuelve OTRA hoja: se exige el encabezado
+        if (!/categ/i.test(String(res.table.cols[0].label || ''))) return;
+        res.table.rows.forEach(function (r, i) {
+          var c = normCat(celda(r, 0));
+          if (!c || ordenArmado.hasOwnProperty(c)) return;
+          var n = parseFloat(String(celda(r, 1)).replace(',', '.'));
+          ordenArmado[c] = isNaN(n) ? 1000 + i : n;
+        });
+      }
+      // Orden de categorías del formulario de la edición (lo eligió el equipo
+      // en generar-edicion y A3 lo dejó escrito en el HTML del formulario).
+      function cargarOrdenForm() {
+        if (!idEdicion) return;
+        var aplicar = function (lista) {
+          var o = {};
+          lista.forEach(function (c, i) { var n = normCat(c); if (n && !o.hasOwnProperty(n)) o[n] = i; });
+          if (!Object.keys(o).length) return false;
+          ordenForm = o;
+          return true;
+        };
+        fetch('pedidos-' + encodeURIComponent(idEdicion) + '.html', { cache: 'no-store' })
+          .then(function (r) { return r.ok ? r.text() : ''; })
+          .then(function (t) {
+            var m = String(t || '').match(/var ORDEN_RAW = '([^']*)'/);
+            return (m && m[1].indexOf('{{') === -1) ? m[1].split('|') : null;
+          })
+          .catch(function () { return null; })
+          .then(function (lista) {
+            if (!lista) {
+              // mismo navegador que generó la edición: el orden quedó guardado
+              try { lista = JSON.parse(localStorage.getItem('nm_orden_categorias') || 'null'); } catch (e) { lista = null; }
+            }
+            if (lista && lista.length && aplicar(lista)) {
+              try { renderEntrega(); } catch (e) {}
+            }
+          });
+      }
+      function numEdicion(id) {
+        var m = String(id || '').match(/^ED(\d{4})-(\d+)$/);
+        return m ? parseInt(m[1], 10) * 1000 + parseInt(m[2], 10) : null;
+      }
+      // Respuestas del formulario que B1 guarda en Pedidos (AA en_grupo_whatsapp,
+      // AB primera_vez_declarada). Si las columnas todavía no existen, nada.
+      function parseExtrasPedidos(res) {
+        extrasPed = {};
+        if (!res || !res.table || !res.table.cols || res.table.cols.length < 2) return;
+        var cols = res.table.cols, iG = -1, iP = -1;
+        for (var c = 1; c < cols.length; c++) {
+          var lab = String(cols[c].label || '');
+          if (/grupo/i.test(lab)) iG = c;
+          else if (/primera/i.test(lab)) iP = c;
+        }
+        res.table.rows.forEach(function (r) {
+          var id = String(celda(r, 0)).trim();
+          if (!id) return;
+          var g = iG >= 0 ? String(celda(r, iG)).trim().toLowerCase() : '';
+          var pv = iP >= 0 ? String(celda(r, iP)).trim().toLowerCase() : '';
+          if (g || pv) extrasPed[id] = { grupo: g, primera: pv };
+        });
+      }
+      function esPrimeraVez(p) {
+        // Principal: no tiene pedidos en ediciones anteriores. Si el pedido no
+        // tiene consumidor, se usa lo que la persona declaró en el formulario.
+        if (p.id_consumidor) return !consPrevios[p.id_consumidor];
+        var ex = extrasPed[p.id_pedido];
+        return !!(ex && ex.primera === 'si');
+      }
+      function tagsDePedido(p) {
+        var h = '';
+        if (esPrimeraVez(p)) h += '<span class="tag-ped primera">🌱 Primera vez en el Nodo — explicale la dinámica</span>';
+        var ex = extrasPed[p.id_pedido];
+        if (ex && ex.grupo === 'no') h += '<span class="tag-ped grupo">💬 Sumar al grupo de WhatsApp</span>';
+        else if (ex && ex.grupo === 'no_prefiero_correo') h += '<span class="tag-ped correo">✉ prefiere correo</span>';
+        return h ? '<div class="ped-tags">' + h + '</div>' : '';
+      }
+
       // ── Solapas ──────────────────────────────────────────────────
-      var VISTAS = ['recepcion', 'fracc', 'ajustes', 'entrega'];
+      var VISTAS = ['recepcion', 'fracc', 'ajustes', 'entrega', 'sobrantes'];
       function mostrarVista(cual) {
         VISTAS.forEach(function (v) {
           document.getElementById('vista-' + v).style.display = (v === cual) ? 'block' : 'none';
@@ -1044,6 +1386,25 @@
       }
       VISTAS.forEach(function (v) {
         document.getElementById('tab-' + v).addEventListener('click', function () { mostrarVista(v); });
+      });
+      document.getElementById('tab-sobrantes').addEventListener('click', function () {
+        try { renderSobrantes(); } catch (e) {}
+      });
+      document.getElementById('btn-copiar-sobrantes').addEventListener('click', function () {
+        var ok = document.getElementById('ok-copiar-sobrantes');
+        var conStock = sobrantesActuales.filter(function (s) { return s.quedan > 0.0005; });
+        if (!conStock.length) { ok.textContent = 'No quedan sobrantes para ofrecer.'; return; }
+        var nroEd = (String(idEdicion).match(/-(\d+)$/) || [])[1] || idEdicion;
+        var txt = '🧺 *Sobrantes del Nodo · edición ' + nroEd + '* — reservá por WhatsApp y retirá en el galpón\n\n' +
+          conStock.map(function (s) {
+            return emojiProducto(s.producto) + ' ' + s.producto + ' — ' +
+              (s.precio_venta ? pesos(s.precio_venta) + sufijoPrecio(s.unidad) : 'consultá el precio') +
+              ' · quedan ' + numeroAmable(s.quedan) + ' ' + unidadCantidad(s.unidad, s.quedan);
+          }).join('\n');
+        var hecho = function () { ok.textContent = '✅ Copiada (con precio de venta). Pegala en el grupo de WhatsApp.'; };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(txt).then(hecho, function () { window.prompt('Copiá la lista:', txt); });
+        } else { window.prompt('Copiá la lista:', txt); }
       });
 
       // ── util gviz ────────────────────────────────────────────────
@@ -1099,7 +1460,7 @@
       }
 
       // ── equipo: desplegables de "¿quién?" ────────────────────────
-      var QUIEN_IDS = ['recibido-por', 'preparado-por', 'aprobado-por', 'entregado-por'];
+      var QUIEN_IDS = ['recibido-por', 'preparado-por', 'aprobado-por', 'entregado-por', 'vendido-por'];
 
       function armarSelectsEquipo() {
         QUIEN_IDS.forEach(function (id) {
@@ -1150,8 +1511,18 @@
       function parsePedidos(res) {
         pedidos = [];
         if (!res) return;
+        consPrevios = {};
+        var nActual = numEdicion(idEdicion);
         res.table.rows.forEach(function (r) {
-          if (String(celda(r, 1)).trim() !== idEdicion) return;
+          var edR = String(celda(r, 1)).trim();
+          if (edR !== idEdicion) {
+            var nR = numEdicion(edR);
+            if (nR !== null && nActual !== null && nR < nActual) {
+              var idC = String(celda(r, 2)).trim();
+              if (idC) consPrevios[idC] = true;
+            }
+            return;
+          }
           pedidos.push({
             id_pedido: String(celda(r, 0)).trim(),
             id_consumidor: String(celda(r, 2)).trim(),
@@ -1171,13 +1542,37 @@
       // Lo recibido por producto en esta edición (suma de Recepciones):
       // es la fuente de los faltantes de la solapa Ajustes.
       var recepPorProducto = {};
+      var recepCorruptas = {};   // id_producto -> motivo (cantidades ilegibles en la planilla)
+
+      // La planilla está en español: "1.5" la toma como FECHA (1 de mayo) y
+      // "0.5" como texto. Por eso los decimales se mandan con coma ("1,5"),
+      // que la planilla sí entiende como número. Los enteros van tal cual.
+      function numPlanilla(n) {
+        var x = Math.round((Number(n) || 0) * 1000) / 1000;
+        return (x % 1 === 0) ? x : String(x).replace('.', ',');
+      }
+
+      // Lee una cantidad de Recepciones y dice si es confiable. Vacía, texto
+      // que no es número, o un número enorme (una fecha: 46143 = 1 de mayo)
+      // es un dato roto: no se usa para calcular faltantes.
+      var CANT_MAX_CREIBLE = 20000;
+      function leerCantidad(r, i) {
+        var c = r.c[i];
+        if (!c || c.v === null || c.v === undefined || c.v === '') return { ok: false, val: 0 };
+        var v = c.v;
+        if (typeof v === 'string') v = parseFloat(v.replace(',', '.'));
+        if (typeof v !== 'number' || !isFinite(v)) return { ok: false, val: 0 };
+        if (Math.abs(v) > CANT_MAX_CREIBLE) return { ok: false, val: v };
+        return { ok: true, val: v };
+      }
 
       function parseItems(res) {
         itemsEd = [];
         if (!res) return;
         res.table.rows.forEach(function (r) {
           var idPed = String(celda(r, 1)).trim();
-          if (idPed.indexOf(idEdicion) === -1) return;
+          // exacto: "PED-ED2026-9-" no debe tomar ítems de la ED2026-91
+          if (idPed.indexOf('PED-' + idEdicion + '-') !== 0) return;
           itemsEd.push({
             id_item: String(celda(r, 0)).trim(),
             id_pedido: idPed,
@@ -1186,7 +1581,10 @@
             cantidad: parseFloat(celda(r, 4)) || 0,
             fraccion: String(celda(r, 5)).trim(),
             precio: parseFloat(celda(r, 6)) || 0,
-            efectiva: parseFloat(celda(r, 10)) || 0
+            estado: String(celda(r, 8) || '').trim(),
+            efectiva: parseFloat(celda(r, 10)) || 0,
+            quien: String(celda(r, 11) || '').trim(),
+            obs: String(celda(r, 9) || '').trim()
           });
         });
       }
@@ -1195,10 +1593,21 @@
         recibidosVivo = {};
         recepDetalle = {};
         recepPorProducto = {};
+        recepCorruptas = {};
         if (!res) return;
         try {
-          res.table.rows.forEach(function (r) {
+          // Si una recepción quedó registrada dos veces (mismo id_recepcion:
+          // doble envío, reintento de Make), se cuenta UNA sola vez, la última.
+          // Sumarlas duplicaría lo pedido y lo recibido, y el faltante.
+          var ultimaFila = {};
+          res.table.rows.forEach(function (r, i) {
+            var idR = String(celda(r, 0)).trim();
+            if (idR) ultimaFila[idR] = i;
+          });
+          res.table.rows.forEach(function (r, i) {
             if (String(celda(r, 1)).trim() !== idEdicion) return;
+            var idR0 = String(celda(r, 0)).trim();
+            if (idR0 && ultimaFila[idR0] !== i) return;   // repetida: vale la última
             var idP = String(celda(r, 2)).trim();
             if (idP && !recibidosVivo[idP]) {
               recibidosVivo[idP] = String(celda(r, 4)).trim();
@@ -1206,9 +1615,23 @@
             var idProdRec = String(celda(r, 5)).trim();
             if (idProdRec) {
               var acc = recepPorProducto[idProdRec];
-              if (!acc) acc = recepPorProducto[idProdRec] = { id_producto: idProdRec, id_productor: idP, pedida: 0, recibida: 0 };
-              acc.pedida += parseFloat(celda(r, 6)) || 0;
-              acc.recibida += parseFloat(celda(r, 7)) || 0;
+              if (!acc) acc = recepPorProducto[idProdRec] = { id_producto: idProdRec, id_productor: idP, pedida: 0, recibida: 0, deposito: 0 };
+              // lo que se tomó del depósito para cubrir pedidos (no lo trajo el productor)
+              var txtDep = '';
+              for (var cd = 8; cd <= 11; cd++) txtDep += ' ' + String(celda(r, cd) || '');
+              var mDep = txtDep.match(/(?:Del depósito|Stock del Nodo):\s*([\d.,]+)/);
+              if (mDep) acc.deposito += parseFloat(mDep[1].replace(',', '.')) || 0;
+              var cp = leerCantidad(r, 6), cr = leerCantidad(r, 7);
+              if (!cp.ok || !cr.ok) {
+                recepCorruptas[idProdRec] = {
+                  id_recepcion: String(celda(r, 0)).trim(),
+                  id_productor: idP,
+                  que: (!cp.ok ? 'cantidad_pedida (G)' : '') + (!cp.ok && !cr.ok ? ' y ' : '') +
+                       (!cr.ok ? 'cantidad_recibida (H)' : '')
+                };
+              }
+              acc.pedida += cp.val;
+              acc.recibida += cr.val;
             }
             var idRec = String(celda(r, 0)).trim();
             if (!idRec) return;
@@ -1227,7 +1650,411 @@
               obs: obs
             };
           });
-        } catch (e) { recibidosVivo = {}; recepDetalle = {}; recepPorProducto = {}; }
+        } catch (e) { recibidosVivo = {}; recepDetalle = {}; recepPorProducto = {}; recepCorruptas = {}; }
+        try { renderSobrantes(); } catch (e) {}
+      }
+
+      // ── Sobrantes: recibido de más respecto de lo pedido ─────────
+      // Sale de Recepciones (suma por producto de la edición): recibida (H) −
+      // pedida (G) > 0. Lo rechazado no cuenta (se registra con 0 recibido).
+      // Venta (D7, 22/10): el Nodo le compra todo el sobrante al productor y lo
+      // vende a precio de productor + 20 % (redondeado a $100). Cada venta y el
+      // cierre (donación/merma) quedan en Movimientos_Stock; "Quedan" =
+      // sobrante − ventas − merma de esta edición.
+      var sobrantesActuales = [];
+      var precioProd = {};      // id_producto -> precio_unitario (Productos!G), si no hay ítem
+      var unidadProd = {};      // id_producto -> unidad_venta (Productos!D)
+      var estadoEdicionVig = '';// Ediciones!D de la edición en curso
+      var movSobrantes = {};    // id_producto -> {venta, merma, monto, n} (Movimientos_Stock de la edición)
+      var ventasLocales = {};   // id_producto -> [{tipo, cant, monto, ts, esperado}] enviadas, sin ver aún en la planilla
+      var ventaForm = {};       // id_producto -> {abierto, cant, comprador, medio, conf} (sobrevive al refresco)
+      var cierreSobConf = 0, renderSobPendiente = false;
+      var MEDIOS_PAGO = ['Efectivo', 'Transferencia'];
+
+      function unidadDeProducto(id) {
+        for (var i = 0; i < lineas.length; i++) {
+          if (lineas[i].id_producto === id) return lineas[i].unidad || '';
+        }
+        return unidadProd[id] || '';
+      }
+      function precioDeProducto(id) {
+        for (var i = 0; i < itemsEd.length; i++) {
+          if (itemsEd[i].id_producto === id && itemsEd[i].precio) return itemsEd[i].precio;
+        }
+        return precioProd[id] || 0;
+      }
+      // precio de productor + 20 %, redondeado a los $100 más cercanos (3.300 → 3.960 → 4.000)
+      function precioVenta(p) { return p > 0 ? Math.round(p * 1.2 / 100) * 100 : 0; }
+      function esPorPeso(u) { return /^(kg|kgs|kilos?|g|gr|grs|gramos?|l|lt|lts|litros?|ml|cc)$/i.test(String(u || '').trim()); }
+      function sufijoPrecio(u) {
+        u = String(u || '').trim();
+        if (!u) return '';
+        if (/^unidad(es)?$/i.test(u)) return ' c/u';
+        return '/' + unidadMostrada(u);
+      }
+      function unidadCantidad(u, n) {
+        u = String(u || '').trim();
+        if (/^unidad(es)?$/i.test(u)) return n === 1 ? 'unidad' : 'unidades';
+        return unidadMostrada(u);
+      }
+      function emojiProducto(nombre) {
+        var n = normCat(nombre);
+        var tabla = [
+          [/banan/, '🍌'], [/limon/, '🍋'], [/mandarin|naranj|pomelo/, '🍊'], [/manzan/, '🍎'],
+          [/pera\b|peras/, '🍐'], [/palta/, '🥑'], [/jengibre|curcuma/, '🫚'], [/papa|papin|batata/, '🥔'],
+          [/cebolla/, '🧅'], [/ajo\b|ajos/, '🧄'], [/brocoli|coliflor/, '🥦'], [/berenjena/, '🍆'],
+          [/tomate/, '🍅'], [/zanahoria/, '🥕'], [/zapall|calabaz/, '🎃'], [/lechuga|acelga|espinaca|hinojo|repollo|kale/, '🥬'],
+          [/pan\b|panes|pan /, '🍞'], [/huevo/, '🥚'], [/uva/, '🍇'], [/frutill/, '🍓'], [/kiwi/, '🥝'],
+          [/poroto|garbanz|arveja|lenteja|maiz|pisingallo/, '🫘']
+        ];
+        for (var i = 0; i < tabla.length; i++) if (tabla[i][0].test(n)) return tabla[i][1];
+        return '🌿';
+      }
+
+      // Movimientos_Stock (A id_mov … D id_producto, E tipo, F cantidad, H monto, J id_edicion)
+      function parseMovimientos(res) {
+        if (!res || !res.table || !res.table.cols || res.table.cols.length < 10) return false;
+        // si la hoja no existe, gviz devuelve OTRA hoja: se exige el encabezado
+        if (!/id_mov/i.test(String(res.table.cols[0].label || ''))) return false;
+        var m = {};
+        res.table.rows.forEach(function (r) {
+          if (String(celda(r, 9)).trim() !== idEdicion) return;
+          var tipo = String(celda(r, 4)).trim().toLowerCase();
+          var esV = tipo === 'venta sobrante', esM = tipo === 'merma sobrante';
+          if (!esV && !esM) return;
+          var idP = String(celda(r, 3)).trim();
+          if (!idP) return;
+          var c = celda(r, 5);
+          c = (typeof c === 'number') ? c : parseFloat(String(c).replace(',', '.'));
+          if (!isFinite(c)) c = 0;
+          var mo = celda(r, 7);
+          mo = (typeof mo === 'number') ? mo : parseFloat(String(mo).replace(/\./g, '').replace(',', '.'));
+          var a = m[idP] || (m[idP] = { venta: 0, merma: 0, monto: 0, n: 0 });
+          if (esV) { a.venta += c; a.monto += isFinite(mo) ? mo : 0; } else { a.merma += c; }
+          a.n++;
+        });
+        movSobrantes = m;
+        // lo enviado desde este teléfono que la planilla ya muestra, se suelta
+        Object.keys(ventasLocales).forEach(function (k) {
+          var n = m[k] ? m[k].n : 0;
+          ventasLocales[k] = ventasLocales[k].filter(function (v) { return n < v.esperado; });
+          if (!ventasLocales[k].length) delete ventasLocales[k];
+        });
+        return true;
+      }
+      function parseEstadoEdicion(res) {
+        if (!res || !idEdicion) return;
+        res.table.rows.forEach(function (r) {
+          if (String(celda(r, 0)).trim() === idEdicion) estadoEdicionVig = String(celda(r, 3) || '').trim();
+        });
+      }
+      function puedeCerrarSobrantes() {
+        var e = normCat(estadoEdicionVig);
+        if (['entrega', 'liquidacion', 'cierre', 'cerrada'].indexOf(e) !== -1) return true;
+        try { return pedidos.length > 0 && pendientesDeRetiro().length === 0; } catch (x) { return false; }
+      }
+
+      function renderSobrantes() {
+        var cont = document.getElementById('lista-sobrantes');
+        if (!cont) return;
+        // alguien está escribiendo una venta: se redibuja cuando suelte el campo
+        var act = document.activeElement;
+        if (act && cont.contains(act) && /^(INPUT|SELECT)$/.test(act.tagName)) { renderSobPendiente = true; return; }
+        renderSobPendiente = false;
+        var lista = [];
+        Object.keys(recepPorProducto).forEach(function (k) {
+          if (recepCorruptas[k]) return;
+          var a = recepPorProducto[k];
+          var extra = Math.round((a.recibida - a.pedida) * 1000) / 1000;
+          if (extra <= 0.0005) return;
+          var precio = precioDeProducto(k);
+          var mv = movSobrantes[k] || { venta: 0, merma: 0, monto: 0, n: 0 };
+          var pend = ventasLocales[k] || [];
+          var pendCant = 0, pendMonto = 0, pendViejo = false;
+          pend.forEach(function (v) {
+            pendCant += v.cant;
+            if (v.tipo === 'venta_sobrante') pendMonto += v.monto;
+            if (Date.now() - v.ts > 180000) pendViejo = true;
+          });
+          var vendido = Math.round((mv.venta + pend.filter(function (v) { return v.tipo === 'venta_sobrante'; })
+            .reduce(function (t, v) { return t + v.cant; }, 0)) * 1000) / 1000;
+          var quedan = Math.max(0, Math.round((extra - mv.venta - mv.merma - pendCant) * 1000) / 1000);
+          lista.push({
+            id_producto: k,
+            id_productor: a.id_productor,
+            producto: nombreProducto(k),
+            productor: productores[a.id_productor] || a.id_productor,
+            pedida: Math.round(a.pedida * 1000) / 1000,
+            recibida: Math.round(a.recibida * 1000) / 1000,
+            sobrante: extra,
+            unidad: unidadDeProducto(k),
+            precio: precio,
+            precio_venta: precioVenta(precio),
+            valor: Math.round(extra * precio),
+            valor_venta: Math.round(extra * precioVenta(precio)),
+            vendido: vendido,
+            cobrado: Math.round(mv.monto + pendMonto),
+            merma: Math.round(mv.merma * 1000) / 1000,
+            quedan: quedan,
+            pendientes: pend.length,
+            pendViejo: pendViejo
+          });
+        });
+        lista.sort(function (x, y) { return x.productor === y.productor ? (x.producto < y.producto ? -1 : 1) : (x.productor < y.productor ? -1 : 1); });
+        sobrantesActuales = lista;
+        var tab = document.getElementById('tab-sobrantes');
+        if (tab) tab.textContent = '📦 Sobrantes' + (lista.length ? ' (' + lista.length + ')' : '');
+        if (!lista.length) {
+          cont.innerHTML = '<p class="muted">No hay sobrantes registrados en esta edición. Cuando en Recepción se carga más de lo pedido, aparece acá.</p>';
+          renderCierreSobrantes();
+          return;
+        }
+        var total = 0, totalVenta = 0, totalCobrado = 0;
+        var h = '<div style="overflow-x:auto;"><table class="tabla-sobrantes"><thead><tr>' +
+          '<th>Producto</th>' +
+          '<th class="num col-sec">Sobrante</th><th class="num">Quedan</th><th class="num">Precio venta</th>' +
+          '<th></th></tr></thead><tbody>';
+        lista.forEach(function (s) {
+          total += s.valor;
+          totalVenta += s.valor_venta;
+          totalCobrado += s.cobrado;
+          var f = ventaForm[s.id_producto] || {};
+          var agotado = s.quedan <= 0.0005;
+          var detalle = [];
+          if (s.vendido > 0) detalle.push('vendido ' + numeroAmable(s.vendido));
+          if (s.merma > 0) detalle.push('merma ' + numeroAmable(s.merma));
+          h += '<tr class="' + (agotado ? 'agotado' : '') + '">' +
+            '<td><strong>' + escH(s.producto) + '</strong>' +
+              '<span class="vs-pend" style="color:#6f6a5c;">' + escH(s.productor) + '</span>' +
+              (s.pendientes ? '<span class="vs-pend' + (s.pendViejo ? ' tarde' : '') + '">' +
+                (s.pendViejo ? '⚠ ' + s.pendientes + ' registro(s) no aparecen todavía en la planilla: revisá D7 en Make'
+                             : '⏳ ' + s.pendientes + ' registro(s) guardándose…') + '</span>' : '') +
+            '</td>' +
+            '<td class="num col-sec"><strong>+' + numeroAmable(s.sobrante) + ' ' + escH(s.unidad) + '</strong>' +
+              '<span class="vs-pend det" style="color:#6f6a5c;">pedido ' + numeroAmable(s.pedida) + ' · llegó ' + numeroAmable(s.recibida) + '</span></td>' +
+            '<td class="num ' + (agotado ? 'quedan-0' : '') + '"><strong>' + numeroAmable(s.quedan) + '</strong>' +
+              '<span class="vs-pend solo-movil" style="color:#6f6a5c;">de +' + numeroAmable(s.sobrante) + ' ' + escH(s.unidad) + '</span>' +
+              (detalle.length ? '<span class="vs-pend" style="color:#6f6a5c;">' + detalle.join(' · ') + '</span>' : '') + '</td>' +
+            '<td class="num"><span class="precio-venta">' + (s.precio_venta ? pesos(s.precio_venta) + escH(sufijoPrecio(s.unidad)) : '—') + '</span>' +
+              (s.precio ? '<span class="vs-pend det" style="color:#6f6a5c;">productor ' + pesos(s.precio) + ' · valor* ' + pesos(s.valor) + '</span>' : '') + '</td>' +
+            '<td class="num"><button type="button" class="btn-vender vs-abrir" data-id="' + escH(s.id_producto) + '"' +
+              (agotado || !s.precio_venta ? ' disabled' : '') + ' title="' + (f.abierto ? 'Cerrar' : 'Vender') + '">' +
+              (f.abierto ? '✕<span class="txt-btn"> Cerrar</span>' : '🛒<span class="txt-btn"> Vender</span>') + '</button></td></tr>';
+          if (f.abierto && !agotado && s.precio_venta) {
+            var cantN = aNumero(f.cant || '');
+            var montoTxt = (cantN && cantN > 0) ? pesos(Math.round(cantN * s.precio_venta)) : '—';
+            var confirmando = f.conf && (Date.now() - f.conf < 6000);
+            h += '<tr class="fila-venta"><td colspan="5"><div class="venta-sob" data-id="' + escH(s.id_producto) + '">' +
+              '<div><label>Cantidad (' + escH(unidadCantidad(s.unidad, 2)) + ')</label>' +
+                '<input class="vs-cant" inputmode="decimal" autocomplete="off" placeholder="' + (esPorPeso(s.unidad) ? 'ej. 1,5' : 'ej. 2') + '" value="' + escH(f.cant || '') + '"></div>' +
+              '<div><label>Medio de pago</label><select class="vs-medio"><option value="">— Elegí —</option>' +
+                MEDIOS_PAGO.map(function (m) { return '<option' + (f.medio === m ? ' selected' : '') + '>' + m + '</option>'; }).join('') +
+              '</select></div>' +
+              '<div class="vs-full"><label>Comprador/a (opcional)</label>' +
+                '<input class="vs-comp" autocomplete="off" placeholder="Nombre" value="' + escH(f.comprador || '') + '"></div>' +
+              '<div class="vs-full vs-monto">Cobrar: <strong class="vs-monto-num">' + montoTxt + '</strong>' +
+                ' <span class="muted" style="font-size:.82rem;">(' + pesos(s.precio_venta) + escH(sufijoPrecio(s.unidad)) +
+                ' · quedan ' + numeroAmable(s.quedan) + ')</span></div>' +
+              '<div class="vs-full vs-botones"><button type="button" class="btn-resolver vs-conf' + (confirmando ? ' confirmar' : '') + '">' +
+                (confirmando ? '¿Confirmás? Tocá de nuevo' : '✔ Registrar venta') + '</button>' +
+                '<button type="button" class="vs-cancel">Cancelar</button></div>' +
+              '<div class="vs-aviso">' + escH(f.aviso || '') + '</div>' +
+              '</div></td></tr>';
+          }
+        });
+        h += '</tbody><tfoot>' +
+          '<tr><td colspan="3"><strong>Total a precio de productor</strong> <span class="muted" style="font-size:.8rem;">(lo que el Nodo le paga al productor)</span></td>' +
+          '<td class="num" colspan="2"><strong>' + pesos(total) + '</strong></td></tr>' +
+          '<tr><td colspan="3"><strong>Total a precio de venta</strong> <span class="muted" style="font-size:.8rem;">(si se vende todo)</span></td>' +
+          '<td class="num" colspan="2"><strong>' + pesos(totalVenta) + '</strong></td></tr>' +
+          (totalCobrado > 0 ? '<tr><td colspan="3"><strong>Vendido hasta ahora</strong> <span class="muted" style="font-size:.8rem;">(Caja Nodo)</span></td>' +
+            '<td class="num" colspan="2"><strong>' + pesos(totalCobrado) + '</strong></td></tr>' : '') +
+          '</tfoot></table></div>' +
+          '<p class="muted" style="font-size:0.8rem; margin-top:6px;">* Al precio que el productor fijó en esta edición, sin aporte. ' +
+          'Precio venta = precio de productor + 20 %, redondeado a $100. Cada venta queda en la hoja <em>Movimientos_Stock</em>.</p>';
+        cont.innerHTML = h;
+        renderCierreSobrantes();
+      }
+
+      function renderCierreSobrantes() {
+        var txt = $('cierre-sob-texto'), btn = $('btn-cerrar-sobrantes');
+        if (!txt || !btn) return;
+        var quedan = sobrantesActuales.filter(function (s) { return s.quedan > 0.0005; });
+        if (!quedan.length) {
+          txt.textContent = sobrantesActuales.length ? 'No queda nada sin vender: no hay que cerrar nada.' : 'Todavía no hay sobrantes.';
+          btn.style.display = 'none';
+          return;
+        }
+        btn.style.display = '';
+        var nombres = quedan.map(function (s) { return s.producto + ' ' + numeroAmable(s.quedan) + ' ' + unidadCantidad(s.unidad, s.quedan); }).join(', ');
+        if (!puedeCerrarSobrantes()) {
+          txt.textContent = 'Se habilita cuando la edición está en Entrega o ya se entregaron todos los pedidos. ' +
+            'Ahora quedan sin vender: ' + nombres + '.';
+          btn.disabled = true;
+          btn.classList.remove('confirmar');
+          btn.textContent = 'Cerrar venta de sobrantes → donación/merma';
+          return;
+        }
+        btn.disabled = false;
+        txt.textContent = 'Cuando ya no se vende más: lo que queda (' + nombres + ') se registra como ' +
+          'donación/merma y la tabla queda en 0. No toca la plata ni lo que se le paga al productor.';
+        var conf = cierreSobConf && (Date.now() - cierreSobConf < 6000);
+        btn.classList.toggle('confirmar', !!conf);
+        btn.textContent = conf ? '¿Confirmás? Tocá de nuevo (' + quedan.length + ' producto' + (quedan.length === 1 ? '' : 's') + ')'
+                               : 'Cerrar venta de sobrantes → donación/merma';
+      }
+
+      function avisoSob(id, msg, ok) {
+        var caja = $(id);
+        if (!caja) return;
+        if (!msg) { caja.style.display = 'none'; return; }
+        caja.style.display = 'block';
+        caja.style.background = ok ? 'rgba(110, 142, 85, 0.12)' : 'rgba(166, 64, 43, 0.10)';
+        caja.style.color = ok ? 'var(--c-corteza, #4a4234)' : '#A6402B';
+        caja.textContent = msg;
+      }
+      function sobPorId(id) {
+        for (var i = 0; i < sobrantesActuales.length; i++) if (sobrantesActuales[i].id_producto === id) return sobrantesActuales[i];
+        return null;
+      }
+      function enviarMovSobrante(s, tipo, cant, precio, comprador, medio, quien, clave) {
+        var monto = Math.round(cant * precio);
+        var n = movSobrantes[s.id_producto] ? movSobrantes[s.id_producto].n : 0;
+        var lst = ventasLocales[s.id_producto] || (ventasLocales[s.id_producto] = []);
+        lst.push({ tipo: tipo, cant: cant, monto: monto, ts: Date.now(), esperado: n + lst.length + 1 });
+        return fetch(WEBHOOK_D7, {
+          method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            tipo: tipo,
+            clave: clave,
+            id_edicion: idEdicion,
+            id_producto: s.id_producto,
+            producto: s.producto,
+            id_productor: s.id_productor,
+            cantidad: cant,
+            precio: precio,
+            monto: monto,
+            comprador: comprador,
+            medio_pago: medio,
+            registrado_por: quien
+          })
+        }).catch(function () {});
+      }
+
+      (function () {
+        var cont = document.getElementById('lista-sobrantes');
+        if (!cont) return;
+        cont.addEventListener('focusout', function () {
+          setTimeout(function () {
+            var act = document.activeElement;
+            if (renderSobPendiente && !(act && cont.contains(act) && /^(INPUT|SELECT)$/.test(act.tagName))) renderSobrantes();
+          }, 250);
+        });
+        function guardarCampo(e) {
+          var box = e.target.closest('.venta-sob');
+          if (!box) return;
+          var f = ventaForm[box.dataset.id] || (ventaForm[box.dataset.id] = { abierto: true });
+          if (e.target.classList.contains('vs-cant')) f.cant = e.target.value;
+          else if (e.target.classList.contains('vs-comp')) f.comprador = e.target.value;
+          else if (e.target.classList.contains('vs-medio')) f.medio = e.target.value;
+          f.conf = 0;
+          var b = box.querySelector('.vs-conf');
+          if (b) { b.classList.remove('confirmar'); b.textContent = '✔ Registrar venta'; }
+          var s = sobPorId(box.dataset.id), m = box.querySelector('.vs-monto-num');
+          if (s && m) {
+            var c = aNumero(f.cant || '');
+            m.textContent = (c && c > 0) ? pesos(Math.round(c * s.precio_venta)) : '—';
+          }
+        }
+        cont.addEventListener('input', guardarCampo);
+        cont.addEventListener('change', guardarCampo);
+        cont.addEventListener('click', function (e) {
+          var t = (e.target.closest && e.target.closest('button')) || e.target;
+          if (t.classList.contains('vs-abrir')) {
+            var id = t.dataset.id, f = ventaForm[id] || {};
+            f.abierto = !f.abierto; f.conf = 0; f.aviso = '';
+            ventaForm[id] = f;
+            avisoSob('aviso-sobrantes', '');
+            renderSobrantes();
+            if (f.abierto) { var inp = cont.querySelector('.venta-sob[data-id="' + id + '"] .vs-cant'); if (inp) inp.focus(); }
+            return;
+          }
+          var box = t.closest('.venta-sob');
+          if (!box) return;
+          var idP = box.dataset.id, fo = ventaForm[idP] || (ventaForm[idP] = { abierto: true });
+          if (t.classList.contains('vs-cancel')) { ventaForm[idP] = { abierto: false }; renderSobrantes(); return; }
+          if (!t.classList.contains('vs-conf')) return;
+          var s = sobPorId(idP);
+          if (!s) return;
+          function mal(msg) { fo.aviso = msg; fo.conf = 0; var a = box.querySelector('.vs-aviso'); if (a) a.textContent = msg; t.classList.remove('confirmar'); t.textContent = '✔ Registrar venta'; }
+          fo.aviso = '';
+          if (!webhookListo(WEBHOOK_D7, 'D7 · Venta de sobrantes', 'aviso-sobrantes')) { mal('Falta configurar la venta de sobrantes: no se guardó nada.'); return; }
+          var quien = valorQuien('vendido-por'), clave = $('clave-sobrantes').value.trim();
+          if (!quien) { mal('Antes, elegí tu nombre arriba (¿Quién registra las ventas?).'); return; }
+          if (!clave) { mal('Falta la clave de equipo (arriba).'); return; }
+          var cant = aNumero(fo.cant || '');
+          if (!cant || cant <= 0) { mal('Escribí la cantidad que se lleva.'); return; }
+          cant = Math.round(cant * 1000) / 1000;
+          if (!esPorPeso(s.unidad) && cant % 1 !== 0) { mal('Este producto se vende por ' + unidadCantidad(s.unidad, 1) + ': la cantidad va sin decimales.'); return; }
+          if (cant > s.quedan + 0.0005) { mal('Quedan solo ' + numeroAmable(s.quedan) + ' ' + unidadCantidad(s.unidad, s.quedan) + '.'); return; }
+          if (!fo.medio) { mal('Elegí el medio de pago (efectivo o transferencia).'); return; }
+          if (!fo.conf || Date.now() - fo.conf > 6000) {
+            fo.conf = Date.now();
+            t.classList.add('confirmar');
+            t.textContent = '¿Confirmás? Tocá de nuevo';
+            setTimeout(function () {
+              if (fo.conf && Date.now() - fo.conf >= 6000) { fo.conf = 0; if (t.isConnected) { t.classList.remove('confirmar'); t.textContent = '✔ Registrar venta'; } }
+            }, 6100);
+            return;
+          }
+          var monto = Math.round(cant * s.precio_venta);
+          enviarMovSobrante(s, 'venta_sobrante', cant, s.precio_venta, (fo.comprador || '').trim(), fo.medio, quien, clave);
+          ventaForm[idP] = { abierto: false };
+          avisoSob('aviso-sobrantes', '✓ Venta registrada: ' + numeroAmable(cant) + ' ' + unidadCantidad(s.unidad, cant) + ' de ' +
+            s.producto + ' · ' + pesos(monto) + ' (' + fo.medio + ')' + (fo.comprador ? ' · ' + fo.comprador.trim() : '') +
+            '. Cobrá y entregá. En unos segundos aparece en la planilla.', true);
+          renderSobrantes();
+        });
+      })();
+
+      $('btn-cerrar-sobrantes').addEventListener('click', function () {
+        avisoSob('aviso-cierre-sob', '');
+        if (!puedeCerrarSobrantes()) { renderCierreSobrantes(); return; }
+        if (!webhookListo(WEBHOOK_D7, 'D7 · Venta de sobrantes', 'aviso-cierre-sob')) return;
+        var quien = valorQuien('vendido-por'), clave = $('clave-sobrantes').value.trim();
+        if (!quien) { avisoSob('aviso-cierre-sob', 'Antes, elegí tu nombre arriba (¿Quién registra las ventas?).'); return; }
+        if (!clave) { avisoSob('aviso-cierre-sob', 'Falta la clave de equipo (arriba).'); return; }
+        var quedan = sobrantesActuales.filter(function (s) { return s.quedan > 0.0005; });
+        if (!quedan.length) { renderCierreSobrantes(); return; }
+        if (!cierreSobConf || Date.now() - cierreSobConf > 6000) {
+          cierreSobConf = Date.now();
+          renderCierreSobrantes();
+          setTimeout(function () { if (cierreSobConf && Date.now() - cierreSobConf >= 6000) { cierreSobConf = 0; renderCierreSobrantes(); } }, 6100);
+          return;
+        }
+        cierreSobConf = 0;
+        var btn = this;
+        btn.disabled = true;
+        btn.textContent = 'Registrando…';
+        // uno por producto, de a uno (Make los procesa en orden)
+        var i = 0;
+        (function siguiente() {
+          if (i >= quedan.length) {
+            avisoSob('aviso-cierre-sob', '✓ Listo: ' + quedan.length + ' producto' + (quedan.length === 1 ? '' : 's') +
+              ' registrados como donación/merma. En unos segundos se ven en la planilla.', true);
+            renderSobrantes();
+            return;
+          }
+          var s = quedan[i++];
+          enviarMovSobrante(s, 'merma_sobrante', s.quedan, 0, '', '', quien, clave)
+            .then(function () { setTimeout(siguiente, 400); });
+        })();
+      });
+
+      function escH(t) {
+        return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
       }
 
       function idRecepcionDe(idProd, l) {
@@ -1239,27 +2066,33 @@
         // Edición vigente (Comandas_Calc!K1) + tabla de comandas + nombres
         Promise.all([
           gviz('sheet=Comandas_Calc&range=K1&headers=0'),
-          gviz('sheet=Comandas_Calc&range=A1:H500&headers=1'),
-          gviz('sheet=Productores&range=A1:B300&headers=1'),
-          gviz('sheet=Plan_Fraccionamiento&range=A1:L500&headers=1'),
-          gviz('sheet=Pedidos&range=A1:U3000&headers=1'),
-          gviz('sheet=Consumidores&range=A1:D2000&headers=1'),
+          gviz('sheet=Comandas_Calc&range=A1:I5000&headers=1'),
+          gviz('sheet=Productores&range=A1:B2000&headers=1'),
+          gviz('sheet=Plan_Fraccionamiento&range=A1:L20000&headers=1'),
+          gviz('sheet=Pedidos&range=A1:U20000&headers=1'),
+          gviz('sheet=Consumidores&range=A1:D20000&headers=1'),
           Promise.resolve(null),   // (libre: antes Propuestas_Ajuste)
-          gviz('sheet=Items&range=A1:M3000&headers=1'),
+          gviz('sheet=Items&range=A1:M50000&headers=1'),
           // Las dos últimas no son críticas: si la hoja no existe, seguimos igual.
           gviz('sheet=Equipo&range=A1:E100&headers=1').catch(function () { return null; }),
-          gviz('sheet=Recepciones&range=A1:L4000&headers=1').catch(function () { return null; }),
+          gviz('sheet=Recepciones&range=A1:L50000&headers=1').catch(function () { return null; }),
           // Productos!U conservacion (Frío / Ambiente): qué va al puesto de frío
-          gviz('sheet=Productos&range=A1:U800&headers=1').catch(function () { return null; }),
+          gviz('sheet=Productos&range=A1:U5000&headers=1').catch(function () { return null; }),
           // Ediciones: para saber cuál es la edición en curso
-          gviz('sheet=Ediciones&range=A1:D300&headers=1').catch(function () { return null; })
+          gviz('sheet=Ediciones&range=A1:D1000&headers=1').catch(function () { return null; }),
+          // Orden físico del galpón para armar (hoja Orden_Armado, opcional)
+          gviz('sheet=Orden_Armado&range=A1:B300&headers=1').catch(function () { return null; }),
+          // Respuestas "en el grupo" / "primera vez" que guarda B1 (Pedidos AA:AB, opcional)
+          gviz('sheet=Pedidos&headers=1&tq=' + encodeURIComponent('select A, AA, AB')).catch(function () { return null; }),
+          // Movimientos_Stock: ventas y merma de sobrantes (D7), opcional
+          gviz('sheet=Movimientos_Stock&range=A1:L20000&headers=1').catch(function () { return null; })
         ]).then(function (res) {
           // Edición en curso = última fila de Ediciones con id ED####-##
           var edVigente = '';
           if (res[11]) {
             res[11].table.rows.forEach(function (r) {
               var idE = String(celda(r, 0)).trim();
-              if (/^ED\d{4}-\d{2,3}$/.test(idE)) edVigente = idE;
+              if (/^ED\d{4}-\d{2,}$/.test(idE)) edVigente = idE;
             });
           }
           conservacion = {};
@@ -1269,6 +2102,26 @@
               if (idP) conservacion[idP] = String(celda(r, 20) || '').trim();
             });
           }
+          // Productos!I categoria: para ordenar el armado
+          categoriaProd = {};
+          if (res[10]) {
+            res[10].table.rows.forEach(function (r) {
+              var idP = String(celda(r, 0)).trim();
+              if (idP) categoriaProd[idP] = String(celda(r, 8) || '').trim();
+            });
+          }
+          // Productos!G precio y D unidad: respaldo para los sobrantes
+          if (res[10]) {
+            res[10].table.rows.forEach(function (r) {
+              var idP = String(celda(r, 0)).trim();
+              if (!idP) return;
+              var pr = parseFloat(String(celda(r, 6)).replace(',', '.'));
+              if (pr > 0) precioProd[idP] = pr;
+              unidadProd[idP] = String(celda(r, 3) || '').trim();
+            });
+          }
+          parseOrdenArmado(res[12]);
+          parseExtrasPedidos(res[13]);
           var rowsK = res[0].table.rows;
           idEdicion = rowsK.length ? String(celda(rowsK[0], 0)).trim() : '';
 
@@ -1289,7 +2142,9 @@
               cant_paquetes: parseFloat(celda(r, 4)) || 0,
               producto: String(celda(r, 5)).trim(),
               unidad: String(celda(r, 6)).trim(),
-              linea: String(celda(r, 7)).trim()
+              linea: String(celda(r, 7)).trim(),
+              // lo que cubre el stock del Nodo (Comandas_Calc!I): no lo trae el productor
+              de_stock: parseFloat(String(celda(r, 8) || '0').replace(',', '.')) || 0
             });
           });
 
@@ -1343,7 +2198,7 @@
               id_plan: String(celda(r, 0)).trim(),
               id_producto: String(celda(r, 2)).trim(),
               nombre: String(celda(r, 3)).trim(),
-              fraccion: String(celda(r, 4)).trim(),
+              fraccion: String(celda(r, 4)).trim() || '1',   // vacía = pedido entero
               porciones: celda(r, 5),
               unidades: celda(r, 6),
               estado: String(celda(r, 8)).trim(),
@@ -1368,6 +2223,8 @@
           // Ítems de los pedidos de esta edición
           parseItems(res[7]);
 
+          parseEstadoEdicion(res[11]);
+          parseMovimientos(res[14]);
           parseEquipo(res[8]);
           parseRecepciones(res[9]);
           calcularFaltantes();
@@ -1376,10 +2233,12 @@
             '</strong> · ' + contarProductores() + ' productores · ' +
             planFracc.length + ' fracciones · ' + pedidos.length + ' pedidos';
           armarSelectsEquipo();
+          restaurarQuienRecibe();
           armarSelect();
           renderFracc();
           renderAjustes();
           renderEntrega();
+          cargarOrdenForm();
         }).catch(function () {
           $('estado-edicion').className = 'aviso rojo';
           $('estado-edicion').textContent = 'No pudimos leer la planilla. Revisá la conexión y recargá.';
@@ -1397,6 +2256,7 @@
           return ' ✓ recibido' + (recibidosVivo[idProd] ? ' por ' + recibidosVivo[idProd] : '');
         }
         if (registrados[idProd]) return ' ✓ registrado';
+        if (hayBorrador(idProd)) return ' · 📝 en curso (sin registrar)';
         return '';
       }
 
@@ -1452,7 +2312,7 @@
         var b = $('btn-refrescar');
         b.disabled = true;
         b.textContent = 'Actualizando…';
-        gviz('sheet=Recepciones&range=A1:L4000&headers=1&_=' + Date.now())
+        gviz('sheet=Recepciones&range=A1:L50000&headers=1&_=' + Date.now())
           .then(function (res) { parseRecepciones(res); })
           .catch(function () {})
           .then(function () {
@@ -1464,9 +2324,98 @@
           });
       });
 
+      // ── Borradores: recibir a varios productores a la vez ────────
+      // Lo cargado de un productor que todavía no se registró se guarda solo
+      // (en este teléfono) y vuelve al elegirlo otra vez. Nada se manda a la
+      // planilla ni cuenta como faltante hasta tocar "Registrar recepción".
+      var BORR_PREF = 'nm_borrador_rec_';
+      function claveBorrador(idProd) { return BORR_PREF + idEdicion + '_' + idProd; }
+      function leerBorrador(idProd) {
+        try { var t = localStorage.getItem(claveBorrador(idProd)); return t ? JSON.parse(t) : null; } catch (e) { return null; }
+      }
+      function borrarBorrador(idProd) { try { localStorage.removeItem(claveBorrador(idProd)); } catch (e) {} }
+      function hayBorrador(idProd) { return !!(idEdicion && leerBorrador(idProd)); }
+      function guardarBorrador() {
+        var card = $('card-items'), idProd = card.dataset.idProd;
+        if (!idProd || !idEdicion || bloqueadoPorRegistro || card.style.display === 'none') return;
+        if (recibidosVivo[idProd] || registrados[idProd]) return;
+        var filas = [], algo = false;
+        Array.prototype.forEach.call($('lista-items').querySelectorAll('.item'), function (div) {
+          var inp = div.querySelector('.cant');
+          var f = { key: div.dataset.key, chk: div.querySelector('.chk').checked, cant: inp.value,
+                    cal: div.querySelector('.calidad').value, obs: div.querySelector('.obs').value,
+                    tc: inp.dataset.tocado || '' };
+          var dep = div.querySelector('.in-dep');
+          if (dep) {
+            f.dep = dep.value; f.ext = div.querySelector('.in-extra').value;
+            f.aj = div.querySelector('.caja-ajuste').style.display !== 'none';
+          }
+          if (f.chk || f.obs || f.aj) algo = true;
+          filas.push(f);
+        });
+        if (!algo) { borrarBorrador(idProd); return; }
+        try { localStorage.setItem(claveBorrador(idProd), JSON.stringify({ ts: Date.now(), filas: filas })); } catch (e) {}
+      }
+      function restaurarBorrador(idProd) {
+        var b = leerBorrador(idProd);
+        if (!b || !b.filas) return null;
+        var porKey = {};
+        b.filas.forEach(function (f) { porKey[f.key] = f; });
+        Array.prototype.forEach.call($('lista-items').querySelectorAll('.item'), function (div) {
+          var f = porKey[div.dataset.key];
+          if (!f) return;
+          var caja = div.querySelector('.caja-ajuste');
+          if (f.aj && caja && caja.style.display === 'none') div.querySelector('.link-ajuste').click();
+          if (f.dep !== undefined && div.querySelector('.in-dep')) {
+            div.querySelector('.in-dep').value = f.dep;
+            div.querySelector('.in-extra').value = f.ext;
+            if (div._recalcAjuste) div._recalcAjuste();
+          }
+          var inp = div.querySelector('.cant');
+          inp.value = f.cant;
+          if (f.tc) inp.dataset.tocado = f.tc;
+          div.querySelector('.calidad').value = f.cal;
+          div.querySelector('.obs').value = f.obs;
+          var chk = div.querySelector('.chk');
+          if (chk.checked !== f.chk) {
+            chk.checked = f.chk;
+            chk.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        });
+        return b;
+      }
+      function mostrarAvisoBorrador(b, idProd) {
+        var caja = $('aviso-borrador');
+        if (!b) { caja.style.display = 'none'; caja.innerHTML = ''; return; }
+        var h = new Date(b.ts);
+        caja.style.display = 'block';
+        caja.innerHTML = '📝 <strong>Recepción en curso, todavía sin registrar</strong> (guardada a las ' +
+          ('0' + h.getHours()).slice(-2) + ':' + ('0' + h.getMinutes()).slice(-2) + ' en este teléfono). ' +
+          'Seguí donde quedaste y tocá <strong>Registrar recepción</strong> al terminar. ' +
+          '<button type="button" class="link-ajuste" id="btn-descartar-borrador">Descartar y empezar de nuevo</button>';
+        $('btn-descartar-borrador').addEventListener('click', function () {
+          if (this.dataset.confirmar !== '1') {
+            this.dataset.confirmar = '1';
+            this.textContent = '¿Seguro? Tocá otra vez para descartar';
+            return;
+          }
+          borrarBorrador(idProd);
+          renderItems(idProd);
+          armarSelect();
+        });
+      }
+      // se guarda solo con cada cambio
+      ['input', 'change', 'click'].forEach(function (ev) {
+        $('lista-items').addEventListener(ev, function () { setTimeout(guardarBorrador, 0); });
+      });
+      window.addEventListener('pagehide', guardarBorrador);
+      document.addEventListener('visibilitychange', function () { if (document.hidden) guardarBorrador(); });
+
       // ── render de la lista del productor elegido ─────────────────
       $('sel-productor').addEventListener('change', function () {
+        guardarBorrador();   // el productor anterior queda en curso, no como faltante
         var id = this.value;
+        armarSelect();       // marca "📝 en curso" en la lista
         if (!id) { $('card-items').style.display = 'none'; return; }
         renderItems(id);
       });
@@ -1479,12 +2428,14 @@
         var propias = lineas.filter(function (l) { return l.id_productor === idProd; });
 
         propias.forEach(function (l, i) {
-          var esperado = l.fraccion ? l.cant_paquetes : l.cant_efectiva;
+          var deStock = l.fraccion ? 0 : (l.de_stock || 0);
+          var esperado = l.fraccion ? l.cant_paquetes : Math.max(0, Math.round((l.cant_efectiva - deStock) * 1000) / 1000);
           var unidadMuestra = etiquetaUnidad(l, esperado);
 
           var div = document.createElement('div');
           div.className = 'item no-llego';
           div.dataset.idx = String(i);
+          div.dataset.key = l.id_producto + '|' + (l.fraccion || '');
           div.innerHTML =
             '<input type="checkbox" class="chk" aria-label="Recibido">' +
             '<div class="cuerpo">' +
@@ -1509,9 +2460,65 @@
 
           div.querySelector('.linea-nombre').textContent =
             (l.producto || l.id_producto) + ' — esperado: ' + numeroAmable(esperado) + ' ' + unidadMuestra;
+          if (deStock > 0) {
+            var nst = document.createElement('div');
+            nst.className = 'nota-stock';
+            nst.style.cssText = 'font-size:.82rem;color:#4a5d33;margin-top:2px;';
+            nst.textContent = '📦 Además se usan ' + numeroAmable(deStock) + ' ' + etiquetaUnidad(l, deStock) +
+              ' del stock del Nodo (sacalos del depósito para el armado). El productor trae solo lo esperado.';
+            div.querySelector('.linea-nombre').insertAdjacentElement('afterend', nst);
+          }
           var inp = div.querySelector('.cant');
           inp.value = numeroAmable(esperado);
-          inp.dataset.max = String(esperado);   // tope: lo solicitado
+          // ✏️ Lo que efectivamente se le pidió al productor (sin tocar los pedidos)
+          if (!l.fraccion) {
+            var aj = document.createElement('div');
+            aj.className = 'ajuste-pedido';
+            aj.innerHTML =
+              '<button type="button" class="link-ajuste">✏️ Se le pidió otra cantidad al productor</button>' +
+              '<div class="caja-ajuste" style="display:none;">' +
+                '<label>📦 Tomado del depósito <input type="text" class="in-dep" inputmode="decimal" value="' + numeroAmable(deStock) + '"></label>' +
+                '<label>➕ Extra para venta <input type="text" class="in-extra" inputmode="decimal" value="0"></label>' +
+                '<div class="txt-ajuste"></div>' +
+              '</div>';
+            div.querySelector('.linea-nombre').insertAdjacentElement('afterend', aj);
+            (function (l, div, inp) {
+              function recalc() {
+                var dep = Math.min(l.cant_efectiva, Math.max(0, aNumero(div.querySelector('.in-dep').value) || 0));
+                var ext = Math.max(0, aNumero(div.querySelector('.in-extra').value) || 0);
+                var pedido = Math.round((Math.max(0, l.cant_efectiva - dep) + ext) * 1000) / 1000;
+                div.querySelector('.txt-ajuste').textContent = 'Los pedidos suman ' + numeroAmable(l.cant_efectiva) +
+                  ' → se le pidió al productor ' + numeroAmable(pedido) + ' ' + etiquetaUnidad(l, pedido) +
+                  '. Los pedidos de la gente no cambian; el extra va a Sobrantes para vender.';
+                div.querySelector('.linea-nombre').textContent = (l.producto || l.id_producto) +
+                  ' — esperado: ' + numeroAmable(pedido) + ' ' + etiquetaUnidad(l, pedido);
+                inp.dataset.max = String(pedido);
+                if (!inp.dataset.tocado && !inp.disabled) inp.value = numeroAmable(pedido);
+                if (!inp.disabled) { try { marcarNovedad(div); } catch (e) {} }
+              }
+              div._recalcAjuste = recalc;
+              div.querySelector('.link-ajuste').addEventListener('click', function () {
+                var c = div.querySelector('.caja-ajuste');
+                var abrir = c.style.display === 'none';
+                c.style.display = abrir ? 'block' : 'none';
+                if (!abrir && !div.querySelector('.in-dep').disabled) {
+                  // cerrar = cancelar: vuelve a lo que calcula el sistema
+                  div.querySelector('.in-dep').value = numeroAmable(l.fraccion ? 0 : (l.de_stock || 0));
+                  div.querySelector('.in-extra').value = '0';
+                }
+                this.textContent = abrir ? '✖ Cancelar el ajuste (vuelve a lo que calcula el sistema)'
+                                         : '✏️ Se le pidió otra cantidad al productor';
+                recalc();
+              });
+              div.querySelector('.in-dep').addEventListener('input', recalc);
+              div.querySelector('.in-extra').addEventListener('input', recalc);
+              inp.addEventListener('input', function () { inp.dataset.tocado = '1'; });
+              Array.prototype.forEach.call(div.querySelectorAll('.step-btn'), function (b) {
+                b.addEventListener('click', function () { inp.dataset.tocado = '1'; });
+              });
+            })(l, div, inp);
+          }
+          inp.dataset.max = String(esperado);   // lo solicitado (ya no es tope: lo de más es sobrante)
           inp.dataset.paso = '1';                // − / + suman de a una unidad vendible
           div.querySelector('.detalle .muted').textContent = etiquetaUnidad(l, 0);
 
@@ -1531,7 +2538,16 @@
               if (det.calidad && CALIDADES.indexOf(det.calidad) !== -1 && det.calidad !== 'No llegó') {
                 selCal.value = det.calidad;
               }
+              var mD = det.obs.match(/Del depósito:\s*([\d.,]+)/), mE = det.obs.match(/Extra para venta:\s*([\d.,]+)/);
+              if ((mD || mE) && div.querySelector('.caja-ajuste')) {
+                div.querySelector('.caja-ajuste').style.display = 'block';
+                if (mD) div.querySelector('.in-dep').value = mD[1];
+                if (mE) div.querySelector('.in-extra').value = mE[1];
+                inp.dataset.tocado = '1';   // lo recibido es lo registrado
+                if (div._recalcAjuste) div._recalcAjuste();
+              }
               var obsTxt = det.obs.replace(/ · Rechazado: no se recibe$/, '')
+                                  .replace(/\s*·?\s*(Del depósito|Extra para venta|Sobrante): [^·]*/g, '')
                                   .replace(/ · [\d.,]+ × .*$/, '');
               div.querySelector('.obs').value = obsTxt;
             }
@@ -1540,6 +2556,11 @@
           cont.appendChild(div);
         });
 
+        $('card-items').dataset.idProd = idProd;
+        var borr = null;
+        if (recibidosVivo[idProd] || registrados[idProd]) borrarBorrador(idProd);
+        else borr = restaurarBorrador(idProd);
+        mostrarAvisoBorrador(borr, idProd);
         marcarTodos();
         $('titulo-productor').textContent = productores[idProd] || idProd;
         $('card-items').style.display = 'block';
@@ -1576,6 +2597,15 @@
         } else if (!isNaN(max) && v < max - 0.0001) {
           msg = '⚠ Llegó de menos: falta ' + numeroAmable(Math.round((max - v) * 1000) / 1000) + '.';
           estado = 'parcial';
+        } else if (!isNaN(max) && v > max + 0.0001) {
+          var extra = Math.round((v - max) * 1000) / 1000;
+          msg = '➕ Llegó de más: sobra' + (extra === 1 ? '' : 'n') + ' ' + numeroAmable(extra) +
+            '. Separalo: queda como sobrante del Nodo (solapa 📦 Sobrantes).';
+          if (max > 0 && v >= max * 2 && extra >= 2) {
+            msg += ' ¿Seguro? Es el doble o más de lo pedido: revisá que no sea un error de tipeo.';
+          }
+          if (cal === 'Con observaciones') msg += ' (con observaciones)';
+          estado = 'sobra';
         } else if (cal === 'Con observaciones') {
           msg = '⚠ Llegó completo, pero con observaciones.';
           estado = 'parcial';
@@ -1584,6 +2614,7 @@
         nota.textContent = msg;
         item.classList.toggle('parcial', estado === 'parcial');
         item.classList.toggle('nada', estado === 'nada');
+        item.classList.toggle('sobra', estado === 'sobra');
       }
 
       function marcarTodos() {
@@ -1601,20 +2632,8 @@
       $('lista-items').addEventListener('input', function (e) {
         if (!e.target.classList.contains('cant')) return;
         desRechazarSiSube(e.target.closest('.item'), aNumero(e.target.value) || 0);
-        var max = parseFloat(e.target.dataset.max);
-        var v = aNumero(e.target.value);
-        if (!isNaN(max) && v !== null && v > max) {
-          e.target.value = numeroAmable(max);
-          var nota = e.target.closest('.detalle').querySelector('.muted');
-          var original = nota.dataset.orig || nota.textContent;
-          nota.dataset.orig = original;
-          nota.textContent = '⚠ máximo: lo solicitado (' + numeroAmable(max) + ')';
-          nota.style.color = '#A6402B';
-          setTimeout(function () {
-            nota.textContent = original;
-            nota.style.color = '';
-          }, 2500);
-        }
+        // Se puede cargar más de lo pedido: la diferencia queda como sobrante
+        // (lo avisa marcarNovedad en azul).
         marcarNovedad(e.target.closest('.item'));
       });
 
@@ -1632,7 +2651,6 @@
         v += btn.classList.contains('step-mas') ? paso : -paso;
         v = Math.round(v * 10000) / 10000;
         if (v < 0) v = 0;
-        if (!isNaN(max) && v > max) v = max;
         inp.value = numeroAmable(v);
         desRechazarSiSube(item, v);
         marcarNovedad(item);
@@ -1705,6 +2723,38 @@
         validarEntrega();
       }
 
+      // ── "Recibir de otro productor": arriba de todo y recarga completa,
+      // para arrancar el próximo con la planilla recién leída.
+      var K_QUIEN = 'nm_recibe_quien';
+      $('btn-otro-productor').addEventListener('click', function () {
+        try {
+          sessionStorage.setItem(K_QUIEN, JSON.stringify({
+            sel: $('recibido-por').value, otro: $('recibido-por-otro').value
+          }));
+          sessionStorage.setItem('nm_volver_arriba', '1');
+        } catch (e) {}
+        try { history.scrollRestoration = 'manual'; } catch (e) {}
+        window.scrollTo(0, 0);
+        location.reload();
+      });
+      function restaurarQuienRecibe() {
+        try {
+          var q = JSON.parse(sessionStorage.getItem(K_QUIEN) || 'null');
+          if (!q) return;
+          var sel = $('recibido-por');
+          if (q.sel && Array.prototype.some.call(sel.options, function (o) { return o.value === q.sel; })) {
+            sel.value = q.sel;
+            if (q.sel === '__otro__') { $('recibido-por-otro').style.display = 'block'; $('recibido-por-otro').value = q.otro || ''; }
+          } else if (q.otro) {
+            $('recibido-por-otro').value = q.otro;
+          }
+          if (sessionStorage.getItem('nm_volver_arriba')) {
+            sessionStorage.removeItem('nm_volver_arriba');
+            window.scrollTo(0, 0);
+          }
+        } catch (e) {}
+      }
+
       // ── envío ────────────────────────────────────────────────────
       $('btn-confirmar').addEventListener('click', function () {
         if (bloqueadoPorRegistro || this.dataset.enviando) return;   // doble toque
@@ -1718,28 +2768,48 @@
           var tildado = div.querySelector('.chk').checked;
           var calidad = tildado ? div.querySelector('.calidad').value : 'No llegó';
           var factor = l.fraccion ? factorFraccion(l.fraccion) : 1;
-          var pedidaEf = l.cant_efectiva;
+          // lo que cubre el stock del Nodo no se le pidió al productor
+          var deStockEf = l.fraccion ? 0 : (l.de_stock || 0);
+          var extraEf = 0;
+          if (!l.fraccion && div.querySelector('.in-dep')) {
+            deStockEf = Math.min(l.cant_efectiva, Math.max(0, aNumero(div.querySelector('.in-dep').value) || 0));
+            extraEf = Math.max(0, aNumero(div.querySelector('.in-extra').value) || 0);
+          }
+          deStockEf = Math.round(deStockEf * 1000) / 1000;
+          extraEf = Math.round(extraEf * 1000) / 1000;
+          // cantidad_pedida = lo que necesitan los pedidos del productor (sin
+          // lo del depósito). El extra NO entra: llega como sobrante para vender.
+          var pedidaEf = Math.max(0, Math.round((l.cant_efectiva - deStockEf) * 1000) / 1000);
           // lo rechazado no se recibe: cuenta como faltante completo
           var recibidaMostrada = (tildado && calidad !== 'Rechazado')
             ? (aNumero(div.querySelector('.cant').value) || 0) : 0;
           var recibidaEf = l.fraccion ? recibidaMostrada * factor : recibidaMostrada;
           recibidaEf = Math.round(recibidaEf * 1000) / 1000;
+          // tildado pero con 0: es un faltante completo, no "Calidad OK"
+          if (tildado && recibidaEf <= 0 && calidad !== 'Rechazado') calidad = 'No llegó';
 
           var obs = tildado ? div.querySelector('.obs').value.trim() : 'No recibido';
+          if (deStockEf > 0) obs = (obs ? obs + ' · ' : '') + 'Del depósito: ' + String(deStockEf).replace('.', ',');
+          if (extraEf > 0) obs = (obs ? obs + ' · ' : '') + 'Extra para venta: ' + String(extraEf).replace('.', ',');
           if (calidad === 'Rechazado') {
             obs = (obs ? obs + ' · ' : '') + 'Rechazado: no se recibe';
           }
           if (l.fraccion && tildado) {
             obs = (obs ? obs + ' · ' : '') + recibidaMostrada + ' × ' + l.fraccion + ' ' + l.unidad;
           }
+          var sobranteEf = Math.round((recibidaEf - pedidaEf) * 1000) / 1000;
+          if (sobranteEf > 0) {
+            obs = (obs ? obs + ' · ' : '') + 'Sobrante: +' + String(sobranteEf).replace('.', ',') + ' ' + (l.unidad || '');
+          }
 
           items.push({
             id_recepcion: 'REC' + idEdicion + '-' + idProd + '-' + l.id_producto + (l.fraccion ? '-' + l.fraccion : ''),
             id_producto: l.id_producto,
             producto: l.producto,
-            cantidad_pedida: pedidaEf,
-            cantidad_recibida: recibidaEf,
-            diferencia: Math.round((recibidaEf - pedidaEf) * 1000) / 1000,
+            // decimales con coma: ver numPlanilla (evita que 1.5 se grabe como fecha)
+            cantidad_pedida: numPlanilla(pedidaEf),
+            cantidad_recibida: numPlanilla(recibidaEf),
+            diferencia: numPlanilla(Math.round((recibidaEf - pedidaEf) * 1000) / 1000),
             calidad: calidad,
             observaciones: obs
           });
@@ -1770,6 +2840,8 @@
           $('ok-box').style.display = 'block';
           registrados[idProd] = true;
           recibidosVivo[idProd] = valorQuien('recibido-por');
+          borrarBorrador(idProd);
+          mostrarAvisoBorrador(null);
           armarSelect();
           $('sel-productor').value = idProd;
           // queda en modo consulta: botón "Ya registrada ✓" apagado y
@@ -1780,37 +2852,205 @@
       });
 
       // ── Fraccionamiento ──────────────────────────────────────────
+      // Plan_Fraccionamiento se escribe al generar las comandas y no cambia.
+      // Lo que hay que armar HOY sale de Items (ya con los recortes de
+      // Ajustes) y se cruza con lo recibido: nunca se tilda como preparado
+      // algo que no llegó, que se recortó o cuya recepción falta registrar.
+      var EPS = 0.0005;
+      var fraccVista = [];   // renglones que se muestran (con su estado de hoy)
+
+      function redondear3(n) { return Math.round(n * 1000) / 1000; }
+      function porc(n) { return numeroAmable(n) + (Math.abs(n - 1) < EPS ? ' porción' : ' porciones'); }
+
+      function calcularFraccVista() {
+        var dem = {}, totProd = {};
+        itemsEd.forEach(function (it) {
+          totProd[it.id_producto] = (totProd[it.id_producto] || 0) + it.efectiva;
+          if (it.quien !== 'Galpón') return;
+          // Producto que fracciona el galpón pedido ENTERO (1 kg, 2 kg…): el
+          // productor lo manda a granel junto con lo demás, así que también hay
+          // que pesarlo y embolsarlo. No está en el plan (no es una fracción),
+          // pero se muestra para que no se olvide (ED19: 1 kg de coco rallado).
+          var entero = !it.fraccion;
+          // solo lo que se pesa (kg, litro); un maple entero no se arma
+          if (entero && !/^(kg|kilo|kilos|l|lt|litro|litros)$/i.test(String(unidadDeProducto(it.id_producto) || '').trim())) return;
+          var k = it.id_producto + '|' + (entero ? '1' : it.fraccion);
+          if (!dem[k]) dem[k] = { porciones: 0, unidades: 0, entero: entero, pedidos: 0, bolsas: {} };
+          dem[k].pedidos++;
+          // enteros: cuántas bolsas de cada tamaño (un pedido de 2 kg = una bolsa de 2 kg)
+          if (entero) {
+            var tam = Math.round((it.efectiva || it.cantidad) * 1000) / 1000;
+            dem[k].bolsas[tam] = (dem[k].bolsas[tam] || 0) + 1;
+          }
+          dem[k].porciones += it.cantidad;
+          dem[k].unidades += it.efectiva;
+        });
+
+        var vistos = {};
+        var out = planFracc.filter(function (p) {
+          // un "entero" de algo que no se pesa (un maple) no se arma
+          return p.fraccion !== '1' ||
+            /^(kg|kilo|kilos|l|lt|litro|litros)$/i.test(String(unidadDeProducto(p.id_producto) || '').trim());
+        }).map(function (p) {
+          var k = p.id_producto + '|' + p.fraccion;
+          vistos[k] = true;
+          var ahora = dem[k] || { porciones: 0, unidades: 0 };
+          var plan = parseFloat(String(p.porciones).replace(',', '.')) || 0;
+          var rec0 = recepPorProducto[p.id_producto];
+          // lo tomado del depósito cuenta como llegado para armar
+          var rec = rec0 ? { recibida: rec0.recibida + (rec0.deposito || 0) } : null;
+          var total = redondear3(totProd[p.id_producto] || 0);
+          var r = {
+            p: p, plan: plan,
+            ahora: redondear3(ahora.porciones), unidades: redondear3(ahora.unidades),
+            preparado: p.estado === 'Preparado',
+            pedidos: ahora.pedidos || 0,
+            bolsas: ahora.bolsas || {},
+            estado: 'ok', msg: '', alerta: ''
+          };
+          if (recepCorruptas[p.id_producto]) {
+            r.estado = 'bloq';
+            r.msg = 'La recepción de este producto tiene un número ilegible en la planilla: revisala antes de armar.';
+          } else if (!rec) {
+            r.estado = 'bloq';
+            r.msg = 'Todavía no se registró la recepción de este producto.';
+          } else if (rec.recibida < total - EPS && rec.recibida + EPS < r.unidades) {
+            // ni siquiera alcanza para estas porciones: primero el recorte
+            r.estado = 'bloq';
+            r.msg = 'Llegaron ' + numeroAmable(redondear3(rec.recibida)) + ' y los pedidos suman ' +
+              numeroAmable(total) + ': aplicá primero el recorte en Ajustes.';
+          } else if (rec.recibida < total - EPS) {
+            // Falta producto, pero lo que llegó alcanza para armar estas
+            // porciones: se pueden preparar ya. Si después el recorte cae sobre
+            // alguna, la app avisa que la separes como sobrante.
+            r.estado = 'cambio';
+            r.msg = 'Llegaron ' + numeroAmable(redondear3(rec.recibida)) + ' y los pedidos suman ' +
+              numeroAmable(total) + ' (falta ' + numeroAmable(redondear3(total - rec.recibida)) +
+              '). Alcanza para estas porciones: podés armarlas. El faltante se reparte en Ajustes.';
+          } else if (r.ahora <= EPS) {
+            r.estado = 'cero';
+            r.msg = 'No hay que armar: no llegó o se recortó todo.';
+          } else if (Math.abs(r.ahora - plan) > EPS) {
+            r.estado = 'cambio';
+            r.msg = (r.ahora < plan ? 'Se recortó: ' : 'Cambió el pedido: ') +
+              'eran ' + porc(plan) + ', ahora van ' + numeroAmable(r.ahora) + '.';
+          }
+          if (r.preparado && r.estado !== 'bloq' && r.ahora < plan - EPS) {
+            var sobran = redondear3(plan - r.ahora);
+            r.alerta = '⚠ Figura preparado con ' + porc(plan) + ' y van ' +
+              numeroAmable(r.ahora) + ': separá ' + porc(sobran) + ' aparte: no se entregan, quedan como sobrante.';
+          }
+          if (r.preparado && r.estado === 'bloq') {
+            r.alerta = '⚠ Figura preparado, pero ' + r.msg.charAt(0).toLowerCase() + r.msg.slice(1);
+          }
+          if (r.preparado && r.ahora > plan + EPS) {
+            r.alerta = '⚠ Figura preparado con ' + porc(plan) + ', pero ahora van ' +
+              numeroAmable(r.ahora) + ': armá ' + numeroAmable(redondear3(r.ahora - plan)) + ' más.';
+          }
+          return r;
+        });
+
+        // Fracciones que piden los pedidos y no están en el plan
+        Object.keys(dem).forEach(function (k) {
+          if (vistos[k] || dem[k].porciones <= EPS) return;
+          var partes = k.split('|');
+          out.push({
+            p: { id_plan: '', id_producto: partes[0], nombre: nombreProducto(partes[0]), fraccion: partes[1] },
+            pedidos: dem[k].pedidos,
+            bolsas: dem[k].bolsas || {},
+            plan: 0, ahora: redondear3(dem[k].porciones), unidades: redondear3(dem[k].unidades),
+            preparado: false, estado: dem[k].entero ? 'entero' : 'bloq',
+            msg: dem[k].entero
+              ? 'Pedido entero (por kilo): pesalo y embolsalo igual que las fracciones. Para poder tildarlo, tiene que estar en el plan de fraccionamiento (lo agrega la equipa en la planilla).'
+              : 'No está en el plan de fraccionamiento: armalo igual y avisá para que se agregue.',
+            alerta: ''
+          });
+        });
+        // mismos productos juntos, en orden alfabético; dentro de cada uno,
+        // de la porción más chica a la más grande (1/4, 1/2, 1 kg entero)
+        out.sort(function (a, b) {
+          var na = String(a.p.nombre || nombreProducto(a.p.id_producto) || '').toLowerCase();
+          var nb = String(b.p.nombre || nombreProducto(b.p.id_producto) || '').toLowerCase();
+          var c = na.localeCompare(nb, 'es');
+          if (c) return c;
+          return (factorFraccion(a.p.fraccion) || 1) - (factorFraccion(b.p.fraccion) || 1);
+        });
+        return out;
+      }
+
+      // "6 bolsas de 1 kg · 3 de 2 kg · 1 de 4 kg"
+      function detalleBolsas(bolsas, uni) {
+        var tams = Object.keys(bolsas || {}).map(Number).sort(function (a, b) { return a - b; });
+        if (!tams.length) return 'pedidos enteros';
+        return tams.map(function (t, i) {
+          var n = bolsas[t];
+          return (i === 0 ? n + (n === 1 ? ' bolsa' : ' bolsas') : n) + ' de ' + numeroAmable(t) + ' ' + uni;
+        }).join(' · ');
+      }
+
       function renderFracc() {
         var cont = $('lista-fracc');
         cont.innerHTML = '';
+        fraccVista = calcularFraccVista();
 
-        if (!planFracc.length) {
+        if (!fraccVista.length) {
           cont.innerHTML = '<p class="muted">No hay fracciones pendientes para esta edición 🎉</p>';
           $('progreso-fracc').textContent = '';
+          validarFracc();
           return;
         }
 
-        planFracc.forEach(function (p, i) {
-          var yaPreparado = (p.estado === 'Preparado');
+        fraccVista.forEach(function (r, i) {
+          var p = r.p;
+          var habilitado = !r.preparado && (r.estado === 'ok' || r.estado === 'cambio') && !!p.id_plan;
           var div = document.createElement('div');
-          div.className = 'item' + (yaPreparado ? ' preparado' : ' no-llego');
+          div.className = 'item' +
+            (r.preparado ? ' preparado' : (habilitado ? ' no-llego' : '')) +
+            (r.estado === 'cero' || r.estado === 'bloq' ? ' nada' : '') +
+            (r.estado === 'cambio' && !r.preparado ? ' parcial' : '') +
+            (r.estado === 'entero' ? ' parcial' : '') +
+            (r.alerta ? ' nada' : '');
+          if (r.alerta) div.style.opacity = '1';
           div.dataset.idx = String(i);
           div.innerHTML =
             '<input type="checkbox" class="chk-f" aria-label="Preparado"' +
-              (yaPreparado ? ' checked disabled' : '') + '>' +
+              (r.preparado ? ' checked disabled' : (habilitado ? '' : ' disabled')) + '>' +
             '<div class="cuerpo">' +
               '<div class="linea-nombre"></div>' +
               '<div class="quien"></div>' +
+              '<div class="nota-novedad"></div>' +
             '</div>';
-          div.querySelector('.linea-nombre').textContent =
-            'Armar ' + p.porciones + ' porciones de ' + p.fraccion +
-            ' — ' + (p.nombre || p.id_producto) + ' (= ' + p.unidades + ' en total)';
+          var nombre = p.nombre || p.id_producto;
+          var esEntero = (p.fraccion === '1');
+          var uni = unidadDeProducto(p.id_producto) || 'kg';
+          div.querySelector('.linea-nombre').textContent = ((esEntero && r.ahora > EPS) || r.estado === 'entero')
+            ? 'Armar ' + detalleBolsas(r.bolsas, uni) + ' — ' + nombre + ' (= ' + numeroAmable(r.unidades) + ' ' + uni + ' en total)'
+            : (r.estado === 'entero')
+            ? 'Pesar ' + numeroAmable(r.unidades) + ' ' + (unidadDeProducto(p.id_producto) || 'kg') + ' en entero' +
+              ((r.pedidos || 0) > 1 ? ' (' + r.pedidos + ' pedidos)' : '') + ' — ' + nombre
+            : (r.ahora <= EPS)
+            ? nombre + ' · ' + p.fraccion + ' — no se arma'
+            : 'Armar ' + porc(r.ahora) + ' de ' + p.fraccion + ' — ' + nombre +
+              ' (= ' + numeroAmable(r.unidades) + ' en total)';
           div.querySelector('.quien').textContent =
-            yaPreparado ? '✓ Preparado' + (p.preparado_por ? ' por ' + p.preparado_por : '') : '';
+            r.preparado ? '✓ Preparado' + (p.preparado_por ? ' por ' + p.preparado_por : '') : '';
+          div.querySelector('.nota-novedad').textContent = r.alerta || r.msg;
           cont.appendChild(div);
         });
+        filtrarFracc();   // al refrescar, se mantiene la búsqueda
         actualizarProgresoFracc();
       }
+
+      function filtrarFracc() {
+        var q = ($('buscar-fracc').value || '').trim().toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        Array.prototype.forEach.call($('lista-fracc').querySelectorAll('.item'), function (div) {
+          var t = (div.querySelector('.linea-nombre').textContent || '').toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          div.style.display = (!q || t.indexOf(q) !== -1) ? '' : 'none';
+        });
+      }
+      $('buscar-fracc').addEventListener('input', filtrarFracc);
 
       $('lista-fracc').addEventListener('change', function (e) {
         if (!e.target.classList.contains('chk-f') || e.target.disabled) return;
@@ -1821,9 +3061,17 @@
       });
 
       function actualizarProgresoFracc() {
-        var hechas = planFracc.filter(function (p) { return p.estado === 'Preparado'; }).length;
+        var aArmar = fraccVista.filter(function (r) { return r.ahora > EPS && r.estado !== 'entero'; });
+        var enteros = fraccVista.filter(function (r) { return r.estado === 'entero'; }).length;
+        var hechas = aArmar.filter(function (r) { return r.preparado; }).length;
+        var bloq = aArmar.filter(function (r) { return !r.preparado && r.estado === 'bloq'; }).length;
+        var alertas = fraccVista.filter(function (r) { return !!r.alerta; }).length;
         var nuevas = $('lista-fracc').querySelectorAll('.chk-f:checked:not(:disabled)').length;
-        $('progreso-fracc').textContent = hechas + ' ya preparadas · ' + nuevas + ' por registrar ahora';
+        $('progreso-fracc').textContent = hechas + ' de ' + aArmar.length + ' ya preparadas · ' +
+          nuevas + ' por registrar ahora' +
+          (bloq ? ' · ' + bloq + ' esperando recepción o ajuste' : '') +
+          (alertas ? ' · ⚠ ' + alertas + ' para revisar' : '') +
+          (enteros ? ' · ' + enteros + ' producto' + (enteros === 1 ? '' : 's') + ' entero' + (enteros === 1 ? '' : 's') + ' para pesar' : '');
         validarFracc();
       }
 
@@ -1835,14 +3083,28 @@
       }
       $('clave-fracc').addEventListener('input', validarFracc);
 
+      // al entrar a la solapa, traer lo último (recepciones, ítems y plan)
+      document.getElementById('tab-fracc').addEventListener('click', function () {
+        refrescoVivo(false);
+      });
+
       $('btn-fracc').addEventListener('click', function () {
         var divs = $('lista-fracc').querySelectorAll('.item');
-        var items = [];
-        planFracc.forEach(function (p, i) {
-          var chk = divs[i].querySelector('.chk-f');
-          if (chk.checked && !chk.disabled) items.push({ id_plan: p.id_plan });
+        var marcadas = [];
+        fraccVista.forEach(function (r, i) {
+          var chk = divs[i] && divs[i].querySelector('.chk-f');
+          if (chk && chk.checked && !chk.disabled && r.p.id_plan &&
+              (r.estado === 'ok' || r.estado === 'cambio')) marcadas.push(r);
         });
-        if (!items.length) return;
+        if (!marcadas.length) return;
+        var items = marcadas.map(function (r) {
+          return {
+            id_plan: r.p.id_plan,
+            // lo que se armó de verdad (puede ser menos que el plan original)
+            porciones_armadas: numPlanilla(r.ahora),
+            unidades_armadas: numPlanilla(r.unidades)
+          };
+        });
 
         var payload = {
           tipo: 'fraccionamiento',
@@ -1867,12 +3129,10 @@
           btn.textContent = 'Registrar fracciones preparadas';
           $('ok-fracc').style.display = 'block';
           // Marcar localmente como preparadas
-          planFracc.forEach(function (p, i) {
-            var chk = divs[i].querySelector('.chk-f');
-            if (chk.checked && !chk.disabled) {
-              p.estado = 'Preparado';
-              p.preparado_por = valorQuien('preparado-por');
-            }
+          marcadas.forEach(function (r) {
+            r.p.estado = 'Preparado';
+            r.p.preparado_por = valorQuien('preparado-por');
+            r.p.porciones = r.ahora;
           });
           renderFracc();
         }
@@ -1898,7 +3158,8 @@
 
       function textoItem(it) {
         var info = infoProducto(it.id_producto);
-        if (it.efectiva <= 0) return info.nombre + ' — faltante, no va';
+        if (it.efectiva <= 0) return info.nombre + (/^Recorte en armado/i.test(it.obs || '')
+          ? ' — recortado en armado, no va' : ' — faltante, no va');
         var cant;
         if (it.fraccion) {
           cant = it.cantidad + ' × ' + it.fraccion + (info.unidad ? ' ' + info.unidad : '');
@@ -1913,7 +3174,8 @@
       var overrides = {};    // id_pedido -> {estado} optimista hasta que la planilla confirme
       var LS_TICKS = 'nm_ticks_';  // tildes de control guardados en el navegador
 
-      var ESTADOS_ENTREGA = ['Armado', 'Frío entregado', 'Cajón entregado', 'Entregado'];
+      var ESTADOS_ENTREGA = ['Armado', 'Frío entregado', 'Cajón entregado', 'Entregado', 'No retirado', 'Pasado a stock', 'Cancelado'];
+      function estadoCerrado(e) { return e === 'Pasado a stock' || e === 'Cancelado'; }
       function rango(e) { return e === 'Entregado' ? 2 : (e === 'Pendiente' ? 0 : 1); }
 
       function estadoDe(p) {
@@ -1932,6 +3194,8 @@
           if (it.efectiva <= 0) return;   // faltante: no va en ningún lado
           (esFrio(it.id_producto) ? frio : amb).push({ it: it, k: k });
         });
+        amb.sort(compararPorCategoria);
+        frio.sort(compararPorCategoria);
         return { ambiente: amb, frio: frio };
       }
       function frioPendiente(p) {
@@ -1962,6 +3226,9 @@
         if (est === 'Armado') return '✓ cajón armado';
         if (est === 'Frío entregado') return '❄ frío entregado · falta el cajón';
         if (est === 'Cajón entregado') return '📦 cajón entregado · faltan refrigerados';
+        if (est === 'No retirado') return '⏸ no retirado · falta decidir qué se hace';
+        if (est === 'Pasado a stock') return '📦 no retirado · mercadería al stock (se cobra)';
+        if (est === 'Cancelado') return '📦 no retirado · al stock, cobro anulado';
         return '✓✓ entregado';
       }
       function claseEstado(est) {
@@ -1999,8 +3266,15 @@
           }).join('') + '</ul>';
       }
 
+      function normBusqueda(t) {
+        return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      }
       function renderEntrega() {
         var cont = $('lista-entrega');
+        cargarRecortes();
+        // si hay un recorte a medio cargar, conservar lo escrito al redibujar
+        var frPrev = cont.querySelector('.form-recorte'), frVals = null;
+        if (frPrev) frVals = { m: frPrev.querySelector('.rc-motivo').value, v: frPrev.querySelector('.rc-va').value };
         cont.innerHTML = '';
 
         if (!pedidos.length) {
@@ -2011,6 +3285,17 @@
         }
 
         var filtro = $('buscar-entrega').value.trim().toLowerCase();
+        var filtroN = normBusqueda(filtro);
+        var nroBuscado = filtro.replace(/^n[°º]?\s*/, '');
+        // búsqueda por producto: qué ítems coinciden (sin tildes, parte del nombre)
+        var porProducto = {};   // id_pedido -> [it]
+        var resumenProd = [];   // filas para el recuadro de arriba
+        if (filtroN.length >= 3 && !/^\d+$/.test(nroBuscado)) {
+          itemsEd.forEach(function (it) {
+            if (normBusqueda(infoProducto(it.id_producto).nombre).indexOf(filtroN) === -1) return;
+            (porProducto[it.id_pedido] = porProducto[it.id_pedido] || []).push(it);
+          });
+        }
 
         // qué pedidos entran en la vista elegida
         var visibles = pedidos.filter(function (p) {
@@ -2031,8 +3316,10 @@
         visibles.forEach(function (p) {
           var i = pedidos.indexOf(p);
           var nombre = nombreConsumidor(p);
-          if (filtro && nombre.toLowerCase().indexOf(filtro) === -1 &&
-              String(p.correlativo) !== filtro.replace(/^n[°º]?\s*/, '')) return;
+          var coincProd = porProducto[p.id_pedido] || null;
+          if (filtro && normBusqueda(nombre).indexOf(filtroN) === -1 &&
+              String(p.correlativo) !== nroBuscado && !coincProd) return;
+          if (coincProd) resumenProd.push({ p: p, i: i, its: coincProd });
 
           var est = estadoDe(p);
           var its = itemsDePedido(p.id_pedido);
@@ -2052,6 +3339,8 @@
               '<span class="chip-ped ' + claseEstado(est) + '">' + chipEstado(est) + '</span>' +
             '</div>' +
             '<div class="ped-cuerpo"></div>';
+          var tagsPed = tagsDePedido(p);
+          if (tagsPed) card.querySelector('.ped-head').insertAdjacentHTML('afterend', tagsPed);
           card.querySelector('.ped-nombre').textContent =
             'N° ' + p.correlativo + ' · ' + nombre +
             ' — $' + Math.round(p.total).toLocaleString('es-AR') +
@@ -2072,8 +3361,20 @@
           if (its.length && !partes.ambiente.length) {
             cuerpo.insertAdjacentHTML('beforeend', '<p class="muted" style="font-size:0.9rem;">Este pedido es todo refrigerado: no hay cajón que armar.</p>');
           }
+          var conCats = Object.keys(categoriaProd).length > 0, catPrev = null;
+          function subCategoria(it, clase) {
+            if (!conCats) return;
+            var cat = etiquetaCategoria(it.id_producto);
+            if (normCat(cat) === catPrev) return;
+            catPrev = normCat(cat);
+            var d = document.createElement('div');
+            d.className = 'cat-sub' + (clase ? ' ' + clase : '');
+            d.textContent = cat;
+            cuerpo.appendChild(d);
+          }
           partes.ambiente.forEach(function (x) {
             var it = x.it, k = x.k;
+            subCategoria(it);
             var marcado = est !== 'Pendiente' || ticks.indexOf(k) !== -1;
             var fila = document.createElement('label');
             fila.className = 'item-ped' + (marcado ? ' ok' : '');
@@ -2088,7 +3389,24 @@
               tag.textContent = productores[idProdIt] || idProdIt;
               fila.querySelector('.txt').appendChild(tag);
             }
+            var etRec = etiquetaRecorte(it);
+            if (etRec) {
+              var tr = document.createElement('span');
+              tr.className = 'tag-recorte';
+              tr.textContent = etRec;
+              fila.querySelector('.txt').appendChild(tr);
+            }
+            if ((est === 'Pendiente' || (modoEdicion[p.id_pedido] && !cajonListo)) && !recortesLocales[it.id_item]) {
+              var br = document.createElement('button');
+              br.type = 'button';
+              br.className = 'btn-recorte';
+              br.dataset.k = String(k);
+              br.title = 'No entra completo en el cajón (merma, descarte…)';
+              br.textContent = '✂ Recorte';
+              fila.appendChild(br);
+            }
             cuerpo.appendChild(fila);
+            if (recorteAbierto === p.id_pedido + '|' + k) cuerpo.appendChild(formRecorte(p, it, k));
           });
           // faltantes (no van): informativos
           its.forEach(function (it) {
@@ -2109,8 +3427,10 @@
           if (partes.frio.length) {
             cuerpo.insertAdjacentHTML('beforeend', '<div class="bloque-tit frio">❄ Refrigerados · puesto de frío' +
               (frioListo ? ' · entregados' : '') + '</div>');
+            catPrev = null;
             partes.frio.forEach(function (x) {
               var it = x.it;
+              subCategoria(it, 'frio');
               var fila = document.createElement('div');
               fila.className = 'item-frio' + (frioListo ? ' ok' : '');
               fila.innerHTML = '<span class="ico">' + (frioListo ? '✓' : '❄') + '</span><span class="txt"></span>';
@@ -2127,13 +3447,54 @@
           }
 
           // ── Botones según estado ──
-          if (est === 'Pendiente') {
+          if (estadoCerrado(est)) {
+            cuerpo.insertAdjacentHTML('beforeend', '<p class="muted" style="font-size:.9rem;margin:8px 0;">' +
+              (est === 'Cancelado'
+                ? 'No se retiró: la mercadería pasó al stock del Nodo y el cobro quedó anulado.'
+                : 'No se retiró: la mercadería pasó al stock del Nodo. El pedido se cobra igual.') +
+              ' Ya no se puede entregar desde acá.</p>');
+          } else if (est === 'Pendiente') {
             var b = document.createElement('button');
             b.type = 'button';
             b.className = 'btn-accion armar';
             b.textContent = partes.ambiente.length ? '✓ Cajón armado' : '✓ Listo (sin cajón, todo refrigerado)';
             cuerpo.appendChild(b);
           } else if (est !== 'Entregado') {
+            if (!cajonListo && partes.ambiente.length && est !== 'No retirado') {
+              var bm = document.createElement('button');
+              bm.type = 'button';
+              bm.className = 'btn-modificar';
+              bm.textContent = modoEdicion[p.id_pedido] ? '✓ Terminar modificación' : '✏ Modificar armado';
+              bm.title = 'Para corregir un cajón ya armado: habilita ✂ Recorte en cada renglón';
+              if (modoEdicion[p.id_pedido]) {
+                cuerpo.insertAdjacentHTML('beforeend', '<p class="muted" style="font-size:.85rem;margin:6px 0;">✏ Modificando el armado: ' +
+                  'tocá <strong>✂ Recorte</strong> en el producto que no va o va de menos. El cajón sigue figurando como armado.</p>');
+              }
+              cuerpo.appendChild(bm);
+            }
+            if (est === 'No retirado') {
+              var res = document.createElement('div');
+              res.className = 'resolver-nr';
+              res.style.cssText = 'margin:10px 0;padding:10px 12px;border:1px dashed #A8B894;border-radius:8px;';
+              res.innerHTML = '<div class="bloque-tit">⏸ No se retiró · ¿qué hacemos?</div>' +
+                '<p class="muted" style="font-size:.85rem;margin:4px 0 6px;">Si la persona viene a buscarlo, registrá la entrega con los botones verdes de abajo, como siempre. ' +
+                'Si no, elegí qué hacer (cada opción pide confirmar con un segundo toque):</p>' +
+                '<ul class="muted" style="font-size:.85rem;margin:0 0 8px 18px;padding:0;">' +
+                '<li><strong>Recoordinar retiro</strong>: el pedido sigue guardado para esa persona. Solo queda anotado (con la nota) que se habló de otro día.</li>' +
+                '<li><strong>Al stock · se cobra igual</strong>: la mercadería pasa al stock del Nodo y el pedido se le cobra igual a la persona.</li>' +
+                '<li><strong>Al stock · anular el cobro</strong>: la mercadería pasa al stock del Nodo y el pedido no se cobra.</li>' +
+                '</ul>' +
+                '<input type="text" class="nota-nr" placeholder="Nota (opcional): qué se habló, cuándo viene…" style="width:100%;margin-bottom:8px;">' +
+                '<div class="acciones-2">' +
+                '<button type="button" class="btn-resolver" data-accion="recoordinar" data-txt="📅 Recoordinar retiro">📅 Recoordinar retiro</button>' +
+                '<button type="button" class="btn-resolver" data-accion="stock_cobra" data-txt="📦 Al stock · se cobra igual">📦 Al stock · se cobra igual</button>' +
+                '<button type="button" class="btn-resolver" data-accion="stock_anula" data-txt="📦 Al stock · anular el cobro">📦 Al stock · anular el cobro</button>' +
+                '</div><div class="aviso" style="display:none;margin-top:8px;"></div>';
+              var inNota = res.querySelector('.nota-nr');
+              inNota.value = (notasNR && notasNR[p.id_pedido]) || '';
+              inNota.dataset.ped = p.id_pedido;
+              cuerpo.appendChild(res);
+            }
             var acc = document.createElement('div');
             acc.className = 'acciones-2';
             if (partes.frio.length && !frioListo) {
@@ -2163,9 +3524,34 @@
             cuerpo.appendChild(b3);
           }
 
+          if (coincProd) {
+            Array.prototype.forEach.call(card.querySelectorAll('.item-ped .txt, .item-frio .txt'), function (t) {
+              if (normBusqueda(t.textContent).indexOf(filtroN) !== -1) t.parentNode.classList.add('coincide');
+            });
+          }
           cont.appendChild(card);
           actualizarControlPed(card);
         });
+        if (resumenProd.length) {
+          var nombresProd = {};
+          resumenProd.forEach(function (x) { x.its.forEach(function (it) { nombresProd[infoProducto(it.id_producto).nombre] = true; }); });
+          var rb = document.createElement('div');
+          rb.className = 'resumen-busqueda';
+          var tot = 0;
+          rb.innerHTML = '<h4>🔎 ' + escH(Object.keys(nombresProd).join(' · ')) + ' — en ' + resumenProd.length +
+            ' pedido' + (resumenProd.length === 1 ? '' : 's') + '</h4><ul>' +
+            resumenProd.map(function (x) {
+              var est = estadoDe(x.p);
+              return '<li><span class="rb-ped" data-ped="' + escH(x.p.id_pedido) + '">N° ' + escH(x.p.correlativo) + ' · ' +
+                escH(nombreConsumidor(x.p)) + '</span> — ' + x.its.map(function (it) {
+                  tot += it.efectiva;
+                  return escH(textoItem(it).replace(/ · .*$/, ''));
+                }).join(', ') + ' <span class="muted">(' + escH(chipEstado(est)) + ')</span></li>';
+            }).join('') + '</ul>';
+          cont.insertBefore(rb, cont.firstChild);
+        }
+        var frNuevo = cont.querySelector('.form-recorte');
+        if (frNuevo && frVals) { frNuevo.querySelector('.rc-motivo').value = frVals.m; frNuevo.querySelector('.rc-va').value = frVals.v; }
         actualizarTablero();
       }
 
@@ -2196,7 +3582,159 @@
         $('barra-armados').style.width = tot ? (arm / tot * 100) + '%' : '0%';
         $('barra-entregados').style.width = tot ? (ent / tot * 100) + '%' : '0%';
         $('barra-frio').style.width = conFrio ? (frioOk / conFrio * 100) + '%' : '0%';
+        renderCierre();
       }
+
+      // ── Resolver un pedido No retirado (D5b) ─────────────────────
+      // recoordinar: queda No retirado con la nota en observaciones.
+      // stock_cobra / stock_anula: cada producto del pedido entra a
+      // Sobrantes (origen No retirado) y el pedido pasa a "Pasado a stock"
+      // o "Cancelado". Al productor se le paga igual lo que entregó.
+      var notasNR = {};   // lo escrito en la nota sobrevive al refresco automático
+      document.getElementById('lista-entrega').addEventListener('input', function (e) {
+        if (e.target.classList.contains('nota-nr')) notasNR[e.target.dataset.ped] = e.target.value;
+      });
+      var TXT_RESOLVER = {
+        recoordinar: 'Queda como No retirado, con la nota en la planilla.',
+        stock_cobra: 'La mercadería pasa al stock del Nodo y el pedido se cobra igual.',
+        stock_anula: 'La mercadería pasa al stock del Nodo y se anula el cobro del pedido.'
+      };
+      function resolverNoRetirado(btn) {
+        var card = btn.closest('.ped-card'), p = pedidos[parseInt(card.dataset.idx, 10)];
+        var caja = btn.closest('.resolver-nr').querySelector('.aviso');
+        function aviso(msg, ok) {
+          caja.style.display = msg ? 'block' : 'none';
+          caja.style.background = ok ? 'rgba(110, 142, 85, 0.12)' : 'rgba(166, 64, 43, 0.10)';
+          caja.style.color = ok ? 'var(--c-corteza, #4a4234)' : '#A6402B';
+          caja.textContent = msg || '';
+        }
+        aviso('');
+        if (!webhookListo(WEBHOOK_D5B, 'D5b · Resolver no retirado', 'aviso-entrega')) return;
+        var quien = valorQuien('entregado-por');
+        var clave = $('clave-entrega').value.trim();
+        if (!quien) { aviso('Antes, elegí tu nombre arriba de todo.'); return; }
+        if (!clave) { aviso('Falta la clave de equipo (arriba de todo).'); return; }
+        var accion = btn.dataset.accion;
+        if (!btn.dataset.conf) {
+          Array.prototype.forEach.call(card.querySelectorAll('.btn-resolver'), function (b) {
+            delete b.dataset.conf; b.textContent = b.dataset.txt;
+          });
+          btn.dataset.conf = '1';
+          btn.textContent = '¿Confirmás? Tocá de nuevo';
+          aviso(TXT_RESOLVER[accion], true);
+          setTimeout(function () {
+            if (!btn.isConnected || !btn.dataset.conf) return;
+            delete btn.dataset.conf; btn.textContent = btn.dataset.txt; aviso('');
+          }, 6000);
+          return;
+        }
+        delete btn.dataset.conf;
+        var nota = (card.querySelector('.nota-nr') || {}).value || '';
+        Array.prototype.forEach.call(card.querySelectorAll('.btn-resolver'), function (b) { b.disabled = true; });
+        btn.textContent = 'Guardando…';
+        fetch(WEBHOOK_D5B, {
+          method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            tipo: 'resolver_no_retirado',
+            accion: accion,
+            id_pedido: p.id_pedido,
+            nota: nota.trim(),
+            resuelto_por: quien,
+            clave: clave
+          })
+        }).then(fin).catch(fin);
+        function fin() {
+          if (accion !== 'recoordinar') {
+            overrides[p.id_pedido] = { estado: accion === 'stock_anula' ? 'Cancelado' : 'Pasado a stock', ts: Date.now() };
+            renderEntrega();
+          } else {
+            Array.prototype.forEach.call(card.querySelectorAll('.btn-resolver'), function (b) { b.disabled = false; b.textContent = b.dataset.txt; });
+            aviso('✓ Guardado: sigue como No retirado, con la nota en la planilla.', true);
+          }
+        }
+      }
+
+      // ── Cerrar la entrega (D5 · No retirados) ─────────────────────
+      // Lo que no se retiró queda "No retirado": D5 lo marca en la planilla
+      // y le manda la lista a la equipa, que decide en el panel qué hacer
+      // con cada pedido. La edición pasa a Liquidación (A5).
+      var cierreConfirmar = false, cierreEnviado = false;
+      function pendientesDeRetiro() {
+        return pedidos.filter(function (p) {
+          var e = estadoDe(p);
+          return e !== 'Entregado' && e !== 'No retirado' && !estadoCerrado(e);
+        });
+      }
+      function renderCierre() {
+        var txt = $('cierre-texto'), btn = $('btn-cerrar-entrega');
+        if (!txt || !btn) return;
+        if (!pedidos.length) { txt.textContent = 'Todavía no hay pedidos en esta edición.'; btn.style.display = 'none'; return; }
+        var pend = pendientesDeRetiro();
+        if (!pend.length) {
+          txt.textContent = cierreEnviado
+            ? 'Listo: la entrega quedó cerrada.'
+            : 'No queda ningún pedido por entregar.';
+          btn.style.display = 'none';
+          return;
+        }
+        var nros = pend.map(function (p) { return 'N° ' + p.correlativo; }).join(', ');
+        txt.innerHTML = 'Quedan <strong>' + pend.length + '</strong> pedido' + (pend.length === 1 ? '' : 's') +
+          ' sin retirar (' + escH(nros) + '). Cuando termine el horario de retiro, cerrá la entrega: ' +
+          'esos pedidos quedan como <strong>No retirado</strong>, la equipa recibe un mail con la lista y ' +
+          'decide en el panel qué hacer con cada uno. La edición pasa a Liquidación. ' +
+          'Si alguien viene después, igual se le puede registrar la entrega.';
+        btn.style.display = '';
+        btn.disabled = false;
+        btn.textContent = cierreConfirmar
+          ? 'Sí, marcar ' + pend.length + ' como No retirado'
+          : 'Cerrar la entrega';
+      }
+      function avisoCierre(msg, ok) {
+        var caja = $('aviso-cierre');
+        if (!msg) { caja.style.display = 'none'; return; }
+        caja.style.display = 'block';
+        caja.style.background = ok ? 'rgba(110, 142, 85, 0.12)' : 'rgba(166, 64, 43, 0.10)';
+        caja.style.color = ok ? 'var(--c-corteza, #4a4234)' : '#A6402B';
+        caja.textContent = msg;
+      }
+      $('btn-cerrar-entrega').addEventListener('click', function () {
+        avisoCierre('');
+        if (!webhookListo(WEBHOOK_D5, 'D5 · No retirados', 'aviso-cierre')) return;
+        var quien = valorQuien('entregado-por');
+        var clave = $('clave-entrega').value.trim();
+        if (!quien) { avisoCierre('Antes de cerrar, elegí tu nombre arriba de todo.'); return; }
+        if (!clave) { avisoCierre('Falta la clave de equipo (arriba de todo).'); return; }
+        var pend = pendientesDeRetiro();
+        if (!pend.length) { renderCierre(); return; }
+        if (!cierreConfirmar) { cierreConfirmar = true; renderCierre(); return; }
+        var btn = this;
+        btn.disabled = true;
+        btn.textContent = 'Cerrando…';
+        fetch(WEBHOOK_D5, {
+          method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            tipo: 'no_retirados',
+            id_edicion: idEdicion,
+            cerrado_por: quien,
+            clave: clave
+          })
+        }).then(seguir).catch(seguir);
+        function seguir() {
+          pend.forEach(function (p) { overrides[p.id_pedido] = { estado: 'No retirado', ts: Date.now() }; });
+          if (!liqAvisada && WEBHOOK_A5.indexOf('https://hook.') === 0) {
+            liqAvisada = true;
+            fetch(WEBHOOK_A5, {
+              method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+              body: JSON.stringify({ tipo: 'iniciar_liquidacion', clave: clave })
+            }).catch(function () {});
+          }
+          cierreConfirmar = false;
+          cierreEnviado = true;
+          avisoCierre('✓ Entrega cerrada: ' + pend.length + ' pedido' + (pend.length === 1 ? '' : 's') +
+            ' quedaron como No retirado. La equipa recibe la lista por mail. En un minuto la planilla lo confirma.', true);
+          renderEntrega();
+        }
+      });
 
       $('buscar-entrega').addEventListener('input', renderEntrega);
       $('filtros-entrega').addEventListener('click', function (e) {
@@ -2211,6 +3749,40 @@
 
       // Tocar la tarjeta la despliega; tocar el botón registra la acción
       $('lista-entrega').addEventListener('click', function (e) {
+        var rbp = e.target.closest('.rb-ped');
+        if (rbp) {
+          pedAbierto = rbp.dataset.ped;
+          renderEntrega();
+          var abierta = $('lista-entrega').querySelector('.ped-card.abierto');
+          if (abierta) abierta.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          return;
+        }
+        var bRes = e.target.closest('.btn-resolver');
+        if (bRes) { resolverNoRetirado(bRes); return; }
+        if (e.target.closest('.nota-nr')) return;
+        var bMod = e.target.closest('.btn-modificar');
+        if (bMod) {
+          var cM = bMod.closest('.ped-card'), pM = pedidos[parseInt(cM.dataset.idx, 10)];
+          if (modoEdicion[pM.id_pedido]) delete modoEdicion[pM.id_pedido]; else modoEdicion[pM.id_pedido] = true;
+          recorteAbierto = '';
+          renderEntrega();
+          return;
+        }
+        var bRec = e.target.closest('.btn-recorte');
+        if (bRec) {
+          e.preventDefault(); e.stopPropagation();
+          var cR = bRec.closest('.ped-card'), pR = pedidos[parseInt(cR.dataset.idx, 10)];
+          var clv = pR.id_pedido + '|' + bRec.dataset.k;
+          recorteAbierto = recorteAbierto === clv ? '' : clv;
+          renderEntrega();
+          return;
+        }
+        if (e.target.closest('.form-recorte')) {
+          var fr = e.target.closest('.form-recorte');
+          if (e.target.closest('.rc-cancelar')) { recorteAbierto = ''; renderEntrega(); return; }
+          if (e.target.closest('.rc-aplicar')) { e.preventDefault(); aplicarRecorte(fr, e.target.closest('.rc-aplicar')); }
+          return;
+        }
         var deshacer = e.target.closest('.btn-deshacer');
         if (deshacer) {
           var cardD = deshacer.closest('.ped-card');
@@ -2265,6 +3837,178 @@
         guardarTicks(p.id_pedido, idxs);
         actualizarControlPed(card);
       });
+
+      // ── Recorte en armado ───────────────────────────────────────
+      // Cuando al armar el cajón un producto no entra completo (la fracción
+      // pesó menos, se descartó por calidad…), se registra acá. Va por el
+      // mismo escenario D3 que los faltantes de productores (valores
+      // absolutos: repetir el envío no descuenta dos veces). La observación
+      // empieza con "Recorte en armado · <motivo>": con eso la planilla sabe
+      // quién absorbe el costo (Merma y Otro: el Nodo; Descarte: el productor).
+      var recorteAbierto = '';          // "id_pedido|k" con el formulario abierto
+      var modoEdicion = {};             // id_pedido -> true: "Modificar armado" de un cajón ya armado
+      var recortesLocales = {};         // id_item -> {nueva, ts, ped, clave}: enviado, esperando que la planilla lo muestre
+      var avisosRecorte = {};           // id_pedido -> {ts, estado: 'pendiente'|'enviado'}
+      var LS_RECORTES = 'nm_recortes_armado_';
+      var recortesCargadosPara = null;
+      function cargarRecortes() {
+        if (recortesCargadosPara === idEdicion || !idEdicion) return;
+        recortesCargadosPara = idEdicion;
+        try {
+          var gr = JSON.parse(localStorage.getItem(LS_RECORTES + idEdicion) || '{}');
+          recortesLocales = gr.r || {}; avisosRecorte = gr.a || {};
+          var lim = Date.now() - 30 * 60000;   // lo de hace más de media hora ya no se espera
+          Object.keys(recortesLocales).forEach(function (k) { if (recortesLocales[k].ts < lim) delete recortesLocales[k]; });
+        } catch (e) {}
+      }
+      function guardarRecortes() {
+        try { localStorage.setItem(LS_RECORTES + idEdicion, JSON.stringify({ r: recortesLocales, a: avisosRecorte })); } catch (e) {}
+      }
+      // Cuando la planilla ya muestra el recorte (y no queda otro recorte del
+      // mismo pedido en camino), se pide a D3b el correo con el total final.
+      // Se espera unos segundos para que D3 termine de actualizar el pedido.
+      function avisarRecorte(idPed, clave) {
+        var a = avisosRecorte[idPed];
+        if (a && a.estado === 'enviado' && Date.now() - a.ts < 60000) return;
+        for (var k in recortesLocales) if (recortesLocales[k].ped === idPed) return;   // otro en camino
+        avisosRecorte[idPed] = { ts: Date.now(), estado: 'pendiente' };
+        guardarRecortes();
+        setTimeout(function () {
+          if (WEBHOOK_D3B.indexOf('https://hook.') !== 0) return;
+          fetch(WEBHOOK_D3B, {
+            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({ tipo: 'avisos_ajuste', id_edicion: idEdicion, clave: clave,
+              id_pedido: idPed, origen: 'recorte_armado' })
+          }).catch(function () {});
+          avisosRecorte[idPed] = { ts: Date.now(), estado: 'enviado' };
+          guardarRecortes();
+          try { renderEntrega(); } catch (e) {}
+        }, 15000);
+      }
+      var MOTIVOS_RECORTE = {
+        merma: 'Merma al fraccionar',
+        descarte: 'Descarte por calidad',
+        otro: 'Otro motivo'
+      };
+      function recortePorPeso(it) {
+        // parcial (ej. 0,8 kg) solo en productos por kg/litro sin fracción
+        var u = String(infoProducto(it.id_producto).unidad || '').toLowerCase();
+        return !it.fraccion && (u === 'kg' || u === 'litro' || u === 'l' || u === 'lt');
+      }
+      function etiquetaRecorte(it) {
+        var o = recortesLocales[it.id_item];
+        if (o) {
+          if (Math.abs(it.cantidad - o.nueva) < 0.0001) {
+            delete recortesLocales[it.id_item];
+            guardarRecortes();
+            avisarRecorte(o.ped || it.id_pedido, o.clave || $('clave-entrega').value.trim());
+          }
+          else if (Date.now() - o.ts < 240000) return '⏳ guardando recorte…';
+          else return '⚠ el recorte no se aplicó: probá de nuevo o revisá D3';
+        }
+        if (/^Recorte en armado/i.test(it.obs || '')) {
+          var av = avisosRecorte[it.id_pedido];
+          return '✂ ' + it.obs.replace(/^Recorte en armado\s*·\s*/i, '') +
+            (av ? (av.estado === 'enviado' ? ' · 📧 aviso enviado' : ' · 📧 enviando aviso…') : '');
+        }
+        return '';
+      }
+      function formRecorte(p, it, k) {
+        var info = infoProducto(it.id_producto), peso = recortePorPeso(it);
+        var u = info.unidad || '';
+        var d = document.createElement('div');
+        d.className = 'form-recorte';
+        d.dataset.ped = p.id_pedido; d.dataset.k = String(k);
+        var pidio = peso ? numeroAmable(it.efectiva) + ' ' + u
+          : it.cantidad + (it.fraccion ? ' × ' + it.fraccion + (u ? ' ' + u : '') : (u ? ' ' + u : ''));
+        var unidadVa = peso ? u : (it.fraccion ? '× ' + it.fraccion + (u ? ' ' + u : '') : (u || 'unidad'));
+        d.innerHTML =
+          '<div><strong>✂ Recorte en armado</strong> · ' + escH(info.nombre) + ' · pidió ' + escH(pidio) + '</div>' +
+          '<div class="fila"><label>Motivo: <select class="rc-motivo">' +
+            '<option value="merma">Merma al fraccionar (lo absorbe el Nodo)</option>' +
+            '<option value="descarte">Descarte por calidad (no se le paga al productor)</option>' +
+            '<option value="otro">Otro motivo (lo absorbe el Nodo)</option>' +
+          '</select></label></div>' +
+          '<div class="fila"><label>Va en el cajón: <input type="number" class="rc-va" inputmode="decimal" min="0" value="0" ' +
+            (peso ? 'step="0.05" max="' + it.efectiva + '"' : 'step="1" max="' + Math.max(0, it.cantidad - 1) + '"') +
+            ' style="width:80px;"> ' + escH(unidadVa) + '</label>' +
+            '<div class="muted" style="font-size:.8rem;">' + (peso
+              ? 'Poné lo que realmente va (ej. 0,8). 0 = no va nada.'
+              : 'Cuántas van (0 = no va nada).') + '</div></div>' +
+          '<div class="acciones"><button type="button" class="rc-aplicar">Aplicar recorte</button>' +
+          '<button type="button" class="rc-cancelar">Cancelar</button></div>' +
+          '<div class="rc-msg"></div>';
+        return d;
+      }
+      function aplicarRecorte(fr, btn) {
+        var msg = fr.querySelector('.rc-msg');
+        function err(t) { msg.textContent = t; }
+        if (!webhookListo(WEBHOOK_D3, 'D3 · Ajustes', 'aviso-entrega')) return;
+        var quien = valorQuien('entregado-por');
+        var clave = $('clave-entrega').value.trim();
+        if (!quien) { err('Antes, elegí tu nombre arriba de todo.'); return; }
+        if (!clave) { err('Falta la clave de equipo (arriba de todo).'); return; }
+        var p = null;
+        for (var i = 0; i < pedidos.length; i++) if (pedidos[i].id_pedido === fr.dataset.ped) p = pedidos[i];
+        var it = itemsDePedido(fr.dataset.ped)[parseInt(fr.dataset.k, 10)];
+        if (!p || !it) { err('No encuentro el ítem: actualizá la pantalla.'); return; }
+        var peso = recortePorPeso(it);
+        var va = aNumero(fr.querySelector('.rc-va').value);
+        if (va === null || va < 0) { err('Poné cuánto va (0 si no va nada).'); return; }
+        var fac = it.cantidad > 0 ? it.efectiva / it.cantidad : 1;
+        var cantNueva, efNueva;
+        if (peso) {
+          if (va >= it.efectiva) { err('Tiene que ser menos de lo pedido (' + numeroAmable(it.efectiva) + ').'); return; }
+          cantNueva = Math.round(va * 1000) / 1000;          // sin fracción: E está en kg
+          efNueva = cantNueva;
+        } else {
+          if (va % 1 !== 0) { err('Tiene que ser un número entero.'); return; }
+          if (va >= it.cantidad) { err('Tiene que ser menos de lo pedido (' + it.cantidad + ').'); return; }
+          cantNueva = va;
+          efNueva = Math.round(va * fac * 10000) / 10000;
+        }
+        var motivo = fr.querySelector('.rc-motivo').value;
+        var u = infoProducto(it.id_producto).unidad || '';
+        var menos = Math.round((it.efectiva - efNueva) * 10000) / 10000;
+        var obs = 'Recorte en armado · ' + MOTIVOS_RECORTE[motivo] + ' · -' + numeroAmable(menos) + (u ? ' ' + u : '');
+        var devuelto = Math.round(menos * it.precio);
+        var c = contactos[p.id_consumidor] || {};
+        var nomProd = nombreProducto(it.id_producto);
+        btn.disabled = true; btn.textContent = 'Enviando…';
+        fetch(WEBHOOK_D3, {
+          method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            tipo: 'ajustes', id_edicion: idEdicion, aprobado_por: quien, clave: clave,
+            items: [{
+              id_item: it.id_item, id_pedido: it.id_pedido, id_producto: it.id_producto, producto: nomProd,
+              recorte_efectiva: menos,
+              recorte_cantidad: Math.round((it.cantidad - cantNueva) * 10000) / 10000,
+              cantidad_antes: it.cantidad, cantidad_nueva: cantNueva,
+              cantidad_efectiva_antes: it.efectiva, cantidad_efectiva_nueva: efNueva,
+              precio: it.precio, observacion: obs
+            }],
+            pedidos: [{
+              id_pedido: p.id_pedido, correlativo: p.correlativo,
+              nombre: consumidores[p.id_consumidor] || p.id_consumidor,
+              email: c.email || '', telefono: c.tel || '',
+              total_anterior: p.total, monto_devuelto: devuelto,
+              detalle_recortes: '• ' + nomProd + ': pediste ' + numeroAmable(it.efectiva) + (u ? ' ' + u : '') + ' y te llevás ' +
+                numeroAmable(efNueva) + (u ? ' ' + u : '') + ' (' + pesos(devuelto) + ' menos · ' + MOTIVOS_RECORTE[motivo].toLowerCase() + ')'
+            }],
+            propuestas: []
+          })
+        }).then(fin).catch(fin);
+        function fin() {
+          recortesLocales[it.id_item] = { nueva: cantNueva, ts: Date.now(), ped: p.id_pedido, clave: clave };
+          delete avisosRecorte[p.id_pedido];
+          guardarRecortes();
+          // el renglón queda controlado: no frena el "Cajón armado"
+          var k = parseInt(fr.dataset.k, 10), t = leerTicks(p.id_pedido);
+          if (t.indexOf(k) === -1) { t.push(k); guardarTicks(p.id_pedido, t); }
+          recorteAbierto = '';
+          renderEntrega();
+        }
+      }
 
       function avisoEntrega(msg) {
         var caja = $('aviso-entrega');
@@ -2348,7 +4092,7 @@
       // (leer la planilla no gasta operaciones de Make)
       function refrescarPedidos() {
         if (!idEdicion) return;
-        gviz('sheet=Pedidos&range=A1:U3000&headers=1')
+        gviz('sheet=Pedidos&range=A1:U20000&headers=1')
           .then(function (res) { parsePedidos(res); renderEntrega(); chequearTodoEntregado(); })
           .catch(function () {});
       }
@@ -2418,12 +4162,18 @@
         if (manual && btn) { btn.disabled = true; btn.textContent = 'Actualizando…'; }
 
         Promise.all([
-          gviz('sheet=Recepciones&range=A1:L4000&headers=1').catch(function () { return null; }),
-          gviz('sheet=Pedidos&range=A1:U3000&headers=1').catch(function () { return null; }),
-          gviz('sheet=Items&range=A1:M3000&headers=1').catch(function () { return null; }),
-          gviz('sheet=Plan_Fraccionamiento&range=A1:L500&headers=1').catch(function () { return null; })
+          gviz('sheet=Recepciones&range=A1:L50000&headers=1').catch(function () { return null; }),
+          gviz('sheet=Pedidos&range=A1:U20000&headers=1').catch(function () { return null; }),
+          gviz('sheet=Items&range=A1:M50000&headers=1').catch(function () { return null; }),
+          gviz('sheet=Plan_Fraccionamiento&range=A1:L20000&headers=1').catch(function () { return null; }),
+          gviz('sheet=Movimientos_Stock&range=A1:L20000&headers=1').catch(function () { return null; }),
+          gviz('sheet=Ediciones&range=A1:D1000&headers=1').catch(function () { return null; })
         ]).then(function (res) {
           var ocupado = hayTrabajoSinGuardar();
+
+          // sobrantes: ventas/merma (D7) y estado de la edición (habilita el cierre)
+          parseMovimientos(res[4]);
+          parseEstadoEdicion(res[5]);
 
           // quién ya fue recibido (marca ✓ en el select de productores)
           if (res[0]) {
@@ -2434,6 +4184,7 @@
 
           // pedidos y entrega: siempre seguro de re-renderizar
           if (res[1]) { parsePedidos(res[1]); renderEntrega(); }
+          try { renderSobrantes(); } catch (e) {}
 
           // ajustes: faltantes recalculados con lo recibido y los ítems de
           // hoy; solo si nadie está cargando recortes
@@ -2453,7 +4204,7 @@
                 id_plan: String(celda(r, 0)).trim(),
                 id_producto: String(celda(r, 2)).trim(),
                 nombre: String(celda(r, 3)).trim(),
-                fraccion: String(celda(r, 4)).trim(),
+                fraccion: String(celda(r, 4)).trim() || '1',   // vacía = pedido entero
                 porciones: celda(r, 5),
                 unidades: celda(r, 6),
                 estado: String(celda(r, 8)).trim(),
@@ -2523,13 +4274,17 @@
       // aparecen en cuanto se registra una recepción. El faltante REAL se
       // termina de calcular en renderAjustes contra los ítems vivos.
       function calcularFaltantes() {
-        propuestas = Object.keys(recepPorProducto).map(function (k) {
+        propuestas = Object.keys(recepPorProducto).filter(function (k) {
+          return !recepCorruptas[k];   // con datos rotos no se propone ningún recorte
+        }).map(function (k) {
           var a = recepPorProducto[k];
           return {
             id_producto: a.id_producto,
             id_productor: a.id_productor,
-            pedida: Math.round(a.pedida * 10000) / 10000,
-            recibida: Math.round(a.recibida * 10000) / 10000,
+            // pedida/recibida "para los pedidos": se suma lo tomado del depósito
+            pedida: Math.round((a.pedida + (a.deposito || 0)) * 10000) / 10000,
+            recibida: Math.round((a.recibida + (a.deposito || 0)) * 10000) / 10000,
+            deposito: Math.round((a.deposito || 0) * 10000) / 10000,
             detalle: nombreProducto(a.id_producto) + ' · ' + (productores[a.id_productor] || a.id_productor),
             id_propuesta: '',
             ids: []
@@ -2565,13 +4320,14 @@
         // no pisar recortes que alguien está cargando (salvo tras aplicarlos)
         if (!forzar && hayTrabajoSinGuardar()) return;
         Promise.all([
-          gviz('sheet=Recepciones&range=A1:L4000&headers=1&_=' + Date.now()).catch(function () { return null; }),
-          gviz('sheet=Items&range=A1:M3000&headers=1&_=' + Date.now()).catch(function () { return null; })
+          gviz('sheet=Recepciones&range=A1:L50000&headers=1&_=' + Date.now()).catch(function () { return null; }),
+          gviz('sheet=Items&range=A1:M50000&headers=1&_=' + Date.now()).catch(function () { return null; })
         ]).then(function (res) {
           if (res[0]) parseRecepciones(res[0]);
           if (res[1]) parseItems(res[1]);
           calcularFaltantes();
           renderAjustes();
+          if (!$('lista-fracc').querySelectorAll('.chk-f:checked:not(:disabled)').length) renderFracc();
         }).catch(function () {});
       }
 
@@ -2593,14 +4349,25 @@
         cont.innerHTML = '';
         var sinRec = productoresSinRecepcion();
         var avisoSin = $('aviso-sin-recepcion');
+        var rotas = Object.keys(recepCorruptas);
         if (avisoSin) {
-          if (sinRec.length) {
-            avisoSin.style.display = 'block';
-            avisoSin.innerHTML = 'Todavía no se registró la recepción de: <strong>' + sinRec.join(', ') +
-              '</strong>. Sus faltantes van a aparecer acá cuando se registren.';
-          } else {
-            avisoSin.style.display = 'none';
+          var htmlAv = '';
+          if (rotas.length) {
+            htmlAv += '⛔ <strong>' + rotas.length + ' recepción' + (rotas.length === 1 ? '' : 'es') +
+              ' con cantidades ilegibles en la planilla</strong> (hoja Recepciones). Hasta corregirlas, ' +
+              'esos productos no se reparten: el faltante que mostraría sería falso.<ul style="margin:6px 0 0 18px;">' +
+              rotas.map(function (k) {
+                var x = recepCorruptas[k];
+                return '<li>' + nombreProducto(k) + ' · ' + (productores[x.id_productor] || x.id_productor) +
+                  ' — revisar ' + x.que + ' en la fila <code>' + x.id_recepcion + '</code></li>';
+              }).join('') + '</ul>';
           }
+          if (sinRec.length) {
+            htmlAv += (htmlAv ? '<br>' : '') + 'Todavía no se registró la recepción de: <strong>' + sinRec.join(', ') +
+              '</strong>. Sus faltantes van a aparecer acá cuando se registren.';
+          }
+          avisoSin.style.display = htmlAv ? 'block' : 'none';
+          avisoSin.innerHTML = htmlAv;
         }
         if (!propuestas.length) {
           cont.innerHTML = '<p class="muted">Todavía no hay ninguna recepción registrada en esta edición. ' +
@@ -2623,23 +4390,44 @@
           pr.ya_recortado = Math.max(0, Math.round((pr.pedida - actual) * 10000) / 10000);
           if (pr.faltante_actual > 0.0001) visibles++;
         });
-        // Lo contrario también es un problema: si los pedidos tienen MENOS de
-        // lo que llegó, se recortó de más (p. ej. un recorte aplicado dos
-        // veces) y hay mercadería sin dueño. No se corrige sola: se avisa.
-        var demas = propuestas.filter(function (pr) {
-          return pr.recibida - pr.pendiente_hoy > 0.0001;
+        // Recorte duplicado: solo cuando hubo un faltante real (llegó menos
+        // de lo pedido), se aplicaron recortes por faltante y aun así los
+        // pedidos quedaron con MENOS de lo que llegó. Lo que sobra porque
+        // llegó de más, o por un "Recorte en armado", es un sobrante común:
+        // va a la pestaña Sobrantes y acá no se avisa.
+        function menosEnArmado(idProducto) {
+          var t = 0;
+          itemsEd.forEach(function (it) {
+            if (it.id_producto !== idProducto || it.obs.indexOf('Recorte en armado') !== 0) return;
+            var m = it.obs.match(/·\s*-\s*([\d.,]+)/);
+            if (m) t += parseFloat(m[1].replace(',', '.')) || 0;
+          });
+          return t;
+        }
+        function huboRecortePorFaltante(idProducto) {
+          return itemsEd.some(function (it) {
+            return it.id_producto === idProducto && /^(Faltante|Descontado)$/i.test(it.estado) &&
+              it.obs.indexOf('Recorte en armado') !== 0;
+          });
+        }
+        var demas = [];
+        propuestas.forEach(function (pr) {
+          if (!(pr.pedida - pr.recibida > 0.0001)) return;          // no hubo faltante real
+          if (!huboRecortePorFaltante(pr.id_producto)) return;
+          var exceso = Math.round((pr.recibida - pr.pendiente_hoy - menosEnArmado(pr.id_producto)) * 10000) / 10000;
+          if (exceso > 0.0001) { pr.exceso_recorte = exceso; demas.push(pr); }
         });
         var avisoDemas = '';
         if (demas.length) {
           avisoDemas = '<div class="prop-card" style="border-color:#A6402B;">' +
-            '<h3 style="color:#A6402B;">⚠️ Se recortó de más</h3>' +
-            '<p class="prop-sub">En estos productos los pedidos tienen <strong>menos</strong> de lo que ' +
-            'llegó al galpón: sobra mercadería que no está asignada a nadie. Revisá en la planilla ' +
-            '(hoja Items) si algún recorte se aplicó dos veces.</p><ul style="margin:6px 0 0 18px;">' +
+            '<h3 style="color:#A6402B;">⚠️ Posible recorte duplicado</h3>' +
+            '<p class="prop-sub">En estos productos faltó mercadería, pero los recortes que se aplicaron dejan ' +
+            'a los pedidos con <strong>menos</strong> de lo que llegó. Revisá en la planilla (hoja Items) ' +
+            'si algún recorte por faltante se aplicó dos veces.</p><ul style="margin:6px 0 0 18px;">' +
             demas.map(function (pr) {
               return '<li>' + (pr.detalle || pr.id_producto) + ': llegaron ' + numeroAmable(pr.recibida) +
-                ', los pedidos tienen ' + numeroAmable(pr.pendiente_hoy) + ' → sobran <strong>' +
-                numeroAmable(Math.round((pr.recibida - pr.pendiente_hoy) * 10000) / 10000) + '</strong></li>';
+                ', los pedidos tienen ' + numeroAmable(pr.pendiente_hoy) + ' → recortado de más <strong>' +
+                numeroAmable(pr.exceso_recorte) + '</strong></li>';
             }).join('') + '</ul></div>';
         }
         if (!visibles) {
@@ -2657,6 +4445,7 @@
           var html = '<div class="prop-card">';
           html += '<h3>⚠️ ' + (pr.detalle || pr.id_producto) + '</h3>';
           html += '<p class="prop-sub">Se pidieron ' + pr.pedida + ', llegaron ' + pr.recibida +
+            (pr.deposito > 0.0001 ? ' (incluye ' + numeroAmable(pr.deposito) + ' del depósito)' : '') +
             (pr.ya_recortado > 0.0001
               ? ' (ya se recortaron ' + numeroAmable(pr.ya_recortado) + ' antes)'
               : '') +
@@ -2787,8 +4576,8 @@
         caja.style.color = '';
         caja.innerHTML = resumen.length
           ? '✂️ <strong>Recorte propuesto por orden de llegada.</strong> Mirá abajo cómo ' +
-            'queda cada pedido: se puede retocar a mano antes de enviar. Cuando esté bien, ' +
-            'tocá <strong>ENVIAR PEDIDOS ACTUALIZADOS</strong>.'
+            'queda cada pedido: se puede retocar a mano antes de aplicar. Cuando esté bien, ' +
+            'tocá <strong>APLICAR RECORTES</strong>.'
           : '⚠️ No se pudo repartir automáticamente: revisá los faltantes a mano.';
         $('lista-ajustes').scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
@@ -2821,7 +4610,7 @@
         // Se manda SOLO el recorte (delta) de cada ítem. Los valores nuevos
         // los calcula Make leyendo la fila viva de la planilla, así dos
         // personas pueden ajustar a la vez sin pisarse.
-        var itemsOut = [], tocados = {};
+        var itemsOut = [], tocados = {}, cantidadRara = false;
         Object.keys(recortes).forEach(function (k) {
           var idx = parseInt(k, 10), it = itemsEd[idx], v = recortes[idx];
           var factor = factorFraccion(it.fraccion) || 1;
@@ -2838,6 +4627,14 @@
             // resultado es el mismo y no se descuenta de más.
             cantidad_antes: it.cantidad,
             cantidad_nueva: Math.max(0, Math.round((it.cantidad - recorteCant) * 10000) / 10000),
+            _chequeo: (function () {
+              // la cantidad de un ítem es siempre un número entero de unidades
+              // vendibles (paquetes, kilos enteros, maples…). Si el recorte deja
+              // un decimal, algo está mal y no se manda nada.
+              var cn = Math.round((it.cantidad - recorteCant) * 10000) / 10000;
+              if (cn % 1 !== 0 || it.cantidad % 1 !== 0) cantidadRara = true;
+              return undefined;
+            })(),
             cantidad_efectiva_antes: it.efectiva,
             cantidad_efectiva_nueva: Math.max(0, Math.round((it.efectiva - v) * 10000) / 10000),
             precio: it.precio,
@@ -2878,6 +4675,14 @@
         // calculan en la app): la ruta 3 de D3 no recibe nada.
         var propuestasOut = [];
 
+        if (cantidadRara) {
+          errorA('⛔ Uno de los recortes deja una cantidad con decimales (media unidad de venta). ' +
+            'Eso no se puede entregar ni cobrar bien: revisá los recortes (tienen que ser de unidades ' +
+            'enteras) y volvé a intentar. No se envió nada.');
+          return;
+        }
+        itemsOut.forEach(function (x) { delete x._chequeo; });
+
         var btn = $('btn-ajustes');
         btn.disabled = true;
         btn.textContent = 'Enviando…';
@@ -2911,17 +4716,22 @@
           var intentos = 0;
           var timer = setInterval(function () {
             intentos++;
-            if (intentos > 20) {   // ~2,5 minutos
+            if (intentos === 20) {   // ~2,5 minutos: con muchos recortes D3 tarda más
+              caja.innerHTML = '⏳ <strong>D3 sigue trabajando…</strong> Con muchos recortes puede ' +
+                'tardar varios minutos. No cierres ni recargues esta pantalla: avisa sola cuando terminen.';
+            }
+            if (intentos > 75) {   // ~10 minutos
               clearInterval(timer);
               btn.disabled = false;
-              btn.textContent = 'ENVIAR PEDIDOS ACTUALIZADOS';
-              errorA('⚠️ Los recortes NO quedaron aplicados: en la planilla (hoja Items) las ' +
-                'cantidades siguen como antes. El escenario D3 de Make no los procesó (revisá ' +
-                'que esté encendido, que la clave sea la correcta y el History de D3). ' +
-                'Lo cargado acá sigue en pantalla: cuando D3 esté bien, volvé a tocar ENVIAR.');
+              btn.textContent = 'APLICAR RECORTES';
+              errorA('⚠️ Después de 10 minutos la planilla (hoja Items) todavía no muestra los ' +
+                'recortes. Revisá el History del escenario D3 en Make: si el último run está en ' +
+                'verde, recargá esta página para confirmarlo; si no hay run o está en rojo, revisá ' +
+                'que D3 esté encendido y la clave. Lo cargado acá sigue en pantalla: volver a tocar ' +
+                'APLICAR RECORTES es seguro (no descuenta dos veces).');
               return;
             }
-            gviz('sheet=Items&range=A1:M3000&headers=1&_=' + Date.now())
+            gviz('sheet=Items&range=A1:M50000&headers=1&_=' + Date.now())
               .then(function (res) {
                 var pendientes = 0;
                 res.table.rows.forEach(function (r) {
@@ -2932,10 +4742,13 @@
                 });
                 if (pendientes > 0) return;   // D3 todavía trabajando
                 clearInterval(timer);
-                btn.textContent = 'Pedidos actualizados ✓';
-                caja.innerHTML = '✅ <strong>Recortes aplicados y confirmados en la planilla.</strong> ' +
-                  'A cada consumidor afectado le llega por correo el detalle nuevo de su ' +
-                  'pedido con el total actualizado.';
+                btn.textContent = 'Recortes aplicados ✓';
+                caja.innerHTML = '✅ <strong>Recortes aplicados y confirmados en la planilla.</strong><br>' +
+                  '📧 <strong>Todavía no se avisó a nadie.</strong> Cuando estén registradas ' +
+                  '<strong>todas</strong> las recepciones y repartidos todos los faltantes, ' +
+                  'mandá los correos desde la <a href="../#paso-6">guía → paso 6 · Recepción, ajustes ' +
+                  'y entrega → «Avisar a los consumidores»</a>. Cada consumidor con recortes ' +
+                  'recibe un solo correo con su pedido final.';
                 // releer recepciones e ítems (cantidades ya recortadas)
                 refrescarPropuestas(true);
               })
@@ -2967,5 +4780,6 @@
       });
     })();
   </script>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 22/10 d</p>
 </body>
 </html>
