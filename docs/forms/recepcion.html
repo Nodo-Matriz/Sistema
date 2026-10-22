@@ -736,6 +736,8 @@
     .chip-ped.armado { background: var(--c-oliva-claro); color: var(--c-leche); }
     .chip-ped.entregado { background: var(--c-musgo); color: var(--c-crema); }
     .chip-ped.parcial { background: var(--c-oliva-claro); color: var(--c-leche); }
+    .chip-ped.en-armado { background: #f3d58a; color: var(--c-tierra); }
+    .en-armado-box { border-color: #C49543; background: #fbf4e6; }
     .ped-card.parcial { background: rgba(110, 142, 85, 0.10); border-color: var(--c-oliva); }
 
     /* bloque de refrigerados dentro del pedido */
@@ -3170,7 +3172,9 @@
       }
 
       // Estado local de la solapa
-      var pedAbierto = '';   // id_pedido desplegado
+      // pedidos desplegados: se pueden tener varios cajones abiertos a la vez
+      // (se deja uno a medio armar y se empieza otro; los tildes quedan guardados)
+      var pedAbiertos = {};
       var overrides = {};    // id_pedido -> {estado} optimista hasta que la planilla confirme
       var LS_TICKS = 'nm_ticks_';  // tildes de control guardados en el navegador
 
@@ -3313,6 +3317,7 @@
           return;
         }
 
+        var enArmadoLista = [];
         visibles.forEach(function (p) {
           var i = pedidos.indexOf(p);
           var nombre = nombreConsumidor(p);
@@ -3330,13 +3335,21 @@
 
           var card = document.createElement('div');
           card.className = 'ped-card ' + claseEstado(est) +
-            (pedAbierto === p.id_pedido ? ' abierto' : '');
+            (pedAbiertos[p.id_pedido] ? ' abierto' : '');
           card.dataset.idx = String(i);
+          card.dataset.ped = p.id_pedido;
+          // cajón empezado y sin terminar: "en armado · 5 de 12"
+          var ksAmb = partes.ambiente.map(function (x) { return x.k; });
+          var tildadosAmb = ticks.filter(function (k) { return ksAmb.indexOf(k) !== -1; }).length;
+          var enArmado = est === 'Pendiente' && tildadosAmb > 0;
+          if (enArmado) enArmadoLista.push({ p: p, n: tildadosAmb, tot: ksAmb.length });
           card.innerHTML =
             '<div class="ped-head">' +
               '<span class="caret">▶</span>' +
               '<span class="ped-nombre"></span>' +
-              '<span class="chip-ped ' + claseEstado(est) + '">' + chipEstado(est) + '</span>' +
+              (enArmado
+                ? '<span class="chip-ped en-armado">' + textoEnArmado(tildadosAmb, ksAmb.length) + '</span>'
+                : '<span class="chip-ped ' + claseEstado(est) + '">' + chipEstado(est) + '</span>') +
             '</div>' +
             '<div class="ped-cuerpo"></div>';
           var tagsPed = tagsDePedido(p);
@@ -3532,6 +3545,18 @@
           cont.appendChild(card);
           actualizarControlPed(card);
         });
+        if (enArmadoLista.length && !filtro) {
+          var ea = document.createElement('div');
+          ea.className = 'resumen-busqueda en-armado-box';
+          ea.innerHTML = '<h4>🛠 Cajones empezados sin terminar (' + enArmadoLista.length + ')</h4>' +
+            '<p class="muted" style="margin:0 0 4px;font-size:.82rem;">Lo tildado queda guardado en este teléfono. Tocá uno para seguir armándolo.</p><ul>' +
+            enArmadoLista.map(function (x) {
+              return '<li><span class="rb-ped" data-ped="' + escH(x.p.id_pedido) + '">N° ' + escH(x.p.correlativo) + ' · ' +
+                escH(nombreConsumidor(x.p)) + '</span> — ' + x.n + ' de ' + x.tot + ' productos' +
+                (pedAbiertos[x.p.id_pedido] ? ' <span class="muted">(abierto)</span>' : '') + '</li>';
+            }).join('') + '</ul>';
+          cont.insertBefore(ea, cont.firstChild);
+        }
         if (resumenProd.length) {
           var nombresProd = {};
           resumenProd.forEach(function (x) { x.its.forEach(function (it) { nombresProd[infoProducto(it.id_producto).nombre] = true; }); });
@@ -3751,9 +3776,12 @@
       $('lista-entrega').addEventListener('click', function (e) {
         var rbp = e.target.closest('.rb-ped');
         if (rbp) {
-          pedAbierto = rbp.dataset.ped;
+          pedAbiertos[rbp.dataset.ped] = true;
           renderEntrega();
-          var abierta = $('lista-entrega').querySelector('.ped-card.abierto');
+          var abierta = null;
+          Array.prototype.forEach.call($('lista-entrega').querySelectorAll('.ped-card'), function (c) {
+            if (c.dataset.ped === rbp.dataset.ped) abierta = c;
+          });
           if (abierta) abierta.scrollIntoView({ behavior: 'smooth', block: 'start' });
           return;
         }
@@ -3820,7 +3848,8 @@
         if (!head) return;
         var card2 = head.closest('.ped-card');
         var p2 = pedidos[parseInt(card2.dataset.idx, 10)];
-        pedAbierto = (pedAbierto === p2.id_pedido) ? '' : p2.id_pedido;
+        if (pedAbiertos[p2.id_pedido]) delete pedAbiertos[p2.id_pedido];
+        else pedAbiertos[p2.id_pedido] = true;
         renderEntrega();
       });
 
@@ -3836,7 +3865,26 @@
         });
         guardarTicks(p.id_pedido, idxs);
         actualizarControlPed(card);
+        actualizarChipArmado(card, p);
       });
+
+      function textoEnArmado(n, tot) {
+        return n >= tot ? '🛠 tildado · falta confirmar' : '🛠 en armado · ' + n + ' de ' + tot;
+      }
+      function actualizarChipArmado(card, p) {
+        if (estadoDe(p) !== 'Pendiente') return;
+        var ksAmb = partesDe(p.id_pedido).ambiente.map(function (x) { return x.k; });
+        var n = leerTicks(p.id_pedido).filter(function (k) { return ksAmb.indexOf(k) !== -1; }).length;
+        var chip = card.querySelector('.ped-head .chip-ped');
+        if (!chip) return;
+        if (n > 0) {
+          chip.className = 'chip-ped en-armado';
+          chip.textContent = textoEnArmado(n, ksAmb.length);
+        } else {
+          chip.className = 'chip-ped pendiente';
+          chip.textContent = chipEstado('Pendiente');
+        }
+      }
 
       // ── Recorte en armado ───────────────────────────────────────
       // Cuando al armar el cajón un producto no entra completo (la fracción
@@ -4060,7 +4108,7 @@
           overrides[p.id_pedido] = { estado: estadoNuevo, ts: Date.now() };
           if (accion === 'armado') guardarTicks(p.id_pedido, []);
           if (accion === 'entrega') {
-            pedAbierto = '';
+            delete pedAbiertos[p.id_pedido];
             // ¿era el último? -> la edición pasa a Liquidación (paso 7)
             var todos = pedidos.length > 0 && pedidos.every(function (p2) {
               return estadoDe(p2) === 'Entregado';
@@ -4780,6 +4828,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 22/10 d</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 22/10 e</p>
 </body>
 </html>
