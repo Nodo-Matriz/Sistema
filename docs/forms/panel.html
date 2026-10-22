@@ -420,18 +420,24 @@
         var cont = $('grupo-wa');
         if (!cont) return;
         var ok = rext && rext.table && rext.table.cols && rext.table.cols.length >= 2;
-        var iG = -1;
-        if (ok) for (var c = 1; c < rext.table.cols.length; c++) if (/grupo/i.test(String(rext.table.cols[c].label || ''))) iG = c;
+        var iG = -1, iP = -1;
+        if (ok) for (var c = 1; c < rext.table.cols.length; c++) {
+          var lab = String(rext.table.cols[c].label || '');
+          if (/grupo/i.test(lab)) iG = c;
+          else if (/primera/i.test(lab)) iP = c;
+        }
         if (!ok || iG < 0) {
           cont.innerHTML = '<p class="meta">La planilla todavía no guarda esta respuesta del formulario ' +
             '(falta la columna AA «en_grupo_whatsapp» en Pedidos y el cambio en B1). ' +
             'Cuando esté, acá aparece la lista.</p>';
           return;
         }
-        var resp = {}, correo = 0;
+        var resp = {}, primeraDecl = {}, correo = 0;
         rext.table.rows.forEach(function (r) {
           var v = String(celda(r, iG)).trim().toLowerCase();
           resp[String(celda(r, 0)).trim()] = v;
+          // 🌱 primera vez: solo lo que la persona marcó en el formulario (AB)
+          if (iP >= 0) primeraDecl[String(celda(r, 0)).trim()] = String(celda(r, iP)).trim().toLowerCase() === 'si';
         });
         var vistos = {}, lista = [];
         pedidos.forEach(function (p) {
@@ -439,7 +445,7 @@
           if (v === 'no_prefiero_correo' && !vistos['c' + p.cons]) { vistos['c' + p.cons] = true; correo++; }
           if (v !== 'no' || vistos[p.cons]) return;
           vistos[p.cons] = true;
-          lista.push({ cons: p.cons, corr: p.corr, nombre: nombres[p.cons] || p.cons, tel: tels[p.cons] || '', primera: !consEnOtras[p.cons] });
+          lista.push({ cons: p.cons, corr: p.corr, nombre: nombres[p.cons] || p.cons, tel: tels[p.cons] || '', primera: !!primeraDecl[p.id] });
         });
         var pie = correo ? '<p class="meta" style="margin-top:8px;">' + correo + (correo === 1 ? ' persona prefiere' : ' personas prefieren') +
           ' recibir todo por correo: a esas no se les escribe.</p>' : '';
@@ -538,12 +544,27 @@
         var ids = Object.keys(distintos);
         var nuevos = ids.filter(function (c) { return !consEnOtras[c]; }).length;
         var repiten = ids.filter(function (c) { return distintos[c] > 1; }).length;
-        barras($('consumidores'), [
-          { nombre: 'Consumidores distintos', valor: ids.length },
-          { nombre: 'Nuevos (primer pedido en el Nodo)', valor: nuevos },
-          { nombre: 'Recurrentes (ya pidieron antes)', valor: ids.length - nuevos },
+        // primera vez DECLARADA en el formulario (Pedidos AB, la escribe B1)
+        var declPrimera = null;
+        if (rext && rext.table && rext.table.cols) {
+          var iPd = -1;
+          for (var cP = 1; cP < rext.table.cols.length; cP++) if (/primera/i.test(String(rext.table.cols[cP].label || ''))) iPd = cP;
+          if (iPd >= 0) {
+            var pedSi = {}, consSi = {};
+            rext.table.rows.forEach(function (r) {
+              if (String(celda(r, iPd)).trim().toLowerCase() === 'si') pedSi[String(celda(r, 0)).trim()] = true;
+            });
+            pedidos.forEach(function (p) { if (pedSi[p.id]) consSi[p.cons] = true; });
+            declPrimera = Object.keys(consSi).length;
+          }
+        }
+        var filasCons = [{ nombre: 'Consumidores distintos', valor: ids.length }];
+        if (declPrimera !== null) filasCons.push({ nombre: 'Primera vez (lo marcaron en el formulario)', valor: declPrimera });
+        barras($('consumidores'), filasCons.concat([
+          { nombre: 'Sin pedidos anteriores en la planilla (desde ED17)', valor: nuevos },
+          { nombre: 'Con pedidos anteriores en la planilla', valor: ids.length - nuevos },
           { nombre: 'Con más de un pedido en esta edición', valor: repiten }
-        ], function (f) { return String(f.valor); });
+        ]), function (f) { return String(f.valor); });
 
         // ── Ritmo ─────────────────────────────────────────────
         var porFecha = {};

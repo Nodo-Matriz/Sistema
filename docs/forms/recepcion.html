@@ -1363,9 +1363,9 @@
         });
       }
       function esPrimeraVez(p) {
-        // Principal: no tiene pedidos en ediciones anteriores. Si el pedido no
-        // tiene consumidor, se usa lo que la persona declaró en el formulario.
-        if (p.id_consumidor) return !consPrevios[p.id_consumidor];
+        // Solo quien marcó en el formulario "Sí, primera vez" (Pedidos AB, la
+        // escribe B1). El historial de la planilla no sirve para esto: muchas
+        // personas compraron en ediciones anteriores al sistema.
         var ex = extrasPed[p.id_pedido];
         return !!(ex && ex.primera === 'si');
       }
@@ -4828,6 +4828,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 22/10 e</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 22/10 f</p>
 </body>
 </html>
