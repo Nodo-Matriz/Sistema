@@ -158,16 +158,13 @@
       box-shadow: 0 2px 6px rgba(44, 36, 24, 0.18);
       transition: opacity .12s, transform .18s cubic-bezier(.34, 1.4, .64, 1); z-index: 6;
     }
-    .wizard__crumb.is-current .wizard__crumb-tip { background: var(--c-musgo); }
+    /* el punto actual no muestra nombre: ya estás ahí */
+    .wizard__crumb.is-current .wizard__crumb-tip { display: none; }
     @media (hover: hover) {
-      .wizard__crumb.is-visited:hover .wizard__crumb-tip { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-      /* el punto actual ya está agrandado (scale 1.4): su nombre se compensa */
-      .wizard__crumb.is-current:hover .wizard__crumb-tip { transform: translate(-50%, -50%) scale(0.72); }
+      .wizard__crumb.is-visited:not(.is-current):hover .wizard__crumb-tip { opacity: 1; transform: translate(-50%, -50%) scale(1); }
     }
     .wizard__crumb.is-scrub.is-visited:not(.is-current) { transform: scale(1.6); }
-    .wizard__crumb.is-scrub:not(.is-visited) { transform: scale(1.3); }
     .wizard__progress.is-scrubbing .wizard__step-name { color: var(--c-oliva); }
-    .wizard__progress.is-scrubbing.is-bloq .wizard__step-name { color: var(--c-tierra); font-style: italic; }
     @media (prefers-reduced-motion: reduce) { .wizard__crumb, .wizard__crumb-tip { transition: none; } }
   </style>
   <script>
@@ -1213,19 +1210,16 @@
             if (elCuenta) elCuenta.textContent = (actual + 1) + ' de ' + total;
             return;
           }
-          var visto = wizard.visited.has(i);
-          prog.classList.add('is-scrubbing');
-          prog.classList.toggle('is-bloq', !visto);
-          if (!visto) {
-            if (elNombre) elNombre.textContent = 'Todavía no la viste';
-            if (elCuenta) elCuenta.textContent = (i + 1) + ' de ' + total;
-          } else if (i === actual) {
-            if (elNombre) elNombre.textContent = nombre(i);
-            if (elCuenta) elCuenta.textContent = 'estás acá';
-          } else {
-            if (elNombre) elNombre.textContent = '↩ ' + nombre(i);
-            if (elCuenta) elCuenta.textContent = 'soltá para ir';
+          // sin ver todavía, o la actual: no se muestra nada distinto
+          if (!wizard.visited.has(i) || i === actual) {
+            prog.classList.remove('is-scrubbing');
+            if (elNombre) elNombre.textContent = nombre(actual);
+            if (elCuenta) elCuenta.textContent = (actual + 1) + ' de ' + total;
+            return;
           }
+          prog.classList.add('is-scrubbing');
+          if (elNombre) elNombre.textContent = nombre(i);
+          if (elCuenta) elCuenta.textContent = (i + 1) + ' de ' + total;
         }
         cont.addEventListener('pointerdown', function (e) {
           if (e.pointerType === 'mouse') return;   // con mouse: pasar por encima y hacer clic
@@ -1239,7 +1233,7 @@
           var i = puntoEn(e.clientX, e.clientY);
           if (i !== marcado) {
             marcar(i);
-            if (navigator.vibrate && wizard.visited.has(i)) { try { navigator.vibrate(8); } catch (err) {} }
+            if (navigator.vibrate && wizard.visited.has(i) && i !== wizard.getCurrentIndex()) { try { navigator.vibrate(8); } catch (err) {} }
           }
         });
         function soltar() {
