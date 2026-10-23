@@ -698,7 +698,9 @@
       transition: border-color 0.15s, background 0.15s;
     }
 
-    .ped-card.armado { background: rgba(110, 142, 85, 0.08); border-color: var(--c-salvia); }
+    /* Recorrido de colores: pendiente (crema) → en armado (mostaza) → armado, esperando
+       el retiro (arcilla, como la madera del cajón) → media entrega (salvia) → entregado (musgo) */
+    .ped-card.armado { background: rgba(176, 125, 98, 0.10); border-color: var(--c-arcilla); }
     .ped-card.entregado { background: rgba(110, 142, 85, 0.14); border-color: var(--c-oliva); opacity: 0.75; }
 
     .ped-head {
@@ -733,12 +735,12 @@
     }
 
     .chip-ped.pendiente { background: var(--c-crema-osc); color: var(--c-tierra); }
-    .chip-ped.armado { background: var(--c-oliva-claro); color: var(--c-leche); }
+    .chip-ped.armado { background: var(--c-arcilla-oscuro); color: var(--c-leche); }
     .chip-ped.entregado { background: var(--c-musgo); color: var(--c-crema); }
-    .chip-ped.parcial { background: var(--c-oliva-claro); color: var(--c-leche); }
+    .chip-ped.parcial { background: var(--c-salvia); color: var(--c-suelo); }
     .chip-ped.en-armado { background: #f3d58a; color: var(--c-tierra); }
     .en-armado-box { border-color: #C49543; background: #fbf4e6; }
-    .ped-card.parcial { background: rgba(110, 142, 85, 0.10); border-color: var(--c-oliva); }
+    .ped-card.parcial { background: rgba(168, 184, 148, 0.16); border-color: var(--c-salvia); }
 
     /* bloque de refrigerados dentro del pedido */
     .bloque-tit {
@@ -5205,6 +5207,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 23/10 d</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 23/10 e</p>
 </body>
 </html>
