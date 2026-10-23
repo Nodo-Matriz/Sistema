@@ -2372,21 +2372,34 @@
         if (!l) return;
 
         if (b.classList.contains('btn-corregir')) {
-          if (yaRepartido(l.id_producto)) {
-            caja.style.display = 'block';
-            caja.innerHTML = '⛔ El faltante de este producto <strong>ya se repartió en Ajustes</strong> (a alguien se le ' +
-              'recortó). Corregir ahora no le devuelve el producto a nadie: avisale a quien administra el sistema.';
-            return;
-          }
           div.classList.add('corrigiendo');
           Array.prototype.forEach.call(div.querySelectorAll('input, select'), function (el) { el.disabled = false; });
           b.style.display = 'none';
           caja.style.display = 'block';
-          caja.innerHTML = '<p style="margin:6px 0;">Corregí lo que corresponda (tildá si llegó, cantidad, calidad) y guardá. ' +
-            'Usa el <strong>Recibido por</strong> y la <strong>clave</strong> de arriba.</p>' +
+          // quién corrige y clave: dentro de la misma caja (la clave de la
+          // recepción está más abajo y no se ve)
+          var quienAhora = valorQuien('recibido-por');
+          var opts = '<option value="">— Elegí tu nombre —</option>' + equipoNombres.map(function (n) {
+            return '<option' + (n === quienAhora ? ' selected' : '') + '>' + n.replace(/</g, '&lt;') + '</option>';
+          }).join('');
+          var claveAhora = $('clave').value.trim();
+          try { if (!claveAhora) claveAhora = sessionStorage.getItem('nm_clave_equipo') || ''; } catch (e2) {}
+          var avisoRep = yaRepartido(l.id_producto)
+            ? '<p class="aviso" style="margin:6px 0;">⚠ El faltante de este producto <strong>ya se repartió en Ajustes</strong>: ' +
+              'los pedidos ya no lo esperan. Lo que registres ahora como recibido <strong>va a Sobrantes</strong> para vender ' +
+              '(y se le paga al productor). Separalo de los cajones.</p>'
+            : '';
+          caja.innerHTML = avisoRep +
+            '<p style="margin:6px 0;">Corregí lo que corresponda: <strong>tildá si llegó</strong>, cantidad y calidad. Después guardá.</p>' +
+            '<div style="display:flex;flex-wrap:wrap;gap:8px;margin:6px 0;">' +
+              (equipoNombres.length
+                ? '<select class="corr-quien">' + opts + '</select>'
+                : '<input type="text" class="corr-quien" placeholder="Tu nombre" value="' + (quienAhora || '').replace(/"/g, '&quot;') + '">') +
+              '<input type="password" class="corr-clave" placeholder="Clave del equipo" value="' + claveAhora.replace(/"/g, '&quot;') + '">' +
+            '</div>' +
             '<button type="button" class="btn-conf btn-guardar-corr">Guardar corrección</button> ' +
             '<button type="button" class="link-ajuste btn-cancelar-corr">Cancelar</button>' +
-            '<div class="msg-corr" style="margin-top:6px;"></div>';
+            '<div class="msg-corr" style="margin-top:6px;color:#A6402B;font-weight:700;"></div>';
           return;
         }
         if (b.classList.contains('btn-cancelar-corr')) {
@@ -2396,9 +2409,13 @@
         }
         // guardar
         var msg = caja.querySelector('.msg-corr');
-        var quien = valorQuien('recibido-por'), clave = $('clave').value.trim();
-        if (!quien || !clave) { msg.textContent = '⚠ Falta elegir quién corrige (Recibido por) o la clave.'; return; }
-        if (!webhookListo(WEBHOOK_D1B, 'D1b · Corregir recepción', 'aviso-dup')) return;
+        var quien = String((caja.querySelector('.corr-quien') || {}).value || '').trim();
+        var clave = String((caja.querySelector('.corr-clave') || {}).value || '').trim();
+        if (!quien || !clave) { msg.textContent = '⚠ Falta elegir quién corrige o escribir la clave.'; return; }
+        if (!(typeof WEBHOOK_D1B === 'string' && WEBHOOK_D1B.indexOf('https://hook.') === 0)) {
+          msg.textContent = '🚫 La corrección todavía no está conectada (falta la dirección de D1b en el archivo). No se envió nada.';
+          return;
+        }
         if (b.dataset.conf !== '1') {
           b.dataset.conf = '1';
           b.textContent = '¿Seguro? Tocá otra vez para guardar';
@@ -4978,6 +4995,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 22/10 g</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 23/10</p>
 </body>
 </html>
