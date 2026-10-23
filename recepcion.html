@@ -698,7 +698,9 @@
       transition: border-color 0.15s, background 0.15s;
     }
 
-    .ped-card.armado { background: rgba(110, 142, 85, 0.08); border-color: var(--c-salvia); }
+    /* Recorrido de colores: pendiente (crema) → en armado (mostaza) → armado, esperando
+       el retiro (arcilla, como la madera del cajón) → media entrega (salvia) → entregado (musgo) */
+    .ped-card.armado { background: rgba(176, 125, 98, 0.10); border-color: var(--c-arcilla); }
     .ped-card.entregado { background: rgba(110, 142, 85, 0.14); border-color: var(--c-oliva); opacity: 0.75; }
 
     .ped-head {
@@ -733,10 +735,12 @@
     }
 
     .chip-ped.pendiente { background: var(--c-crema-osc); color: var(--c-tierra); }
-    .chip-ped.armado { background: var(--c-oliva-claro); color: var(--c-leche); }
+    .chip-ped.armado { background: var(--c-arcilla-oscuro); color: var(--c-leche); }
     .chip-ped.entregado { background: var(--c-musgo); color: var(--c-crema); }
-    .chip-ped.parcial { background: var(--c-oliva-claro); color: var(--c-leche); }
-    .ped-card.parcial { background: rgba(110, 142, 85, 0.10); border-color: var(--c-oliva); }
+    .chip-ped.parcial { background: var(--c-salvia); color: var(--c-suelo); }
+    .chip-ped.en-armado { background: #f3d58a; color: var(--c-tierra); }
+    .en-armado-box { border-color: #C49543; background: #fbf4e6; }
+    .ped-card.parcial { background: rgba(168, 184, 148, 0.16); border-color: var(--c-salvia); }
 
     /* bloque de refrigerados dentro del pedido */
     .bloque-tit {
@@ -750,6 +754,8 @@
     }
     .item-frio.ok .txt { text-decoration: line-through; opacity: 0.55; }
     .item-frio .ico { flex: 0 0 auto; }
+    .item-frio { cursor: pointer; }
+    .item-frio input { width: 22px; height: 22px; accent-color: #2f6b8f; flex-shrink: 0; cursor: pointer; }
     .btn-accion.frio { background: #2f6b8f; border-color: #2f6b8f; }
     .btn-accion.frio:hover { background: #245672; border-color: #245672; }
     .acciones-2 { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
@@ -1159,6 +1165,8 @@
       // CONFIGURACIÓN — completar antes de publicar
       // ============================================================
       var WEBHOOK_D1     = 'https://hook.us2.make.com/wh4waco8hddd4qvggwfpul8wxyo2s9xo';
+      // D1b · Corregir recepción: reescribe UNA fila de Recepciones (G, H, I, J, L)
+      var WEBHOOK_D1B    = 'https://hook.us2.make.com/krnrjrrdraxttdkk136b9xeg8m5n77nu';
       var WEBHOOK_FRAC   = 'https://hook.us2.make.com/pnu4revwv7cpba73qpnif4bsa0cuw86i';
       var WEBHOOK_RETIRO = 'https://hook.us2.make.com/gd5qh8wry0v9wmnsqfwp96vjmua55e36';
       var WEBHOOK_D3     = 'https://hook.us2.make.com/8w3cb9fk11gf9rj9352ai7k4pixpmm1n';
@@ -1361,9 +1369,9 @@
         });
       }
       function esPrimeraVez(p) {
-        // Principal: no tiene pedidos en ediciones anteriores. Si el pedido no
-        // tiene consumidor, se usa lo que la persona declaró en el formulario.
-        if (p.id_consumidor) return !consPrevios[p.id_consumidor];
+        // Solo quien marcó en el formulario "Sí, primera vez" (Pedidos AB, la
+        // escribe B1). El historial de la planilla no sirve para esto: muchas
+        // personas compraron en ediciones anteriores al sistema.
         var ex = extrasPed[p.id_pedido];
         return !!(ex && ex.primera === 'si');
       }
@@ -1584,7 +1592,9 @@
             estado: String(celda(r, 8) || '').trim(),
             efectiva: parseFloat(celda(r, 10)) || 0,
             quien: String(celda(r, 11) || '').trim(),
-            obs: String(celda(r, 9) || '').trim()
+            obs: String(celda(r, 9) || '').trim(),
+            // N cantidad_original: la que pidió la persona antes de cualquier recorte (D3)
+            original: parseFloat(String(celda(r, 13) || '').replace(',', '.')) || 0
           });
         });
       }
@@ -1608,6 +1618,7 @@
             if (String(celda(r, 1)).trim() !== idEdicion) return;
             var idR0 = String(celda(r, 0)).trim();
             if (idR0 && ultimaFila[idR0] !== i) return;   // repetida: vale la última
+            r = aplicarCorreccion(idR0, r);   // corrección recién enviada (D1b) manda hasta que la planilla la muestre
             var idP = String(celda(r, 2)).trim();
             if (idP && !recibidosVivo[idP]) {
               recibidosVivo[idP] = String(celda(r, 4)).trim();
@@ -1652,6 +1663,24 @@
           });
         } catch (e) { recibidosVivo = {}; recepDetalle = {}; recepPorProducto = {}; recepCorruptas = {}; }
         try { renderSobrantes(); } catch (e) {}
+      }
+
+      // ── Correcciones de recepción (D1b) ──────────────────────────
+      // Lo corregido se muestra enseguida; manda sobre la planilla hasta que
+      // ella lo confirme (o 3 minutos, y entonces avisa que no llegó).
+      var correccionesLocales = {};   // id_recepcion -> {pedida, recibida, dif, calidad, obs, ts}
+      var correccionesFallidas = {};
+      function aplicarCorreccion(idR, r) {
+        var o = correccionesLocales[idR];
+        if (!o) return r;
+        var hoja = { h: parseFloat(String(celda(r, 7)).replace(',', '.')) || 0, j: String(celda(r, 9) || '').trim() };
+        if (Math.abs(hoja.h - o.recibida) < 0.0005 && hoja.j === o.calidad) { delete correccionesLocales[idR]; return r; }
+        if (Date.now() - o.ts > 180000) { delete correccionesLocales[idR]; correccionesFallidas[idR] = true; return r; }
+        var c = r.c.slice();
+        while (c.length < 12) c.push(null);
+        c[6] = { v: o.pedida }; c[7] = { v: o.recibida }; c[8] = { v: o.dif };
+        c[9] = { v: o.calidad }; c[11] = { v: o.obs };
+        return { c: c };
       }
 
       // ── Sobrantes: recibido de más respecto de lo pedido ─────────
@@ -2072,7 +2101,7 @@
           gviz('sheet=Pedidos&range=A1:U20000&headers=1'),
           gviz('sheet=Consumidores&range=A1:D20000&headers=1'),
           Promise.resolve(null),   // (libre: antes Propuestas_Ajuste)
-          gviz('sheet=Items&range=A1:M50000&headers=1'),
+          gviz('sheet=Items&range=A1:N50000&headers=1'),
           // Las dos últimas no son críticas: si la hoja no existe, seguimos igual.
           gviz('sheet=Equipo&range=A1:E100&headers=1').catch(function () { return null; }),
           gviz('sheet=Recepciones&range=A1:L50000&headers=1').catch(function () { return null; }),
@@ -2302,10 +2331,310 @@
         btn.disabled = true;
         btn.textContent = 'Ya registrada ✓';
         // dejar los renglones en modo consulta
-        Array.prototype.forEach.call($('lista-items').querySelectorAll('input, select'), function (el) {
-          el.disabled = true;
+        Array.prototype.forEach.call($('lista-items').querySelectorAll('.item'), function (div) {
+          if (div.classList.contains('corrigiendo')) return;   // se está corrigiendo: queda editable
+          Array.prototype.forEach.call(div.querySelectorAll('input, select'), function (el) { el.disabled = true; });
+          var z = div.querySelector('.zona-corregir');
+          if (z) z.style.display = 'block';
+          var idR = idRecepcionDiv(idProd, div);
+          var nota = div.querySelector('.caja-corregir');
+          if (correccionesLocales[idR] && nota) {
+            nota.style.display = 'block';
+            nota.dataset.estado = 'esperando';
+            nota.innerHTML = '⏳ Corrección enviada: esperando que la planilla la muestre…';
+          } else if (correccionesFallidas[idR] && nota) {
+            nota.style.display = 'block';
+            nota.dataset.estado = 'fallida';
+            nota.innerHTML = '⚠ La corrección no aparece en la planilla: revisá D1b en Make (o la clave) y volvé a corregir.';
+          } else if (nota && nota.dataset.estado === 'esperando') {
+            nota.dataset.estado = 'ok';
+            nota.innerHTML = '✅ Corregido y guardado en la planilla.';
+          }
         });
       }
+
+      // ── ✏️ Corregir un producto ya registrado (D1b) ───────────────
+      // Reescribe SOLO la fila de ese producto en Recepciones: nada se
+      // duplica y los demás productos no se tocan.
+      function idRecepcionDiv(idProd, div) {
+        var k = String(div.dataset.key || '').split('|');
+        return 'REC' + idEdicion + '-' + idProd + '-' + k[0] + (k[1] ? '-' + k[1] : '');
+      }
+      var avisoDevuelto = '';
+      // ítems de esta línea (producto + fracción) a los que se les recortó por faltante
+      function recortadosDe(l) {
+        var out = [];
+        itemsEd.forEach(function (it, idx) {
+          if (it.id_producto !== l.id_producto || String(it.fraccion || '') !== String(l.fraccion || '')) return;
+          if (!/^(Faltante|Descontado)$/i.test(it.estado) || it.obs.indexOf('Recorte en armado') === 0) return;
+          var rec = Math.round(((it.original || 0) - it.cantidad) * 10000) / 10000;
+          if (rec <= 0) return;
+          var ped = pedidoDe(it.id_pedido);
+          if (!ped || estadoCerrado(estadoDe(ped)) || estadoDe(ped) === 'Entregado') return;
+          out.push({ it: it, idx: idx, ped: ped, recortado: rec });
+        });
+        out.sort(function (a, b) { return a.ped.correlativo - b.ped.correlativo; });   // quien pidió antes, primero
+        return out;
+      }
+      // lo que llegó de más respecto de lo que esperan HOY los pedidos (unidades efectivas)
+      function disponibleParaDevolver(l, div) {
+        var tild = div.querySelector('.chk').checked;
+        var cal = div.querySelector('.calidad').value;
+        var mostr = (tild && cal !== 'Rechazado') ? (aNumero(div.querySelector('.cant').value) || 0) : 0;
+        var fac = l.fraccion ? (factorFraccion(l.fraccion) || 1) : 1;
+        var dep = 0;
+        if (!l.fraccion && div.querySelector('.in-dep')) dep = Math.min(l.cant_efectiva, Math.max(0, aNumero(div.querySelector('.in-dep').value) || 0));
+        var necesidad = Math.max(0, l.cant_efectiva - dep);
+        return Math.round((mostr * fac - necesidad) * 1000) / 1000;
+      }
+      function textoDevolucion(l, div, recortados) {
+        var caja = div.querySelector('.caja-corregir'), t = caja && caja.querySelector('.txt-dev');
+        if (!t) return;
+        var fac = l.fraccion ? (factorFraccion(l.fraccion) || 1) : 1;
+        var disp = disponibleParaDevolver(l, div), dev = 0;
+        Array.prototype.forEach.call(caja.querySelectorAll('.in-dev'), function (iv) { dev += (parseFloat(iv.value) || 0) * fac; });
+        t.textContent = disp > 0
+          ? 'Llegaron ' + numeroAmable(disp) + ' más de lo que esperan hoy los pedidos · devolvés ' + numeroAmable(dev) +
+            (disp - dev > 0.0005 ? ' · el resto (' + numeroAmable(Math.round((disp - dev) * 1000) / 1000) + ') va a Sobrantes' : '')
+          : 'Poné en "Recibido" cuánto llegó: con eso se reparte entre estos pedidos.';
+      }
+      // reparto sugerido: primero a quien pidió antes (se puede cambiar a mano)
+      function repartirDevolucion(l, div, recortados) {
+        var caja = div.querySelector('.caja-corregir');
+        if (!caja) return;
+        var fac = l.fraccion ? (factorFraccion(l.fraccion) || 1) : 1;
+        var queda = Math.max(0, disponibleParaDevolver(l, div));
+        Array.prototype.forEach.call(caja.querySelectorAll('.in-dev'), function (iv) {
+          if (iv.dataset.tocado) { queda -= (parseFloat(iv.value) || 0) * fac; return; }
+          var max = parseFloat(iv.max) || 0;
+          var v = Math.min(max, Math.floor((queda + 0.0005) / fac));
+          v = Math.max(0, v);
+          iv.value = String(v);
+          queda -= v * fac;
+        });
+        textoDevolucion(l, div, recortados);
+      }
+      function yaRepartido(idProducto) {
+        // ya se recortó a alguien por faltante de este producto (Ajustes)
+        return itemsEd.some(function (it) {
+          return it.id_producto === idProducto && /^(Faltante|Descontado)$/i.test(it.estado) &&
+            it.obs.indexOf('Recorte en armado') !== 0;
+        });
+      }
+      $('lista-items').addEventListener('click', function (e) {
+        var b = e.target.closest ? e.target.closest('.btn-corregir, .btn-guardar-corr, .btn-cancelar-corr') : null;
+        if (!b) return;
+        var div = b.closest('.item');
+        var idProd = $('card-items').dataset.idProd;
+        var propias = lineas.filter(function (l) { return l.id_productor === idProd; });
+        var l = propias[parseInt(div.dataset.idx, 10)];
+        var caja = div.querySelector('.caja-corregir');
+        if (!l) return;
+
+        if (b.classList.contains('btn-corregir')) {
+          div.classList.add('corrigiendo');
+          Array.prototype.forEach.call(div.querySelectorAll('input, select'), function (el) { el.disabled = false; });
+          b.style.display = 'none';
+          caja.style.display = 'block';
+          // quién corrige y clave: dentro de la misma caja (la clave de la
+          // recepción está más abajo y no se ve)
+          var quienAhora = valorQuien('recibido-por');
+          var opts = '<option value="">— Elegí tu nombre —</option>' + equipoNombres.map(function (n) {
+            return '<option' + (n === quienAhora ? ' selected' : '') + '>' + n.replace(/</g, '&lt;') + '</option>';
+          }).join('');
+          var claveAhora = $('clave').value.trim();
+          try { if (!claveAhora) claveAhora = sessionStorage.getItem('nm_clave_equipo') || ''; } catch (e2) {}
+          var recortados = recortadosDe(l);
+          var avisoRep = '';
+          if (recortados.length) {
+            avisoRep = '<div class="aviso" style="margin:6px 0;">⚠ Este producto <strong>ya se recortó</strong> en ' +
+              recortados.length + ' pedido' + (recortados.length === 1 ? '' : 's') + ' (llegó tarde). ¿Qué hacemos con lo que llegó?' +
+              '<div style="margin:6px 0;">' +
+              '<label style="display:block;"><input type="radio" name="dest-' + div.dataset.idx + '" class="corr-dest" value="devolver" checked> ' +
+              '↩ <strong>Devolvérselo a esos pedidos</strong> (vuelve a su cajón y a su total)</label>' +
+              '<label style="display:block;"><input type="radio" name="dest-' + div.dataset.idx + '" class="corr-dest" value="sobrantes"> ' +
+              '📦 <strong>Mandarlo a Sobrantes</strong> para vender (los pedidos quedan recortados)</label></div>' +
+              '<div class="lista-devolver">' + recortados.map(function (r) {
+                return '<div style="margin:3px 0;">N° ' + r.ped.correlativo + ' · ' +
+                  String(consumidores[r.ped.id_consumidor] || r.ped.id_consumidor).replace(/</g, '&lt;') +
+                  ' — se le recortaron ' + numeroAmable(r.recortado) + ' → devolver ' +
+                  '<input type="number" class="in-dev" data-idx="' + r.idx + '" min="0" max="' + r.recortado +
+                  '" step="1" value="0" style="width:60px;"></div>';
+              }).join('') + '<div class="txt-dev muted" style="font-size:.82rem;"></div></div></div>';
+          }
+          caja.innerHTML = avisoRep +
+            '<p style="margin:6px 0;">Corregí lo que corresponda: <strong>tildá si llegó</strong>, cantidad y calidad. Después guardá.</p>' +
+            '<div style="display:flex;flex-wrap:wrap;gap:8px;margin:6px 0;">' +
+              (equipoNombres.length
+                ? '<select class="corr-quien">' + opts + '</select>'
+                : '<input type="text" class="corr-quien" placeholder="Tu nombre" value="' + (quienAhora || '').replace(/"/g, '&quot;') + '">') +
+              '<input type="password" class="corr-clave" placeholder="Clave del equipo" value="' + claveAhora.replace(/"/g, '&quot;') + '">' +
+            '</div>' +
+            '<button type="button" class="btn-conf btn-guardar-corr">Guardar corrección</button> ' +
+            '<button type="button" class="link-ajuste btn-cancelar-corr">Cancelar</button>' +
+            '<div class="msg-corr" style="margin-top:6px;color:#A6402B;font-weight:700;"></div>';
+          if (recortados.length) {
+            var repartir = function () { repartirDevolucion(l, div, recortados); };
+            div.querySelector('.cant').addEventListener('input', repartir);
+            div.querySelector('.chk').addEventListener('change', repartir);
+            Array.prototype.forEach.call(div.querySelectorAll('.step-btn'), function (sb) {
+              sb.addEventListener('click', function () { setTimeout(repartir, 0); });
+            });
+            Array.prototype.forEach.call(caja.querySelectorAll('.corr-dest'), function (rb) {
+              rb.addEventListener('change', function () {
+                caja.querySelector('.lista-devolver').style.display = rb.value === 'devolver' && rb.checked ? 'block' : 'none';
+                if (rb.value === 'sobrantes' && rb.checked) caja.querySelector('.lista-devolver').style.display = 'none';
+              });
+            });
+            Array.prototype.forEach.call(caja.querySelectorAll('.in-dev'), function (iv) {
+              iv.addEventListener('input', function () { iv.dataset.tocado = '1'; textoDevolucion(l, div, recortados); });
+            });
+            repartir();
+          }
+          return;
+        }
+        if (b.classList.contains('btn-cancelar-corr')) {
+          div.classList.remove('corrigiendo');
+          renderItems(idProd);
+          return;
+        }
+        // guardar
+        var msg = caja.querySelector('.msg-corr');
+        var quien = String((caja.querySelector('.corr-quien') || {}).value || '').trim();
+        var clave = String((caja.querySelector('.corr-clave') || {}).value || '').trim();
+        if (!quien || !clave) { msg.textContent = '⚠ Falta elegir quién corrige o escribir la clave.'; return; }
+        if (!(typeof WEBHOOK_D1B === 'string' && WEBHOOK_D1B.indexOf('https://hook.') === 0)) {
+          msg.textContent = '🚫 La corrección todavía no está conectada (falta la dirección de D1b en el archivo). No se envió nada.';
+          return;
+        }
+        if (b.dataset.conf !== '1') {
+          b.dataset.conf = '1';
+          b.textContent = '¿Seguro? Tocá otra vez para guardar';
+          return;
+        }
+        var item = itemDeLinea(l, div, idProd);
+        var antes = recepDetalle[item.id_recepcion] || {};
+        // ↩ Llegó tarde y se devuelve a pedidos ya recortados
+        var devoluciones = [];
+        var destSel = caja.querySelector('.corr-dest:checked');
+        if (destSel && destSel.value === 'devolver') {
+          Array.prototype.forEach.call(caja.querySelectorAll('.in-dev'), function (iv) {
+            var v = Math.max(0, Math.round(parseFloat(String(iv.value).replace(',', '.')) || 0));
+            var it = itemsEd[parseInt(iv.dataset.idx, 10)];
+            if (v > 0 && it) devoluciones.push({ it: it, v: Math.min(v, parseFloat(iv.max) || v) });
+          });
+          var factorL = l.fraccion ? (factorFraccion(l.fraccion) || 1) : 1;
+          var devEf = devoluciones.reduce(function (a, d) { return a + d.v * factorL; }, 0);
+          var dispEf = disponibleParaDevolver(l, div);
+          if (devEf > dispEf + 0.0005) {
+            msg.textContent = '⚠ Querés devolver ' + numeroAmable(devEf) + ' pero llegaron ' + numeroAmable(Math.max(0, dispEf)) +
+              ' más de lo que esperan hoy los pedidos. Revisá la cantidad recibida o lo que devolvés.';
+            delete b.dataset.conf; b.textContent = 'Guardar corrección';
+            return;
+          }
+          if (devoluciones.length) {
+            // la recepción pasa a esperar también lo devuelto: lo que sobre, a Sobrantes
+            var ped0 = parseFloat(String(item.cantidad_pedida).replace(',', '.')) || 0;
+            var pedNueva = Math.round((ped0 + devEf) * 1000) / 1000;
+            var rec0 = parseFloat(String(item.cantidad_recibida).replace(',', '.')) || 0;
+            item.cantidad_pedida = numPlanilla(pedNueva);
+            item.diferencia = numPlanilla(Math.round((rec0 - pedNueva) * 1000) / 1000);
+            item.observaciones = String(item.observaciones || '').replace(/\s*·?\s*Sobrante: [^·]*/g, '');
+            var sob = Math.round((rec0 - pedNueva) * 1000) / 1000;
+            if (sob > 0) item.observaciones = (item.observaciones ? item.observaciones + ' · ' : '') + 'Sobrante: +' + String(sob).replace('.', ',') + ' ' + (l.unidad || '');
+            item.observaciones = (item.observaciones ? item.observaciones + ' · ' : '') + 'Llegó tarde: devuelto a ' +
+              devoluciones.map(function (d) { var pd = pedidoDe(d.it.id_pedido); return 'N° ' + (pd ? pd.correlativo : '?') + ' (' + d.v + ')'; }).join(', ');
+          }
+        }
+        var h = new Date();
+        var cuando = ('0' + h.getDate()).slice(-2) + '/' + ('0' + (h.getMonth() + 1)).slice(-2) + ' ' +
+          ('0' + h.getHours()).slice(-2) + ':' + ('0' + h.getMinutes()).slice(-2);
+        item.observaciones = (item.observaciones ? item.observaciones + ' · ' : '') + 'Corregido por ' + quien + ' el ' + cuando +
+          ' (antes: recibido ' + String(antes.recibida === undefined ? '?' : antes.recibida).replace('.', ',') +
+          (antes.calidad ? ', ' + antes.calidad : '') + ')';
+        b.disabled = true;
+        b.textContent = 'Guardando…';
+        var payload = {
+          tipo: 'corregir_recepcion',
+          clave: clave,
+          id_edicion: idEdicion,
+          id_productor: idProd,
+          corregido_por: quien,
+          id_recepcion: item.id_recepcion,
+          id_producto: item.id_producto,
+          cantidad_pedida: item.cantidad_pedida,
+          cantidad_recibida: item.cantidad_recibida,
+          diferencia: item.diferencia,
+          calidad: item.calidad,
+          observaciones: item.observaciones
+        };
+        function aNum(x) { return parseFloat(String(x).replace(',', '.')) || 0; }
+        if (devoluciones.length) {
+          if (!(typeof WEBHOOK_D3 === 'string' && WEBHOOK_D3.indexOf('https://hook.') === 0)) {
+            msg.textContent = '🚫 D3 no está conectado: no se puede devolver a los pedidos. No se envió nada.';
+            b.disabled = false; delete b.dataset.conf; b.textContent = 'Guardar corrección';
+            return;
+          }
+          var itemsDev = devoluciones.map(function (d) {
+            var it = d.it;
+            var fac = factorFraccion(it.fraccion) || 1;
+            var nueva = Math.round((it.cantidad + d.v) * 10000) / 10000;
+            return {
+              id_item: it.id_item, id_pedido: it.id_pedido, id_producto: it.id_producto,
+              producto: nombreProducto(it.id_producto),
+              cantidad_antes: it.cantidad, cantidad_nueva: nueva,
+              cantidad_efectiva_antes: it.efectiva, cantidad_efectiva_nueva: Math.round((it.efectiva + d.v * fac) * 10000) / 10000,
+              precio: it.precio,
+              observacion: 'Llegó tarde: se devuelve +' + d.v + ' (' + quien + ', ' + cuando + ')'
+            };
+          });
+          // D3 con valores absolutos; sin "pedidos": no se manda ningún correo
+          fetch(WEBHOOK_D3, {
+            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({ tipo: 'ajustes', id_edicion: idEdicion, aprobado_por: quien + ' (llegó tarde)', clave: clave,
+              items: itemsDev, pedidos: [], propuestas: [] })
+          }).catch(function () {});
+          // se ve enseguida en Entrega / Ajustes (la planilla lo confirma en el próximo refresco)
+          itemsDev.forEach(function (x, k) {
+            var it = devoluciones[k].it;
+            it.cantidad = x.cantidad_nueva; it.efectiva = x.cantidad_efectiva_nueva;
+            if (it.original && it.cantidad >= it.original) it.estado = 'Pedido';
+          });
+        }
+        fetch(WEBHOOK_D1B, {
+          method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload)
+        }).then(fin).catch(fin);
+        function fin() {
+          correccionesLocales[item.id_recepcion] = {
+            pedida: aNum(item.cantidad_pedida), recibida: aNum(item.cantidad_recibida), dif: aNum(item.diferencia),
+            calidad: item.calidad, obs: item.observaciones, ts: Date.now()
+          };
+          delete correccionesFallidas[item.id_recepcion];
+          div.classList.remove('corrigiendo');
+          if (devoluciones.length) {
+            avisoDevuelto = '↩ Devuelto: ' + devoluciones.map(function (d) {
+              var pd = pedidoDe(d.it.id_pedido);
+              return d.v + ' × ' + nombreProducto(d.it.id_producto) + ' al N° ' + (pd ? pd.correlativo : '?') +
+                (pd && estadoDe(pd) !== 'Pendiente' ? ' (su cajón ya estaba armado: agregalo)' : '');
+            }).join(' · ');
+            try { renderEntrega(); } catch (e3) {}
+          }
+          // volver a leer y mostrar ya corregido (Ajustes y Sobrantes incluidos)
+          gviz('sheet=Recepciones&range=A1:L50000&headers=1&_=' + Date.now())
+            .then(function (res) { parseRecepciones(res); }).catch(function () {})
+            .then(function () {
+              renderItems(idProd);
+              calcularFaltantes();
+              renderAjustes();
+              if (avisoDevuelto) {
+                $('aviso-dup').style.display = 'block';
+                $('aviso-dup').innerHTML = '✅ <strong>Recepción ya registrada.</strong><br>' + avisoDevuelto;
+                avisoDevuelto = '';
+              }
+            });
+        }
+      });
 
       // ↻ vuelve a leer la hoja Recepciones sin recargar la página
       $('btn-refrescar').addEventListener('click', function () {
@@ -2456,6 +2785,10 @@
                 '<input type="text" class="obs" placeholder="Observación (opcional)">' +
               '</div>' +
               '<div class="nota-novedad"></div>' +
+              '<div class="zona-corregir" style="display:none;">' +
+                '<button type="button" class="link-ajuste btn-corregir">✏️ Corregir este producto (error al registrar)</button>' +
+                '<div class="caja-corregir" style="display:none;"></div>' +
+              '</div>' +
             '</div>';
 
           div.querySelector('.linea-nombre').textContent =
@@ -2755,16 +3088,8 @@
         } catch (e) {}
       }
 
-      // ── envío ────────────────────────────────────────────────────
-      $('btn-confirmar').addEventListener('click', function () {
-        if (bloqueadoPorRegistro || this.dataset.enviando) return;   // doble toque
-        var idProd = $('card-items').dataset.idProd;
-        var propias = lineas.filter(function (l) { return l.id_productor === idProd; });
-        var divs = $('lista-items').querySelectorAll('.item');
-
-        var items = [];
-        propias.forEach(function (l, i) {
-          var div = divs[i];
+      // Un renglón de recepción → la fila que va a Recepciones (D1 y D1b)
+      function itemDeLinea(l, div, idProd) {
           var tildado = div.querySelector('.chk').checked;
           var calidad = tildado ? div.querySelector('.calidad').value : 'No llegó';
           var factor = l.fraccion ? factorFraccion(l.fraccion) : 1;
@@ -2802,7 +3127,7 @@
             obs = (obs ? obs + ' · ' : '') + 'Sobrante: +' + String(sobranteEf).replace('.', ',') + ' ' + (l.unidad || '');
           }
 
-          items.push({
+          return {
             id_recepcion: 'REC' + idEdicion + '-' + idProd + '-' + l.id_producto + (l.fraccion ? '-' + l.fraccion : ''),
             id_producto: l.id_producto,
             producto: l.producto,
@@ -2812,7 +3137,19 @@
             diferencia: numPlanilla(Math.round((recibidaEf - pedidaEf) * 1000) / 1000),
             calidad: calidad,
             observaciones: obs
-          });
+          };
+      }
+
+      // ── envío ────────────────────────────────────────────────────
+      $('btn-confirmar').addEventListener('click', function () {
+        if (bloqueadoPorRegistro || this.dataset.enviando) return;   // doble toque
+        var idProd = $('card-items').dataset.idProd;
+        var propias = lineas.filter(function (l) { return l.id_productor === idProd; });
+        var divs = $('lista-items').querySelectorAll('.item');
+
+        var items = [];
+        propias.forEach(function (l, i) {
+          items.push(itemDeLinea(l, divs[i], idProd));
         });
 
         var payload = {
@@ -3170,7 +3507,9 @@
       }
 
       // Estado local de la solapa
-      var pedAbierto = '';   // id_pedido desplegado
+      // pedidos desplegados: se pueden tener varios cajones abiertos a la vez
+      // (se deja uno a medio armar y se empieza otro; los tildes quedan guardados)
+      var pedAbiertos = {};
       var overrides = {};    // id_pedido -> {estado} optimista hasta que la planilla confirme
       var LS_TICKS = 'nm_ticks_';  // tildes de control guardados en el navegador
 
@@ -3214,6 +3553,17 @@
         } catch (e) { return []; }
       }
 
+      // tildes de los refrigerados (aparte de los del cajón)
+      var LS_TICKS_FRIO = 'nm_ticksfrio_';
+      function leerTicksFrio(idPed) {
+        try { return JSON.parse(localStorage.getItem(LS_TICKS_FRIO + idEdicion + '-' + idPed)) || []; } catch (e) { return []; }
+      }
+      function guardarTicksFrio(idPed, idxs) {
+        try {
+          if (idxs.length) localStorage.setItem(LS_TICKS_FRIO + idEdicion + '-' + idPed, JSON.stringify(idxs));
+          else localStorage.removeItem(LS_TICKS_FRIO + idEdicion + '-' + idPed);
+        } catch (e) {}
+      }
       function guardarTicks(idPed, idxs) {
         try {
           if (idxs.length) localStorage.setItem(LS_TICKS + idEdicion + '-' + idPed, JSON.stringify(idxs));
@@ -3313,6 +3663,7 @@
           return;
         }
 
+        var enArmadoLista = [];
         visibles.forEach(function (p) {
           var i = pedidos.indexOf(p);
           var nombre = nombreConsumidor(p);
@@ -3330,13 +3681,21 @@
 
           var card = document.createElement('div');
           card.className = 'ped-card ' + claseEstado(est) +
-            (pedAbierto === p.id_pedido ? ' abierto' : '');
+            (pedAbiertos[p.id_pedido] ? ' abierto' : '');
           card.dataset.idx = String(i);
+          card.dataset.ped = p.id_pedido;
+          // cajón empezado y sin terminar: "en armado · 5 de 12"
+          var ksAmb = partes.ambiente.map(function (x) { return x.k; });
+          var tildadosAmb = ticks.filter(function (k) { return ksAmb.indexOf(k) !== -1; }).length;
+          var enArmado = est === 'Pendiente' && tildadosAmb > 0;
+          if (enArmado) enArmadoLista.push({ p: p, n: tildadosAmb, tot: ksAmb.length });
           card.innerHTML =
             '<div class="ped-head">' +
               '<span class="caret">▶</span>' +
               '<span class="ped-nombre"></span>' +
-              '<span class="chip-ped ' + claseEstado(est) + '">' + chipEstado(est) + '</span>' +
+              (enArmado
+                ? '<span class="chip-ped en-armado">' + textoEnArmado(tildadosAmb, ksAmb.length) + '</span>'
+                : '<span class="chip-ped ' + claseEstado(est) + '">' + chipEstado(est) + '</span>') +
             '</div>' +
             '<div class="ped-cuerpo"></div>';
           var tagsPed = tagsDePedido(p);
@@ -3428,12 +3787,17 @@
             cuerpo.insertAdjacentHTML('beforeend', '<div class="bloque-tit frio">❄ Refrigerados · puesto de frío' +
               (frioListo ? ' · entregados' : '') + '</div>');
             catPrev = null;
+            var ticksF = leerTicksFrio(p.id_pedido);
             partes.frio.forEach(function (x) {
-              var it = x.it;
+              var it = x.it, k = x.k;
               subCategoria(it, 'frio');
-              var fila = document.createElement('div');
-              fila.className = 'item-frio' + (frioListo ? ' ok' : '');
-              fila.innerHTML = '<span class="ico">' + (frioListo ? '✓' : '❄') + '</span><span class="txt"></span>';
+              // se tilda al sacarlo de la heladera (queda guardado en este teléfono)
+              var marcadoF = frioListo || ticksF.indexOf(k) !== -1;
+              var fila = document.createElement('label');
+              fila.className = 'item-frio' + (marcadoF ? ' ok' : '');
+              fila.innerHTML = '<input type="checkbox" class="chk-frio" data-k="' + k + '"' +
+                (frioListo ? ' disabled' : '') + (marcadoF ? ' checked' : '') + '>' +
+                '<span class="ico">❄</span><span class="txt"></span>';
               fila.querySelector('.txt').textContent = textoItem(it);
               var idProdF = it.id_productor || productorDeProducto(it.id_producto);
               if (idProdF) {
@@ -3444,6 +3808,14 @@
               }
               cuerpo.appendChild(fila);
             });
+            if (!frioListo) {
+              var progF = document.createElement('div');
+              progF.className = 'prog-frio muted';
+              progF.style.cssText = 'font-size:.85rem;margin:4px 0 6px;';
+              progF.textContent = ticksF.filter(function (k) { return partes.frio.some(function (x) { return x.k === k; }); }).length +
+                ' de ' + partes.frio.length + ' refrigerados controlados';
+              cuerpo.appendChild(progF);
+            }
           }
 
           // ── Botones según estado ──
@@ -3532,6 +3904,18 @@
           cont.appendChild(card);
           actualizarControlPed(card);
         });
+        if (enArmadoLista.length && !filtro) {
+          var ea = document.createElement('div');
+          ea.className = 'resumen-busqueda en-armado-box';
+          ea.innerHTML = '<h4>🛠 Cajones empezados sin terminar (' + enArmadoLista.length + ')</h4>' +
+            '<p class="muted" style="margin:0 0 4px;font-size:.82rem;">Lo tildado queda guardado en este teléfono. Tocá uno para seguir armándolo.</p><ul>' +
+            enArmadoLista.map(function (x) {
+              return '<li><span class="rb-ped" data-ped="' + escH(x.p.id_pedido) + '">N° ' + escH(x.p.correlativo) + ' · ' +
+                escH(nombreConsumidor(x.p)) + '</span> — ' + x.n + ' de ' + x.tot + ' productos' +
+                (pedAbiertos[x.p.id_pedido] ? ' <span class="muted">(abierto)</span>' : '') + '</li>';
+            }).join('') + '</ul>';
+          cont.insertBefore(ea, cont.firstChild);
+        }
         if (resumenProd.length) {
           var nombresProd = {};
           resumenProd.forEach(function (x) { x.its.forEach(function (it) { nombresProd[infoProducto(it.id_producto).nombre] = true; }); });
@@ -3751,9 +4135,12 @@
       $('lista-entrega').addEventListener('click', function (e) {
         var rbp = e.target.closest('.rb-ped');
         if (rbp) {
-          pedAbierto = rbp.dataset.ped;
+          pedAbiertos[rbp.dataset.ped] = true;
           renderEntrega();
-          var abierta = $('lista-entrega').querySelector('.ped-card.abierto');
+          var abierta = null;
+          Array.prototype.forEach.call($('lista-entrega').querySelectorAll('.ped-card'), function (c) {
+            if (c.dataset.ped === rbp.dataset.ped) abierta = c;
+          });
           if (abierta) abierta.scrollIntoView({ behavior: 'smooth', block: 'start' });
           return;
         }
@@ -3799,7 +4186,12 @@
             registrarAccion(p, 'armado', btn);
             return;
           }
-          // Entregar (frío o cajón) pide confirmación: dos toques seguidos
+          // Refrigerados: un solo toque (pedido de la equipa, 23/10)
+          if (btn.dataset.accion === 'frio') {
+            registrarAccion(p, 'frio', btn);
+            return;
+          }
+          // Entregar el cajón pide confirmación: dos toques seguidos
           if (!btn.dataset.conf) {
             btn.dataset.conf = '1';
             btn.classList.add('confirmar');
@@ -3820,8 +4212,24 @@
         if (!head) return;
         var card2 = head.closest('.ped-card');
         var p2 = pedidos[parseInt(card2.dataset.idx, 10)];
-        pedAbierto = (pedAbierto === p2.id_pedido) ? '' : p2.id_pedido;
+        if (pedAbiertos[p2.id_pedido]) delete pedAbiertos[p2.id_pedido];
+        else pedAbiertos[p2.id_pedido] = true;
         renderEntrega();
+      });
+
+      // Tildar refrigerados al sacarlos de la heladera
+      $('lista-entrega').addEventListener('change', function (e) {
+        if (!e.target.classList.contains('chk-frio')) return;
+        var card = e.target.closest('.ped-card');
+        var p = pedidos[parseInt(card.dataset.idx, 10)];
+        e.target.closest('.item-frio').classList.toggle('ok', e.target.checked);
+        var idxs = [];
+        Array.prototype.forEach.call(card.querySelectorAll('.chk-frio:not(:disabled)'), function (ci) {
+          if (ci.checked) idxs.push(parseInt(ci.getAttribute('data-k'), 10));
+        });
+        guardarTicksFrio(p.id_pedido, idxs);
+        var pf = card.querySelector('.prog-frio');
+        if (pf) pf.textContent = idxs.length + ' de ' + card.querySelectorAll('.chk-frio').length + ' refrigerados controlados';
       });
 
       // Tachar productos mientras se arma el cajón (queda guardado en el navegador)
@@ -3836,7 +4244,26 @@
         });
         guardarTicks(p.id_pedido, idxs);
         actualizarControlPed(card);
+        actualizarChipArmado(card, p);
       });
+
+      function textoEnArmado(n, tot) {
+        return n >= tot ? '🛠 tildado · falta confirmar' : '🛠 en armado · ' + n + ' de ' + tot;
+      }
+      function actualizarChipArmado(card, p) {
+        if (estadoDe(p) !== 'Pendiente') return;
+        var ksAmb = partesDe(p.id_pedido).ambiente.map(function (x) { return x.k; });
+        var n = leerTicks(p.id_pedido).filter(function (k) { return ksAmb.indexOf(k) !== -1; }).length;
+        var chip = card.querySelector('.ped-head .chip-ped');
+        if (!chip) return;
+        if (n > 0) {
+          chip.className = 'chip-ped en-armado';
+          chip.textContent = textoEnArmado(n, ksAmb.length);
+        } else {
+          chip.className = 'chip-ped pendiente';
+          chip.textContent = chipEstado('Pendiente');
+        }
+      }
 
       // ── Recorte en armado ───────────────────────────────────────
       // Cuando al armar el cajón un producto no entra completo (la fracción
@@ -4060,7 +4487,7 @@
           overrides[p.id_pedido] = { estado: estadoNuevo, ts: Date.now() };
           if (accion === 'armado') guardarTicks(p.id_pedido, []);
           if (accion === 'entrega') {
-            pedAbierto = '';
+            delete pedAbiertos[p.id_pedido];
             // ¿era el último? -> la edición pasa a Liquidación (paso 7)
             var todos = pedidos.length > 0 && pedidos.every(function (p2) {
               return estadoDe(p2) === 'Entregado';
@@ -4164,7 +4591,7 @@
         Promise.all([
           gviz('sheet=Recepciones&range=A1:L50000&headers=1').catch(function () { return null; }),
           gviz('sheet=Pedidos&range=A1:U20000&headers=1').catch(function () { return null; }),
-          gviz('sheet=Items&range=A1:M50000&headers=1').catch(function () { return null; }),
+          gviz('sheet=Items&range=A1:N50000&headers=1').catch(function () { return null; }),
           gviz('sheet=Plan_Fraccionamiento&range=A1:L20000&headers=1').catch(function () { return null; }),
           gviz('sheet=Movimientos_Stock&range=A1:L20000&headers=1').catch(function () { return null; }),
           gviz('sheet=Ediciones&range=A1:D1000&headers=1').catch(function () { return null; })
@@ -4321,7 +4748,7 @@
         if (!forzar && hayTrabajoSinGuardar()) return;
         Promise.all([
           gviz('sheet=Recepciones&range=A1:L50000&headers=1&_=' + Date.now()).catch(function () { return null; }),
-          gviz('sheet=Items&range=A1:M50000&headers=1&_=' + Date.now()).catch(function () { return null; })
+          gviz('sheet=Items&range=A1:N50000&headers=1&_=' + Date.now()).catch(function () { return null; })
         ]).then(function (res) {
           if (res[0]) parseRecepciones(res[0]);
           if (res[1]) parseItems(res[1]);
@@ -4731,7 +5158,7 @@
                 'APLICAR RECORTES es seguro (no descuenta dos veces).');
               return;
             }
-            gviz('sheet=Items&range=A1:M50000&headers=1&_=' + Date.now())
+            gviz('sheet=Items&range=A1:N50000&headers=1&_=' + Date.now())
               .then(function (res) {
                 var pendientes = 0;
                 res.table.rows.forEach(function (r) {
@@ -4780,6 +5207,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 22/10 d</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 23/10 e</p>
 </body>
 </html>
