@@ -4184,7 +4184,12 @@
             registrarAccion(p, 'armado', btn);
             return;
           }
-          // Entregar (frío o cajón) pide confirmación: dos toques seguidos
+          // Refrigerados: un solo toque (pedido de la equipa, 23/10)
+          if (btn.dataset.accion === 'frio') {
+            registrarAccion(p, 'frio', btn);
+            return;
+          }
+          // Entregar el cajón pide confirmación: dos toques seguidos
           if (!btn.dataset.conf) {
             btn.dataset.conf = '1';
             btn.classList.add('confirmar');
@@ -5200,6 +5205,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 23/10 c</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 23/10 d</p>
 </body>
 </html>
