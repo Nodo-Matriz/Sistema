@@ -140,6 +140,35 @@
     /* Día de retiro (dentro de la opción galpón) */
     #dias-retiro { margin: 8px 0 0 var(--s-6); display: flex; flex-direction: column; gap: 6px; }
     #dias-retiro .option { margin: 0; }
+
+    /* ── Puntos de categorías: volver a una ya vista ─────────────
+       Mouse: al pasar por un punto ya visto aparece su nombre; clic para ir.
+       Celular: apoyar el dedo y deslizar sin soltar; el nombre se ve en el
+       título y al soltar sobre una categoría vista se va a esa. */
+    .wizard__crumbs { touch-action: none; padding: 6px 0; margin-top: calc(var(--s-3) - 6px); gap: 8px; }
+    .wizard__crumb { position: relative; width: 12px; height: 12px; }
+    .wizard__crumb.is-visited { cursor: pointer; }
+    /* el nombre "sale" del propio punto: misma forma y color, se agranda */
+    .wizard__crumb-tip {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%) scale(0.15);
+      background: var(--c-oliva-claro); color: var(--c-leche);
+      font-family: var(--f-body); font-size: .8rem; font-weight: 700; white-space: nowrap;
+      padding: 4px 12px; border-radius: var(--r-pill); opacity: 0; pointer-events: none;
+      box-shadow: 0 2px 6px rgba(44, 36, 24, 0.18);
+      transition: opacity .12s, transform .18s cubic-bezier(.34, 1.4, .64, 1); z-index: 6;
+    }
+    .wizard__crumb.is-current .wizard__crumb-tip { background: var(--c-musgo); }
+    @media (hover: hover) {
+      .wizard__crumb.is-visited:hover .wizard__crumb-tip { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      /* el punto actual ya está agrandado (scale 1.4): su nombre se compensa */
+      .wizard__crumb.is-current:hover .wizard__crumb-tip { transform: translate(-50%, -50%) scale(0.72); }
+    }
+    .wizard__crumb.is-scrub.is-visited:not(.is-current) { transform: scale(1.6); }
+    .wizard__crumb.is-scrub:not(.is-visited) { transform: scale(1.3); }
+    .wizard__progress.is-scrubbing .wizard__step-name { color: var(--c-oliva); }
+    .wizard__progress.is-scrubbing.is-bloq .wizard__step-name { color: var(--c-tierra); font-style: italic; }
+    @media (prefers-reduced-motion: reduce) { .wizard__crumb, .wizard__crumb-tip { transition: none; } }
   </style>
   <script>
     // Red de seguridad: si el script del formulario falla al cargar (p. ej. un
@@ -1118,6 +1147,7 @@
           scrollGuardado[idx] = window.pageYOffset;
         },
         onStepChange: function (idx, stepEl, info) {
+          if (typeof actualizarPuntos === 'function') actualizarPuntos();
           stepEl.querySelectorAll('.product').forEach(function (p) {
             p.classList.add('is-active');
           });
@@ -1133,6 +1163,104 @@
           }
         }
       });
+      // ── Volver a una categoría ya vista desde los puntos ─────────
+      // (los puntos los arma form-logic.js; acá se les agrega el nombre y el
+      // gesto de deslizar en el celular). Solo se puede ir a categorías ya
+      // vistas: las que faltan se siguen recorriendo con "Siguiente".
+      var actualizarPuntos = (function () {
+        var cont = wizardEl.querySelector('.wizard__crumbs');
+        var prog = wizardEl.querySelector('.wizard__progress');
+        var elNombre = wizardEl.querySelector('.wizard__step-name');
+        var elCuenta = wizardEl.querySelector('.wizard__step-count');
+        if (!cont || !wizard || !wizard.visited) return function () {};
+        var pasos = Array.prototype.slice.call(stepsContainer.querySelectorAll('.wizard__step'));
+        function puntos() { return Array.prototype.slice.call(cont.querySelectorAll('.wizard__crumb')); }
+        function nombre(i) { return (pasos[i] && pasos[i].dataset.stepName) || ''; }
+        puntos().forEach(function (d) {
+          if (!d.querySelector('.wizard__crumb-tip')) {
+            var t = document.createElement('span');
+            t.className = 'wizard__crumb-tip';
+            d.appendChild(t);
+          }
+        });
+        function actualizar() {
+          puntos().forEach(function (d, i) {
+            var visto = wizard.visited.has(i);
+            d.querySelector('.wizard__crumb-tip').textContent = visto ? nombre(i) : '';
+            d.setAttribute('aria-label', visto ? 'Volver a ' + nombre(i) : 'Categoría ' + (i + 1) + ', todavía no la viste');
+          });
+        }
+        // deslizar el dedo
+        var arrastrando = false, marcado = -1, recienArrastro = false;
+        // el punto más cercano al dedo (los puntos pueden ocupar dos renglones)
+        function puntoEn(x, y) {
+          var mejor = -1, dist = 1e9;
+          puntos().forEach(function (d, i) {
+            var r = d.getBoundingClientRect();
+            var dx = r.left + r.width / 2 - x, dy = (r.top + r.height / 2 - y) * 1.6;
+            var dd = dx * dx + dy * dy;
+            if (dd < dist) { dist = dd; mejor = i; }
+          });
+          return mejor;
+        }
+        function marcar(i) {
+          puntos().forEach(function (d, k) { d.classList.toggle('is-scrub', k === i); });
+          marcado = i;
+          var actual = wizard.getCurrentIndex(), total = pasos.length;
+          if (i < 0) {
+            prog.classList.remove('is-scrubbing', 'is-bloq');
+            if (elNombre) elNombre.textContent = nombre(actual);
+            if (elCuenta) elCuenta.textContent = (actual + 1) + ' de ' + total;
+            return;
+          }
+          var visto = wizard.visited.has(i);
+          prog.classList.add('is-scrubbing');
+          prog.classList.toggle('is-bloq', !visto);
+          if (!visto) {
+            if (elNombre) elNombre.textContent = 'Todavía no la viste';
+            if (elCuenta) elCuenta.textContent = (i + 1) + ' de ' + total;
+          } else if (i === actual) {
+            if (elNombre) elNombre.textContent = nombre(i);
+            if (elCuenta) elCuenta.textContent = 'estás acá';
+          } else {
+            if (elNombre) elNombre.textContent = '↩ ' + nombre(i);
+            if (elCuenta) elCuenta.textContent = 'soltá para ir';
+          }
+        }
+        cont.addEventListener('pointerdown', function (e) {
+          if (e.pointerType === 'mouse') return;   // con mouse: pasar por encima y hacer clic
+          arrastrando = true;
+          try { cont.setPointerCapture(e.pointerId); } catch (err) {}
+          marcar(puntoEn(e.clientX, e.clientY));
+          e.preventDefault();
+        });
+        cont.addEventListener('pointermove', function (e) {
+          if (!arrastrando) return;
+          var i = puntoEn(e.clientX, e.clientY);
+          if (i !== marcado) {
+            marcar(i);
+            if (navigator.vibrate && wizard.visited.has(i)) { try { navigator.vibrate(8); } catch (err) {} }
+          }
+        });
+        function soltar() {
+          if (!arrastrando) return;
+          arrastrando = false;
+          var i = marcado;
+          marcar(-1);
+          recienArrastro = true;
+          setTimeout(function () { recienArrastro = false; }, 400);
+          if (i >= 0 && wizard.visited.has(i) && i !== wizard.getCurrentIndex()) wizard.goTo(i);
+        }
+        cont.addEventListener('pointerup', soltar);
+        cont.addEventListener('pointercancel', function () { arrastrando = false; marcar(-1); });
+        // Después de deslizar, el "clic" del dedo no tiene que hacer nada más
+        // (form-logic.js deja pasar al punto siguiente aunque no esté visto).
+        wizardEl.addEventListener('click', function (e) {
+          if (recienArrastro && cont.contains(e.target)) { e.stopPropagation(); e.preventDefault(); }
+        }, true);
+        actualizar();
+        return actualizar;
+      })();
       window.scrollTo(0, 0);
       // El botón "Revisar pedido" muestra la sección final
       var btnFinish = wizardEl.querySelector('[data-action="wizard-finish"]');
