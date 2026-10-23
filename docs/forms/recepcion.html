@@ -752,6 +752,8 @@
     }
     .item-frio.ok .txt { text-decoration: line-through; opacity: 0.55; }
     .item-frio .ico { flex: 0 0 auto; }
+    .item-frio { cursor: pointer; }
+    .item-frio input { width: 22px; height: 22px; accent-color: #2f6b8f; flex-shrink: 0; cursor: pointer; }
     .btn-accion.frio { background: #2f6b8f; border-color: #2f6b8f; }
     .btn-accion.frio:hover { background: #245672; border-color: #245672; }
     .acciones-2 { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
@@ -3549,6 +3551,17 @@
         } catch (e) { return []; }
       }
 
+      // tildes de los refrigerados (aparte de los del cajón)
+      var LS_TICKS_FRIO = 'nm_ticksfrio_';
+      function leerTicksFrio(idPed) {
+        try { return JSON.parse(localStorage.getItem(LS_TICKS_FRIO + idEdicion + '-' + idPed)) || []; } catch (e) { return []; }
+      }
+      function guardarTicksFrio(idPed, idxs) {
+        try {
+          if (idxs.length) localStorage.setItem(LS_TICKS_FRIO + idEdicion + '-' + idPed, JSON.stringify(idxs));
+          else localStorage.removeItem(LS_TICKS_FRIO + idEdicion + '-' + idPed);
+        } catch (e) {}
+      }
       function guardarTicks(idPed, idxs) {
         try {
           if (idxs.length) localStorage.setItem(LS_TICKS + idEdicion + '-' + idPed, JSON.stringify(idxs));
@@ -3772,12 +3785,17 @@
             cuerpo.insertAdjacentHTML('beforeend', '<div class="bloque-tit frio">❄ Refrigerados · puesto de frío' +
               (frioListo ? ' · entregados' : '') + '</div>');
             catPrev = null;
+            var ticksF = leerTicksFrio(p.id_pedido);
             partes.frio.forEach(function (x) {
-              var it = x.it;
+              var it = x.it, k = x.k;
               subCategoria(it, 'frio');
-              var fila = document.createElement('div');
-              fila.className = 'item-frio' + (frioListo ? ' ok' : '');
-              fila.innerHTML = '<span class="ico">' + (frioListo ? '✓' : '❄') + '</span><span class="txt"></span>';
+              // se tilda al sacarlo de la heladera (queda guardado en este teléfono)
+              var marcadoF = frioListo || ticksF.indexOf(k) !== -1;
+              var fila = document.createElement('label');
+              fila.className = 'item-frio' + (marcadoF ? ' ok' : '');
+              fila.innerHTML = '<input type="checkbox" class="chk-frio" data-k="' + k + '"' +
+                (frioListo ? ' disabled' : '') + (marcadoF ? ' checked' : '') + '>' +
+                '<span class="ico">❄</span><span class="txt"></span>';
               fila.querySelector('.txt').textContent = textoItem(it);
               var idProdF = it.id_productor || productorDeProducto(it.id_producto);
               if (idProdF) {
@@ -3788,6 +3806,14 @@
               }
               cuerpo.appendChild(fila);
             });
+            if (!frioListo) {
+              var progF = document.createElement('div');
+              progF.className = 'prog-frio muted';
+              progF.style.cssText = 'font-size:.85rem;margin:4px 0 6px;';
+              progF.textContent = ticksF.filter(function (k) { return partes.frio.some(function (x) { return x.k === k; }); }).length +
+                ' de ' + partes.frio.length + ' refrigerados controlados';
+              cuerpo.appendChild(progF);
+            }
           }
 
           // ── Botones según estado ──
@@ -4182,6 +4208,21 @@
         if (pedAbiertos[p2.id_pedido]) delete pedAbiertos[p2.id_pedido];
         else pedAbiertos[p2.id_pedido] = true;
         renderEntrega();
+      });
+
+      // Tildar refrigerados al sacarlos de la heladera
+      $('lista-entrega').addEventListener('change', function (e) {
+        if (!e.target.classList.contains('chk-frio')) return;
+        var card = e.target.closest('.ped-card');
+        var p = pedidos[parseInt(card.dataset.idx, 10)];
+        e.target.closest('.item-frio').classList.toggle('ok', e.target.checked);
+        var idxs = [];
+        Array.prototype.forEach.call(card.querySelectorAll('.chk-frio:not(:disabled)'), function (ci) {
+          if (ci.checked) idxs.push(parseInt(ci.getAttribute('data-k'), 10));
+        });
+        guardarTicksFrio(p.id_pedido, idxs);
+        var pf = card.querySelector('.prog-frio');
+        if (pf) pf.textContent = idxs.length + ' de ' + card.querySelectorAll('.chk-frio').length + ' refrigerados controlados';
       });
 
       // Tachar productos mientras se arma el cajón (queda guardado en el navegador)
@@ -5159,6 +5200,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 23/10 b</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 23/10 c</p>
 </body>
 </html>
