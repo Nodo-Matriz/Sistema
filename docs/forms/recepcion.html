@@ -1588,7 +1588,9 @@
             estado: String(celda(r, 8) || '').trim(),
             efectiva: parseFloat(celda(r, 10)) || 0,
             quien: String(celda(r, 11) || '').trim(),
-            obs: String(celda(r, 9) || '').trim()
+            obs: String(celda(r, 9) || '').trim(),
+            // N cantidad_original: la que pidió la persona antes de cualquier recorte (D3)
+            original: parseFloat(String(celda(r, 13) || '').replace(',', '.')) || 0
           });
         });
       }
@@ -2095,7 +2097,7 @@
           gviz('sheet=Pedidos&range=A1:U20000&headers=1'),
           gviz('sheet=Consumidores&range=A1:D20000&headers=1'),
           Promise.resolve(null),   // (libre: antes Propuestas_Ajuste)
-          gviz('sheet=Items&range=A1:M50000&headers=1'),
+          gviz('sheet=Items&range=A1:N50000&headers=1'),
           // Las dos últimas no son críticas: si la hoja no existe, seguimos igual.
           gviz('sheet=Equipo&range=A1:E100&headers=1').catch(function () { return null; }),
           gviz('sheet=Recepciones&range=A1:L50000&headers=1').catch(function () { return null; }),
@@ -2354,6 +2356,60 @@
         var k = String(div.dataset.key || '').split('|');
         return 'REC' + idEdicion + '-' + idProd + '-' + k[0] + (k[1] ? '-' + k[1] : '');
       }
+      var avisoDevuelto = '';
+      // ítems de esta línea (producto + fracción) a los que se les recortó por faltante
+      function recortadosDe(l) {
+        var out = [];
+        itemsEd.forEach(function (it, idx) {
+          if (it.id_producto !== l.id_producto || String(it.fraccion || '') !== String(l.fraccion || '')) return;
+          if (!/^(Faltante|Descontado)$/i.test(it.estado) || it.obs.indexOf('Recorte en armado') === 0) return;
+          var rec = Math.round(((it.original || 0) - it.cantidad) * 10000) / 10000;
+          if (rec <= 0) return;
+          var ped = pedidoDe(it.id_pedido);
+          if (!ped || estadoCerrado(estadoDe(ped)) || estadoDe(ped) === 'Entregado') return;
+          out.push({ it: it, idx: idx, ped: ped, recortado: rec });
+        });
+        out.sort(function (a, b) { return a.ped.correlativo - b.ped.correlativo; });   // quien pidió antes, primero
+        return out;
+      }
+      // lo que llegó de más respecto de lo que esperan HOY los pedidos (unidades efectivas)
+      function disponibleParaDevolver(l, div) {
+        var tild = div.querySelector('.chk').checked;
+        var cal = div.querySelector('.calidad').value;
+        var mostr = (tild && cal !== 'Rechazado') ? (aNumero(div.querySelector('.cant').value) || 0) : 0;
+        var fac = l.fraccion ? (factorFraccion(l.fraccion) || 1) : 1;
+        var dep = 0;
+        if (!l.fraccion && div.querySelector('.in-dep')) dep = Math.min(l.cant_efectiva, Math.max(0, aNumero(div.querySelector('.in-dep').value) || 0));
+        var necesidad = Math.max(0, l.cant_efectiva - dep);
+        return Math.round((mostr * fac - necesidad) * 1000) / 1000;
+      }
+      function textoDevolucion(l, div, recortados) {
+        var caja = div.querySelector('.caja-corregir'), t = caja && caja.querySelector('.txt-dev');
+        if (!t) return;
+        var fac = l.fraccion ? (factorFraccion(l.fraccion) || 1) : 1;
+        var disp = disponibleParaDevolver(l, div), dev = 0;
+        Array.prototype.forEach.call(caja.querySelectorAll('.in-dev'), function (iv) { dev += (parseFloat(iv.value) || 0) * fac; });
+        t.textContent = disp > 0
+          ? 'Llegaron ' + numeroAmable(disp) + ' más de lo que esperan hoy los pedidos · devolvés ' + numeroAmable(dev) +
+            (disp - dev > 0.0005 ? ' · el resto (' + numeroAmable(Math.round((disp - dev) * 1000) / 1000) + ') va a Sobrantes' : '')
+          : 'Poné en "Recibido" cuánto llegó: con eso se reparte entre estos pedidos.';
+      }
+      // reparto sugerido: primero a quien pidió antes (se puede cambiar a mano)
+      function repartirDevolucion(l, div, recortados) {
+        var caja = div.querySelector('.caja-corregir');
+        if (!caja) return;
+        var fac = l.fraccion ? (factorFraccion(l.fraccion) || 1) : 1;
+        var queda = Math.max(0, disponibleParaDevolver(l, div));
+        Array.prototype.forEach.call(caja.querySelectorAll('.in-dev'), function (iv) {
+          if (iv.dataset.tocado) { queda -= (parseFloat(iv.value) || 0) * fac; return; }
+          var max = parseFloat(iv.max) || 0;
+          var v = Math.min(max, Math.floor((queda + 0.0005) / fac));
+          v = Math.max(0, v);
+          iv.value = String(v);
+          queda -= v * fac;
+        });
+        textoDevolucion(l, div, recortados);
+      }
       function yaRepartido(idProducto) {
         // ya se recortó a alguien por faltante de este producto (Ajustes)
         return itemsEd.some(function (it) {
@@ -2384,11 +2440,24 @@
           }).join('');
           var claveAhora = $('clave').value.trim();
           try { if (!claveAhora) claveAhora = sessionStorage.getItem('nm_clave_equipo') || ''; } catch (e2) {}
-          var avisoRep = yaRepartido(l.id_producto)
-            ? '<p class="aviso" style="margin:6px 0;">⚠ El faltante de este producto <strong>ya se repartió en Ajustes</strong>: ' +
-              'los pedidos ya no lo esperan. Lo que registres ahora como recibido <strong>va a Sobrantes</strong> para vender ' +
-              '(y se le paga al productor). Separalo de los cajones.</p>'
-            : '';
+          var recortados = recortadosDe(l);
+          var avisoRep = '';
+          if (recortados.length) {
+            avisoRep = '<div class="aviso" style="margin:6px 0;">⚠ Este producto <strong>ya se recortó</strong> en ' +
+              recortados.length + ' pedido' + (recortados.length === 1 ? '' : 's') + ' (llegó tarde). ¿Qué hacemos con lo que llegó?' +
+              '<div style="margin:6px 0;">' +
+              '<label style="display:block;"><input type="radio" name="dest-' + div.dataset.idx + '" class="corr-dest" value="devolver" checked> ' +
+              '↩ <strong>Devolvérselo a esos pedidos</strong> (vuelve a su cajón y a su total)</label>' +
+              '<label style="display:block;"><input type="radio" name="dest-' + div.dataset.idx + '" class="corr-dest" value="sobrantes"> ' +
+              '📦 <strong>Mandarlo a Sobrantes</strong> para vender (los pedidos quedan recortados)</label></div>' +
+              '<div class="lista-devolver">' + recortados.map(function (r) {
+                return '<div style="margin:3px 0;">N° ' + r.ped.correlativo + ' · ' +
+                  String(consumidores[r.ped.id_consumidor] || r.ped.id_consumidor).replace(/</g, '&lt;') +
+                  ' — se le recortaron ' + numeroAmable(r.recortado) + ' → devolver ' +
+                  '<input type="number" class="in-dev" data-idx="' + r.idx + '" min="0" max="' + r.recortado +
+                  '" step="1" value="0" style="width:60px;"></div>';
+              }).join('') + '<div class="txt-dev muted" style="font-size:.82rem;"></div></div></div>';
+          }
           caja.innerHTML = avisoRep +
             '<p style="margin:6px 0;">Corregí lo que corresponda: <strong>tildá si llegó</strong>, cantidad y calidad. Después guardá.</p>' +
             '<div style="display:flex;flex-wrap:wrap;gap:8px;margin:6px 0;">' +
@@ -2400,6 +2469,24 @@
             '<button type="button" class="btn-conf btn-guardar-corr">Guardar corrección</button> ' +
             '<button type="button" class="link-ajuste btn-cancelar-corr">Cancelar</button>' +
             '<div class="msg-corr" style="margin-top:6px;color:#A6402B;font-weight:700;"></div>';
+          if (recortados.length) {
+            var repartir = function () { repartirDevolucion(l, div, recortados); };
+            div.querySelector('.cant').addEventListener('input', repartir);
+            div.querySelector('.chk').addEventListener('change', repartir);
+            Array.prototype.forEach.call(div.querySelectorAll('.step-btn'), function (sb) {
+              sb.addEventListener('click', function () { setTimeout(repartir, 0); });
+            });
+            Array.prototype.forEach.call(caja.querySelectorAll('.corr-dest'), function (rb) {
+              rb.addEventListener('change', function () {
+                caja.querySelector('.lista-devolver').style.display = rb.value === 'devolver' && rb.checked ? 'block' : 'none';
+                if (rb.value === 'sobrantes' && rb.checked) caja.querySelector('.lista-devolver').style.display = 'none';
+              });
+            });
+            Array.prototype.forEach.call(caja.querySelectorAll('.in-dev'), function (iv) {
+              iv.addEventListener('input', function () { iv.dataset.tocado = '1'; textoDevolucion(l, div, recortados); });
+            });
+            repartir();
+          }
           return;
         }
         if (b.classList.contains('btn-cancelar-corr')) {
@@ -2423,6 +2510,38 @@
         }
         var item = itemDeLinea(l, div, idProd);
         var antes = recepDetalle[item.id_recepcion] || {};
+        // ↩ Llegó tarde y se devuelve a pedidos ya recortados
+        var devoluciones = [];
+        var destSel = caja.querySelector('.corr-dest:checked');
+        if (destSel && destSel.value === 'devolver') {
+          Array.prototype.forEach.call(caja.querySelectorAll('.in-dev'), function (iv) {
+            var v = Math.max(0, Math.round(parseFloat(String(iv.value).replace(',', '.')) || 0));
+            var it = itemsEd[parseInt(iv.dataset.idx, 10)];
+            if (v > 0 && it) devoluciones.push({ it: it, v: Math.min(v, parseFloat(iv.max) || v) });
+          });
+          var factorL = l.fraccion ? (factorFraccion(l.fraccion) || 1) : 1;
+          var devEf = devoluciones.reduce(function (a, d) { return a + d.v * factorL; }, 0);
+          var dispEf = disponibleParaDevolver(l, div);
+          if (devEf > dispEf + 0.0005) {
+            msg.textContent = '⚠ Querés devolver ' + numeroAmable(devEf) + ' pero llegaron ' + numeroAmable(Math.max(0, dispEf)) +
+              ' más de lo que esperan hoy los pedidos. Revisá la cantidad recibida o lo que devolvés.';
+            delete b.dataset.conf; b.textContent = 'Guardar corrección';
+            return;
+          }
+          if (devoluciones.length) {
+            // la recepción pasa a esperar también lo devuelto: lo que sobre, a Sobrantes
+            var ped0 = parseFloat(String(item.cantidad_pedida).replace(',', '.')) || 0;
+            var pedNueva = Math.round((ped0 + devEf) * 1000) / 1000;
+            var rec0 = parseFloat(String(item.cantidad_recibida).replace(',', '.')) || 0;
+            item.cantidad_pedida = numPlanilla(pedNueva);
+            item.diferencia = numPlanilla(Math.round((rec0 - pedNueva) * 1000) / 1000);
+            item.observaciones = String(item.observaciones || '').replace(/\s*·?\s*Sobrante: [^·]*/g, '');
+            var sob = Math.round((rec0 - pedNueva) * 1000) / 1000;
+            if (sob > 0) item.observaciones = (item.observaciones ? item.observaciones + ' · ' : '') + 'Sobrante: +' + String(sob).replace('.', ',') + ' ' + (l.unidad || '');
+            item.observaciones = (item.observaciones ? item.observaciones + ' · ' : '') + 'Llegó tarde: devuelto a ' +
+              devoluciones.map(function (d) { var pd = pedidoDe(d.it.id_pedido); return 'N° ' + (pd ? pd.correlativo : '?') + ' (' + d.v + ')'; }).join(', ');
+          }
+        }
         var h = new Date();
         var cuando = ('0' + h.getDate()).slice(-2) + '/' + ('0' + (h.getMonth() + 1)).slice(-2) + ' ' +
           ('0' + h.getHours()).slice(-2) + ':' + ('0' + h.getMinutes()).slice(-2);
@@ -2446,6 +2565,38 @@
           observaciones: item.observaciones
         };
         function aNum(x) { return parseFloat(String(x).replace(',', '.')) || 0; }
+        if (devoluciones.length) {
+          if (!(typeof WEBHOOK_D3 === 'string' && WEBHOOK_D3.indexOf('https://hook.') === 0)) {
+            msg.textContent = '🚫 D3 no está conectado: no se puede devolver a los pedidos. No se envió nada.';
+            b.disabled = false; delete b.dataset.conf; b.textContent = 'Guardar corrección';
+            return;
+          }
+          var itemsDev = devoluciones.map(function (d) {
+            var it = d.it;
+            var fac = factorFraccion(it.fraccion) || 1;
+            var nueva = Math.round((it.cantidad + d.v) * 10000) / 10000;
+            return {
+              id_item: it.id_item, id_pedido: it.id_pedido, id_producto: it.id_producto,
+              producto: nombreProducto(it.id_producto),
+              cantidad_antes: it.cantidad, cantidad_nueva: nueva,
+              cantidad_efectiva_antes: it.efectiva, cantidad_efectiva_nueva: Math.round((it.efectiva + d.v * fac) * 10000) / 10000,
+              precio: it.precio,
+              observacion: 'Llegó tarde: se devuelve +' + d.v + ' (' + quien + ', ' + cuando + ')'
+            };
+          });
+          // D3 con valores absolutos; sin "pedidos": no se manda ningún correo
+          fetch(WEBHOOK_D3, {
+            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({ tipo: 'ajustes', id_edicion: idEdicion, aprobado_por: quien + ' (llegó tarde)', clave: clave,
+              items: itemsDev, pedidos: [], propuestas: [] })
+          }).catch(function () {});
+          // se ve enseguida en Entrega / Ajustes (la planilla lo confirma en el próximo refresco)
+          itemsDev.forEach(function (x, k) {
+            var it = devoluciones[k].it;
+            it.cantidad = x.cantidad_nueva; it.efectiva = x.cantidad_efectiva_nueva;
+            if (it.original && it.cantidad >= it.original) it.estado = 'Pedido';
+          });
+        }
         fetch(WEBHOOK_D1B, {
           method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
           body: JSON.stringify(payload)
@@ -2457,6 +2608,14 @@
           };
           delete correccionesFallidas[item.id_recepcion];
           div.classList.remove('corrigiendo');
+          if (devoluciones.length) {
+            avisoDevuelto = '↩ Devuelto: ' + devoluciones.map(function (d) {
+              var pd = pedidoDe(d.it.id_pedido);
+              return d.v + ' × ' + nombreProducto(d.it.id_producto) + ' al N° ' + (pd ? pd.correlativo : '?') +
+                (pd && estadoDe(pd) !== 'Pendiente' ? ' (su cajón ya estaba armado: agregalo)' : '');
+            }).join(' · ');
+            try { renderEntrega(); } catch (e3) {}
+          }
           // volver a leer y mostrar ya corregido (Ajustes y Sobrantes incluidos)
           gviz('sheet=Recepciones&range=A1:L50000&headers=1&_=' + Date.now())
             .then(function (res) { parseRecepciones(res); }).catch(function () {})
@@ -2464,6 +2623,11 @@
               renderItems(idProd);
               calcularFaltantes();
               renderAjustes();
+              if (avisoDevuelto) {
+                $('aviso-dup').style.display = 'block';
+                $('aviso-dup').innerHTML = '✅ <strong>Recepción ya registrada.</strong><br>' + avisoDevuelto;
+                avisoDevuelto = '';
+              }
             });
         }
       });
@@ -4379,7 +4543,7 @@
         Promise.all([
           gviz('sheet=Recepciones&range=A1:L50000&headers=1').catch(function () { return null; }),
           gviz('sheet=Pedidos&range=A1:U20000&headers=1').catch(function () { return null; }),
-          gviz('sheet=Items&range=A1:M50000&headers=1').catch(function () { return null; }),
+          gviz('sheet=Items&range=A1:N50000&headers=1').catch(function () { return null; }),
           gviz('sheet=Plan_Fraccionamiento&range=A1:L20000&headers=1').catch(function () { return null; }),
           gviz('sheet=Movimientos_Stock&range=A1:L20000&headers=1').catch(function () { return null; }),
           gviz('sheet=Ediciones&range=A1:D1000&headers=1').catch(function () { return null; })
@@ -4536,7 +4700,7 @@
         if (!forzar && hayTrabajoSinGuardar()) return;
         Promise.all([
           gviz('sheet=Recepciones&range=A1:L50000&headers=1&_=' + Date.now()).catch(function () { return null; }),
-          gviz('sheet=Items&range=A1:M50000&headers=1&_=' + Date.now()).catch(function () { return null; })
+          gviz('sheet=Items&range=A1:N50000&headers=1&_=' + Date.now()).catch(function () { return null; })
         ]).then(function (res) {
           if (res[0]) parseRecepciones(res[0]);
           if (res[1]) parseItems(res[1]);
@@ -4946,7 +5110,7 @@
                 'APLICAR RECORTES es seguro (no descuenta dos veces).');
               return;
             }
-            gviz('sheet=Items&range=A1:M50000&headers=1&_=' + Date.now())
+            gviz('sheet=Items&range=A1:N50000&headers=1&_=' + Date.now())
               .then(function (res) {
                 var pendientes = 0;
                 res.table.rows.forEach(function (r) {
@@ -4995,6 +5159,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 23/10</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 23/10 b</p>
 </body>
 </html>
