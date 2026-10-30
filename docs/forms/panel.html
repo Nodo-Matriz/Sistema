@@ -63,6 +63,14 @@
     .btn-wa:hover { background: #1f8a4c; color: #fff; }
     .btn-wa.hecho { background: transparent; color: #1f8a4c; border: 1.5px solid #25a35a; }
     .pill.primera { background: rgba(201, 150, 60, .22); color: #6b4e12; white-space: nowrap; }
+    /* ── Pestañas: Consultas / Estadísticas ── */
+    .pestanas { display: flex; gap: 6px; margin-top: var(--s-4); background: rgba(74,107,58,.08); border-radius: 999px; padding: 4px; }
+    .pestanas button { flex: 1; border: 0; background: transparent; font: inherit; font-weight: 700; font-size: .95rem;
+      color: var(--c-musgo); padding: 10px 12px; border-radius: 999px; cursor: pointer; }
+    .pestanas button[aria-selected="true"] { background: var(--c-oliva); color: var(--c-leche, #FDFBF5); box-shadow: 0 2px 6px rgba(44,36,24,.15); }
+    .resumen-linea { margin-top: var(--s-3); font-size: .95rem; color: var(--c-suelo); }
+    .resumen-linea strong { color: var(--c-musgo); }
+    [data-tab].tab-oculta { display: none !important; }
   </style>
 </head>
 <body>
@@ -96,7 +104,14 @@
 
     <div id="contenido" style="display:none;">
       <div class="aviso" id="control-datos" style="display:none;"></div>
-      <div class="kpis fade-in" data-delay="2">
+      <p class="resumen-linea" id="resumen-linea"></p>
+      <div class="pestanas" role="tablist">
+        <button type="button" role="tab" id="tab-consultas" aria-selected="true">Consultas</button>
+        <button type="button" role="tab" id="tab-stats" aria-selected="false">Estadísticas</button>
+      </div>
+      <div id="zona-consultas"></div>
+      <div id="zona-stats"></div>
+      <div class="kpis fade-in" data-delay="2" data-tab="stats">
         <div class="kpi"><div class="v" id="k-pedidos">–</div><div class="l">pedidos</div></div>
         <div class="kpi"><div class="v" id="k-total">–</div><div class="l">total a abonar</div></div>
         <div class="kpi"><div class="v" id="k-promedio">–</div><div class="l">promedio por pedido</div></div>
@@ -979,6 +994,52 @@
       timer = setInterval(function () { if (!document.hidden) cargar(); }, REFRESCO_MS);
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 09/10 14:19</p>
+
+  <script>
+    // ── Pestañas: «Consultas» (por defecto) y «Estadísticas» ──
+    // Los bloques se reparten en dos zonas; se recuerda la última pestaña
+    // usada en este dispositivo. Arriba queda siempre una línea de resumen.
+    (function () {
+      var zc = document.getElementById('zona-consultas'), zs = document.getElementById('zona-stats');
+      var porId = function (id) { var e = document.getElementById(id); return e && (e.closest('.card-eq') || e); };
+      // Consultas, en este orden
+      ['lista-pedidos', 'card-precomanda', 'card-precios', 'card-grupo-wa', 'card-comentarios'].forEach(function (id) {
+        var c = porId(id); if (c) zc.appendChild(c);
+      });
+      // Estadísticas
+      var kpis = document.querySelector('.kpis'); if (kpis) zs.appendChild(kpis);
+      ['entrega', 'consumidores', 'ritmo', 'productos', 'productores'].forEach(function (id) {
+        var c = porId(id); if (c) zs.appendChild(c);
+      });
+      var tc = document.getElementById('tab-consultas'), ts = document.getElementById('tab-stats');
+      function elegir(cual) {
+        zc.style.display = cual === 'consultas' ? '' : 'none';
+        zs.style.display = cual === 'stats' ? '' : 'none';
+        tc.setAttribute('aria-selected', cual === 'consultas');
+        ts.setAttribute('aria-selected', cual === 'stats');
+        try { localStorage.setItem('nm_panel_pestana', cual); } catch (e) {}
+      }
+      tc.addEventListener('click', function () { elegir('consultas'); });
+      ts.addEventListener('click', function () { elegir('stats'); });
+      var guardada = 'consultas';
+      try { guardada = localStorage.getItem('nm_panel_pestana') || 'consultas'; } catch (e) {}
+      elegir(guardada === 'stats' ? 'stats' : 'consultas');
+      // Línea de resumen (toma los números de los recuadros de estadísticas)
+      var linea = document.getElementById('resumen-linea');
+      function resumen() {
+        var t = function (id) { var e = document.getElementById(id); return e ? e.textContent.trim() : '–'; };
+        if (t('k-pedidos') === '–') { linea.textContent = ''; return; }
+        linea.innerHTML = '<strong></strong> pedidos · total <strong></strong> · promedio <strong></strong>';
+        var s = linea.querySelectorAll('strong');
+        s[0].textContent = t('k-pedidos'); s[1].textContent = t('k-total'); s[2].textContent = t('k-promedio');
+      }
+      ['k-pedidos', 'k-total', 'k-promedio'].forEach(function (id) {
+        var e = document.getElementById(id);
+        if (e && window.MutationObserver) new MutationObserver(resumen).observe(e, { childList: true, characterData: true, subtree: true });
+      });
+      resumen();
+    })();
+  </script>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 30/10 pestañas</p>
 </body>
 </html>
