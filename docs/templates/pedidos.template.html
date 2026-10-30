@@ -166,6 +166,8 @@
     .wizard__crumb.is-scrub.is-visited:not(.is-current) { transform: scale(1.6); }
     .wizard__progress.is-scrubbing .wizard__step-name { color: var(--c-oliva); }
     @media (prefers-reduced-motion: reduce) { .wizard__crumb, .wizard__crumb-tip { transition: none; } }
+      body.nm-sin-datos #aviso-tolerancia { bottom: 84px !important; }
+    body.nm-sin-datos { padding-bottom: 84px; }
   </style>
   <script>
     // Red de seguridad: si el script del formulario falla al cargar (p. ej. un
@@ -512,6 +514,7 @@
   </main>
 
   <script src="../assets/form-logic.js"></script>
+  <script src="../assets/cola-pedidos.js"></script>
   <script id="categorias-json" type="application/json">
 [{{categorias_json}}]
   </script>
@@ -579,6 +582,7 @@
           .catch(function () { return null; });
       }
       function bloquearPorCierre(texto) {
+        if (window.__nmPendiente) return;   // hay un pedido pendiente de envío: se muestra ese aviso
         var w = document.getElementById('wizard'), f = document.getElementById('final-section');
         if (w) w.classList.add('hidden');
         if (f) f.classList.add('hidden');
@@ -1136,6 +1140,7 @@
 
       var scrollGuardado = {};   // índice de categoría → dónde quedó la página
       var primerPaso = true;
+      var irPorPuntos = false;   // el cambio de categoría vino de los puntitos
 
       var wizard = NM.initWizard(wizardEl, {
         // el scroll lo maneja el formulario, no el wizard
@@ -1151,6 +1156,15 @@
           // Al abrir: la página queda arriba y se ve el encabezado completo.
           if (primerPaso) { primerPaso = false; return; }
           var volviendo = info && info.direction === 'prev';
+          if (irPorPuntos) {
+            // Desde los puntitos: cada categoría arranca desde el principio,
+            // salvo la categoría hasta donde llegaste, que vuelve al lugar
+            // donde la dejaste.
+            irPorPuntos = false;
+            var hasta = -1;
+            wizard.visited.forEach(function (k) { if (k > hasta) hasta = k; });
+            volviendo = (idx === hasta);
+          }
           if (volviendo && scrollGuardado[idx] != null) {
             // Volver atrás: la página vuelve a donde estaba en esa categoría.
             scrollSeguro(scrollGuardado[idx]);
@@ -1243,14 +1257,19 @@
           marcar(-1);
           recienArrastro = true;
           setTimeout(function () { recienArrastro = false; }, 400);
-          if (i >= 0 && wizard.visited.has(i) && i !== wizard.getCurrentIndex()) wizard.goTo(i);
+          if (i >= 0 && wizard.visited.has(i) && i !== wizard.getCurrentIndex()) { irPorPuntos = true; wizard.goTo(i); }
         }
         cont.addEventListener('pointerup', soltar);
         cont.addEventListener('pointercancel', function () { arrastrando = false; marcar(-1); });
         // Después de deslizar, el "clic" del dedo no tiene que hacer nada más
         // (form-logic.js deja pasar al punto siguiente aunque no esté visto).
         wizardEl.addEventListener('click', function (e) {
-          if (recienArrastro && cont.contains(e.target)) { e.stopPropagation(); e.preventDefault(); }
+          if (recienArrastro && cont.contains(e.target)) { e.stopPropagation(); e.preventDefault(); return; }
+          // clic con mouse en un puntito
+          if (cont.contains(e.target) && e.target.closest('.wizard__crumb')) {
+            irPorPuntos = true;
+            setTimeout(function () { irPorPuntos = false; }, 0);   // si no cambió de categoría
+          }
         }, true);
         actualizar();
         return actualizar;
@@ -1898,6 +1917,7 @@
       // 6. Envío del pedido
       // ----------------------------------------------------------------
       var pedidoForm = document.getElementById('pedido-form');
+      var mostrarListo = function () {};
 
       // Segundo chequeo del estado justo antes de enviar (por si cerró
       // mientras la persona armaba el pedido).
@@ -1964,7 +1984,8 @@
         });
       }, 20000);
 
-      NM.bindFormSubmit(pedidoForm, function buildPayload() {
+      var ultimoPayload = null;
+      function armarPayload() {
         var calc = calcularItems();
 
         // Validación: stock limitado (con lo último que se leyó de la planilla)
@@ -2056,12 +2077,30 @@
           forma_pago: document.querySelector('[name="pago"]:checked').value,
           comentarios: document.getElementById('comentarios').value.trim() || null,
         };
+      }
+      NM.bindFormSubmit(pedidoForm, function buildPayload() {
+        var p = armarPayload();
+        ultimoPayload = p;
+        if (p) {
+          p.id_envio = idEnvio();
+          // Sin datos: no se intenta enviar, queda pendiente en el celular.
+          if (hayCola && sinDatos()) { encolarPedido(p); return null; }
+        }
+        return p;
       }, {
+        // Falla de conexión al enviar: el pedido queda pendiente. Cualquier
+        // otro error, como siempre.
+        onError: function (err) {
+          var deRed = (err instanceof TypeError) || sinDatos();
+          if (deRed && hayCola && ultimoPayload) { ultimaFallaRed = true; encolarPedido(ultimoPayload); return; }
+          NM.showErrorMessage(pedidoForm, (err && err.userMessage) ||
+            'No pudimos guardar tu envío. Probá de nuevo o avisanos al Nodo.');
+        },
         // B1 procesa en fila (secuencial) y Make no permite "Webhook response"
         // en ese modo: la respuesta es siempre "Accepted". El control de hora
         // está acá (con tolerancia) y en B1; si B1 lo rechaza, manda el correo
         // de "llegó después del cierre".
-        onSuccess: function () {
+        onSuccess: mostrarListo = function () {
           // Pedido enviado: el borrador guardado ya no hace falta, y no se
           // vuelve a guardar aunque se cierre la pestaña (si no, el próximo
           // pedido desde el mismo celular arrancaba con estas selecciones).
@@ -2123,10 +2162,133 @@
           window.scrollTo({ top: 0, behavior: 'auto' });
         },
       });
+
+      // ── Sin datos: el pedido queda pendiente y se envía solo ─────────
+      // Con datos, nada de esto interviene: el envío es el de siempre.
+      // Sin datos (o si el envío falla por falta de conexión), el pedido se
+      // guarda en el celular (assets/cola-pedidos.js) y se manda solo
+      // cuando vuelve la conexión. sw-pedidos.js guarda una copia de la
+      // página para poder abrirla sin datos y, en Android, envía aunque la
+      // pestaña esté cerrada.
+      var ID_EDICION_COLA = '{{id_edicion}}';
+      var hayCola = !!(window.NMCola && window.indexedDB && window.Promise);
+      var ultimaFallaRed = false;
+      var pendienteMostrado = false;
+      var registroSW = null;
+      function sinDatos() { return navigator.onLine === false; }
+      function idEnvio() { return 'ENV-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8); }
+
+      if (hayCola && 'serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+        navigator.serviceWorker.register('sw-pedidos.js').then(function (r) { registroSW = r; }).catch(function () {});
+        if (window.caches && !sinDatos()) {
+          caches.open('nm-pedidos-v1').then(function (c) {
+            [location.pathname, '../assets/styles.css', '../assets/form-logic.js', '../assets/cola-pedidos.js',
+             '../assets/cabecera.png', '../assets/favicon-nodo.png'].forEach(function (u) { c.add(u).catch(function () {}); });
+          }).catch(function () {});
+        }
+      }
+
+      function barraSinDatos() {
+        var mostrar = sinDatos() || ultimaFallaRed;
+        var b = document.getElementById('aviso-sin-datos');
+        document.body.classList.toggle('nm-sin-datos', mostrar);
+        if (!mostrar) { if (b) b.remove(); return; }
+        if (!b) {
+          b = document.createElement('div');
+          b.id = 'aviso-sin-datos';
+          b.setAttribute('role', 'status');
+          b.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:1001;' +
+            'background:var(--c-leche,#FDFBF5);border-top:4px solid var(--c-tierra,#A6402B);' +
+            'box-shadow:0 -4px 18px rgba(44,36,24,.15);color:var(--c-suelo,#2C2418);' +
+            'padding:10px 16px calc(10px + env(safe-area-inset-bottom));font-size:.92rem;line-height:1.4;text-align:center;';
+          document.body.appendChild(b);
+        }
+        b.innerHTML = pendienteMostrado
+          ? '📵 <strong>El celular está sin datos.</strong> Tu pedido está pendiente de envío: se envía solo cuando vuelvan los datos.'
+          : '📵 <strong>El celular está sin datos.</strong> Lo que cargues queda guardado. Si enviás el pedido, queda pendiente de envío hasta que vuelvan los datos.';
+      }
+
+      function mostrarPendiente() {
+        window.__nmPendiente = true;
+        pendienteMostrado = true;
+        pedidoEnviado = true;            // el borrador ya quedó guardado tal cual
+        edicionCerradaPorEstado = true;  // que el control de cierre no tape este aviso
+        ['aviso-tolerancia', 'aviso-cerrado'].forEach(function (id) { var e = document.getElementById(id); if (e) e.remove(); });
+        wizardEl.classList.add('hidden');
+        finalSection.classList.add('hidden');
+        if (!document.getElementById('aviso-pendiente')) {
+          var av = document.createElement('div');
+          av.id = 'aviso-pendiente';
+          av.className = 'note note--info';
+          av.innerHTML = '<strong>📵 Tu pedido quedó guardado en este celular, pendiente de envío.</strong> ' +
+            'Se envía solo apenas vuelvan los datos, y acá vas a ver la confirmación. ' +
+            'Si cerrás la página, se envía la próxima vez que la abras con datos.';
+          var mainEl = document.querySelector('main.wrap') || document.body;
+          var headerEl = mainEl.querySelector('header');
+          mainEl.insertBefore(av, headerEl ? headerEl.nextSibling : mainEl.firstChild);
+        }
+        barraSinDatos();
+        window.scrollTo({ top: 0, behavior: 'auto' });
+      }
+
+      function pedidoConfirmado() {
+        if (!pendienteMostrado) return;
+        pendienteMostrado = false;
+        window.__nmPendiente = false;
+        ultimaFallaRed = false;
+        var av = document.getElementById('aviso-pendiente'); if (av) av.remove();
+        barraSinDatos();
+        mostrarListo();
+      }
+
+      function revisarCola() {
+        if (!hayCola) return Promise.resolve();
+        return NMCola.listar().then(function (regs) {
+          var mios = regs.filter(function (r) { return r.id_edicion === ID_EDICION_COLA; });
+          if (mios.length) { if (!sinDatos()) ultimaFallaRed = true; mostrarPendiente(); }
+          else { ultimaFallaRed = false; pedidoConfirmado(); barraSinDatos(); }
+        }).catch(function () {});
+      }
+
+      var enviandoCola = false;
+      function intentarEnviar() {
+        if (!hayCola || enviandoCola || sinDatos()) return;
+        enviandoCola = true;
+        var fin = function () { enviandoCola = false; return revisarCola(); };
+        NMCola.enviarPendientes().then(fin, fin);
+      }
+
+      function encolarPedido(p) {
+        var d = new Date(p.enviado_en || Date.now());
+        var hhmm = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+        p.sin_conexion = true;
+        p.comentarios = '[Enviado sin datos a las ' + hhmm + ']' + (p.comentarios ? ' ' + p.comentarios : '');
+        return NMCola.guardar({
+          id_envio: p.id_envio, id_edicion: ID_EDICION_COLA, url: pedidoForm.dataset.webhook,
+          ping: location.pathname, payload: p, creado: Date.now()
+        }).then(function () {
+          mostrarPendiente();
+          if (registroSW && registroSW.sync) { try { registroSW.sync.register('nm-enviar-pedidos').catch(function () {}); } catch (e) {} }
+          intentarEnviar();
+        }).catch(function () {
+          NM.showErrorMessage(pedidoForm, 'El celular está sin datos y no pudimos guardar el pedido. ' +
+            'Probá de nuevo cuando vuelva la señal.');
+        });
+      }
+
+      if (hayCola) {
+        window.addEventListener('online', function () { barraSinDatos(); intentarEnviar(); });
+        window.addEventListener('offline', barraSinDatos);
+        document.addEventListener('visibilitychange', function () { if (!document.hidden) intentarEnviar(); });
+        setInterval(function () { if (pendienteMostrado) intentarEnviar(); }, 15000);
+        try { new BroadcastChannel('nm-pedidos').onmessage = function () { revisarCola(); }; } catch (e) {}
+        barraSinDatos();
+        revisarCola().then(intentarEnviar);
+      }
       window.__nmFormListo = true; // el envío ya quedó conectado
 
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 14/10 11:15</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 23/10 sin datos</p>
 </body>
 </html>
