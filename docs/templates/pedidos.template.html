@@ -168,6 +168,26 @@
     @media (prefers-reduced-motion: reduce) { .wizard__crumb, .wizard__crumb-tip { transition: none; } }
       body.nm-sin-datos #aviso-tolerancia { bottom: 84px !important; }
     body.nm-sin-datos { padding-bottom: 84px; }
+    /* ── Navegación: "Siguiente" más grande que "Anterior" ── */
+    .wizard__nav [data-action="wizard-next"],
+    .wizard__nav [data-action="wizard-finish"] { font-size: 1.12rem; padding: 16px 24px; }
+    .wizard__nav [data-action="wizard-prev"] { align-self: center; font-size: .88rem; padding: 7px 18px; border-width: 1.5px; }
+    .wizard__crumbs-ayuda { margin: 6px 0 0; font-size: .8rem; color: var(--c-tierra); font-style: italic; }
+    /* ── Datos de quien ya pidió y control del correo ── */
+    .nm-link { background: none; border: 0; padding: 0 2px; color: var(--c-musgo); font: inherit; font-weight: 700;
+      text-decoration: underline; cursor: pointer; }
+    .nm-recordados { background: rgba(74, 107, 58, 0.08); border-left: 4px solid var(--c-oliva); border-radius: 10px;
+      padding: 10px 14px; margin-bottom: var(--s-4); font-size: .92rem; }
+    .nm-chip { display: flex; justify-content: space-between; align-items: center; gap: 10px;
+      border: 1.5px solid var(--c-oliva); border-radius: 12px; padding: 10px 14px; background: rgba(74, 107, 58, 0.06); }
+    .nm-aviso { margin-top: 8px; padding: 10px 14px; border-radius: 10px; font-size: .9rem; line-height: 1.45;
+      background: rgba(166, 64, 43, 0.07); border-left: 4px solid var(--c-tierra); }
+    .nm-aviso .nm-botones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .nm-aviso .nm-botones button { font: inherit; font-size: .88rem; font-weight: 700; padding: 6px 14px; border-radius: 999px;
+      border: 1.5px solid var(--c-oliva); background: var(--c-leche, #FDFBF5); color: var(--c-musgo); cursor: pointer; }
+    .nm-aviso .nm-botones button.nm-si { background: var(--c-oliva); color: var(--c-leche, #FDFBF5); }
+    .nm-destino { font-size: .98rem; margin: 0 0 var(--s-3); }
+
   </style>
   <script>
     // Red de seguridad: si el script del formulario falla al cargar (p. ej. un
@@ -238,6 +258,7 @@
           <div class="wizard__bar-fill" style="width: 0%"></div>
         </div>
         <div class="wizard__crumbs"></div>
+        <p class="wizard__crumbs-ayuda hidden">Tocá un punto para volver a una categoría que ya viste.</p>
       </div>
 
       <!-- Las categorías se renderizan acá vía JS desde categorias_json -->
@@ -367,6 +388,18 @@
         <div class="card">
           <h2>Tus datos</h2>
 
+          <div class="nm-recordados hidden" id="datos-recordados">
+            Completamos tus datos del último pedido.
+            <button type="button" class="nm-link" id="btn-no-soy-yo">No soy yo</button>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="telefono">WhatsApp *</label>
+            <input class="input" type="tel" id="telefono" name="telefono" autocomplete="tel" inputmode="tel" required>
+            <span class="field__hint">Con código de área. Ej: 351 234 5678. Si ya pediste antes, completamos el resto.</span>
+            <span class="field__error">Necesitamos un número de WhatsApp para coordinar la entrega.</span>
+          </div>
+
           <div class="field" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
             <div>
               <label class="field__label" for="nombre">Nombre *</label>
@@ -380,18 +413,25 @@
             </div>
           </div>
 
-          <div class="field">
+          <div class="field" id="campo-email">
             <label class="field__label" for="email">Email *</label>
-            <input class="input" type="email" id="email" name="email" required>
-            <span class="field__hint">Te llega ahí el detalle del pedido y el total a abonar.</span>
+            <div class="nm-chip hidden" id="email-chip">
+              <span id="email-chip-texto"></span>
+              <button type="button" class="nm-link" id="btn-cambiar-email">Cambiar</button>
+            </div>
+            <input class="input" type="email" id="email" name="email" autocomplete="email" inputmode="email"
+                   autocapitalize="off" spellcheck="false" required>
+            <div class="nm-aviso hidden" id="email-aviso" role="status"></div>
+            <span class="field__hint" id="email-hint">Te llega ahí el detalle del pedido y el total a abonar.</span>
             <span class="field__error">Email inválido. Revisá la dirección.</span>
           </div>
 
-          <div class="field">
-            <label class="field__label" for="telefono">WhatsApp *</label>
-            <input class="input" type="tel" id="telefono" name="telefono" required>
-            <span class="field__hint">Con código de área. Ej: 351 234 5678</span>
-            <span class="field__error">Necesitamos un número de WhatsApp para coordinar la entrega.</span>
+          <div class="field hidden" id="campo-email2">
+            <label class="field__label" for="email2">Repetí tu email *</label>
+            <input class="input" type="email" id="email2" autocomplete="off" inputmode="email"
+                   autocapitalize="off" spellcheck="false">
+            <span class="field__hint">Así nos aseguramos de que el detalle te llegue bien.</span>
+            <span class="field__error">Los dos correos no coinciden.</span>
           </div>
 
           <div class="field">
@@ -491,6 +531,7 @@
         </div>
 
         <div class="mt-5 center">
+          <p class="nm-destino hidden" id="email-destino"></p>
           <button type="submit" class="btn btn--primary">
             Enviar mi pedido
           </button>
@@ -1194,7 +1235,9 @@
             d.appendChild(t);
           }
         });
+        var ayuda = wizardEl.querySelector('.wizard__crumbs-ayuda');
         function actualizar() {
+          if (ayuda) ayuda.classList.toggle('hidden', wizard.visited.size < 2);
           puntos().forEach(function (d, i) {
             var visto = wizard.visited.has(i);
             d.querySelector('.wizard__crumb-tip').textContent = visto ? nombre(i) : '';
@@ -1815,6 +1858,308 @@
           });
       }
 
+
+      // ══════════════════════════════════════════════════════════════
+      // Datos de quien ya pidió + control del correo
+      // ══════════════════════════════════════════════════════════════
+      // 1. Este celular recuerda los datos del último pedido enviado y los
+      //    completa solo (con "No soy yo" para borrarlos).
+      // 2. Desde otro celular: al escribir el WhatsApp, si ya está en el
+      //    padrón se completan nombre y apellido, y se ofrece el correo
+      //    registrado, mostrado a medias (ju***@gmail.com).
+      // 3. Correo: sugiere correcciones (gmial.com → gmail.com), avisa si el
+      //    WhatsApp figura con otro correo, pide repetirlo cuando es un
+      //    correo que el Nodo no conoce, y lo muestra antes de enviar.
+      // Sin conexión o si falla la consulta al padrón, el formulario sigue
+      // como siempre (solo se pide repetir el correo).
+      var CLAVE_MIS_DATOS = 'nm_mis_datos';
+      var elTel = document.getElementById('telefono');
+      var elNom = document.getElementById('nombre');
+      var elApe = document.getElementById('apellido');
+      var elMail = document.getElementById('email');
+      var elMail2 = document.getElementById('email2');
+      var campoMail2 = document.getElementById('campo-email2');
+      var chip = document.getElementById('email-chip');
+      var chipTexto = document.getElementById('email-chip-texto');
+      var avisoMail = document.getElementById('email-aviso');
+      var hintMail = document.getElementById('email-hint');
+      var destino = document.getElementById('email-destino');
+      var recordados = document.getElementById('datos-recordados');
+
+      var correoConfirmado = '';   // correo que ya se sabe que es correcto (padrón o pedido anterior)
+      var correoDelTel = null;     // correo con el que figura el WhatsApp escrito
+      var correoEnmascarado = false;
+      var correoRevisado = '';     // correo ya revisado que no está en el padrón: se pide repetirlo
+      var esOtroPedido = false;
+      try { esOtroPedido = sessionStorage.getItem('nm_otro_pedido') === '1'; sessionStorage.removeItem('nm_otro_pedido'); } catch (e) {}
+
+      function normMail(v) { return String(v || '').trim().toLowerCase(); }
+      function tel10(v) { return String(v || '').replace(/\D/g, '').slice(-10); }
+      function enmascarar(m) {
+        var p = normMail(m).split('@');
+        if (p.length !== 2) return m;
+        return p[0].slice(0, Math.min(2, p[0].length)) + '***@' + p[1];
+      }
+      function partirNombre(completo) {
+        var partes = String(completo || '').trim().split(/\s+/);
+        if (partes.length > 1) { var ape = partes.pop(); return [partes.join(' '), ape]; }
+        return [partes[0] || '', ''];
+      }
+      function marcarYaPidio() {
+        var r = document.querySelector('input[name="primera_vez"][value="no"]');
+        if (r) r.checked = true;
+      }
+      function guardarTodo() { try { guardarBorrador(); } catch (e) {} }
+
+      // ── Padrón: una consulta por WhatsApp o por correo (no se baja la lista) ──
+      function consultarPadron(where) {
+        var url = 'https://docs.google.com/spreadsheets/d/1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg' +
+          '/gviz/tq?tqx=out:json&sheet=Consumidores_API&headers=1&tq=' +
+          encodeURIComponent('select B, C, D where ' + where + ' limit 5') + '&_=' + Date.now();
+        return fetch(url, { cache: 'no-store' }).then(function (r) { return r.text(); }).then(function (t) {
+          var m = t.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+          if (!m) return null;
+          var res = JSON.parse(m[1]);
+          if (!res.table || !res.table.rows) return [];
+          return res.table.rows.map(function (r) {
+            var c = r.c || [];
+            return { nombre: c[0] && c[0].v ? String(c[0].v) : '', tel: c[1] && c[1].v ? String(c[1].v) : '',
+                     email: c[2] && c[2].v ? normMail(c[2].v) : '' };
+          });
+        }).catch(function () { return null; });   // null = no se pudo consultar
+      }
+      function buscarPorTel(t) {
+        if (t.length !== 10) return Promise.resolve(null);
+        return consultarPadron("C ends with '" + t + "'").then(function (filas) {
+          if (!filas) return null;
+          var f = filas.filter(function (x) { return tel10(x.tel) === t; });
+          return f.length ? f[f.length - 1] : false;     // false = no está en el padrón
+        });
+      }
+      function buscarPorMail(m) {
+        if (!/^[^\s@'"\\]+@[^\s@'"\\]+\.[^\s@'"\\]+$/.test(m)) return Promise.resolve(null);
+        return consultarPadron("lower(D) = '" + m + "'").then(function (filas) {
+          if (!filas) return null;
+          return filas.length ? filas[filas.length - 1] : false;
+        });
+      }
+
+      // ── Sugerencia de corrección del dominio ──
+      var DOMINIOS = ['gmail.com', 'hotmail.com', 'hotmail.com.ar', 'outlook.com', 'outlook.com.ar', 'yahoo.com',
+        'yahoo.com.ar', 'icloud.com', 'live.com', 'live.com.ar', 'proton.me', 'protonmail.com'];
+      function distancia(a, b) {
+        var d = [], i, j;
+        for (i = 0; i <= a.length; i++) { d[i] = [i]; }
+        for (j = 1; j <= b.length; j++) d[0][j] = j;
+        for (i = 1; i <= a.length; i++) for (j = 1; j <= b.length; j++) {
+          d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+          if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+        }
+        return d[a.length][b.length];
+      }
+      function sugerirCorreo(m) {
+        m = normMail(m).replace(/\s+/g, '').replace(/,/g, '.').replace(/\.+$/, '');
+        var i = m.lastIndexOf('@');
+        if (i < 1) return null;
+        var u = m.slice(0, i), d = m.slice(i + 1);
+        if (DOMINIOS.indexOf(d) !== -1) return m !== normMail(elMail.value) ? m : null;
+        if (/^(gmail|hotmail|outlook|yahoo|icloud|live)$/.test(d)) return u + '@' + d + '.com';
+        var mejor = null, dist = 3;
+        DOMINIOS.forEach(function (x) { var k = distancia(d, x); if (k < dist) { dist = k; mejor = x; } });
+        return mejor ? u + '@' + mejor : null;
+      }
+
+      // ── Mostrar el correo ──
+      function mostrarAviso(html, botones) {
+        if (!html) { avisoMail.classList.add('hidden'); avisoMail.innerHTML = ''; return; }
+        avisoMail.innerHTML = html + (botones ? '<div class="nm-botones"></div>' : '');
+        if (botones) {
+          var cont = avisoMail.querySelector('.nm-botones');
+          botones.forEach(function (b) {
+            var btn = document.createElement('button');
+            btn.type = 'button'; btn.textContent = b.texto;
+            if (b.si) btn.className = 'nm-si';
+            btn.addEventListener('click', b.accion);
+            cont.appendChild(btn);
+          });
+        }
+        avisoMail.classList.remove('hidden');
+      }
+      function usarCorreoDelPadron(correo) {
+        elMail.value = correo;
+        correoConfirmado = correo;
+        correoEnmascarado = true;
+        chipTexto.textContent = '📧 ' + enmascarar(correo);
+        chip.classList.remove('hidden');
+        elMail.classList.add('hidden');
+        hintMail.classList.add('hidden');
+        mostrarAviso(null);
+        NM.clearInvalid(elMail);
+        actualizarCorreo();
+        guardarTodo();
+      }
+      function cambiarCorreo() {
+        chip.classList.add('hidden');
+        elMail.classList.remove('hidden');
+        hintMail.classList.remove('hidden');
+        elMail.value = '';
+        correoConfirmado = '';
+        correoEnmascarado = false;
+        actualizarCorreo();
+        elMail.focus();
+      }
+      document.getElementById('btn-cambiar-email').addEventListener('click', cambiarCorreo);
+
+      function hacePaltaRepetir() {
+        var m = normMail(elMail.value);
+        return !!m && m !== correoConfirmado;
+      }
+      function actualizarCorreo() {
+        var m = normMail(elMail.value);
+        var repetir = hacePaltaRepetir() && m === correoRevisado;
+        campoMail2.classList.toggle('hidden', !repetir);
+        if (!repetir) NM.clearInvalid(elMail2);
+        if (m && NM.isValidEmail(m)) {
+          destino.innerHTML = '📧 El detalle del pedido te llega a <strong></strong>';
+          destino.querySelector('strong').textContent = correoEnmascarado ? enmascarar(m) : m;
+          destino.classList.remove('hidden');
+        } else {
+          destino.classList.add('hidden');
+        }
+      }
+
+      // ── Al escribir el WhatsApp ──
+      var ultimoTel = '';
+      function revisarTel() {
+        var t = tel10(elTel.value);
+        if (t.length !== 10 || t === ultimoTel) return;
+        ultimoTel = t;
+        buscarPorTel(t).then(function (f) {
+          if (tel10(elTel.value) !== t) return;          // ya cambió el número
+          if (!f) { correoDelTel = null; return; }
+          correoDelTel = f.email || null;
+          marcarYaPidio();
+          if (!elNom.value.trim() && !elApe.value.trim() && f.nombre) {
+            var n = partirNombre(f.nombre);
+            elNom.value = n[0]; elApe.value = n[1];
+            NM.clearInvalid(elNom); NM.clearInvalid(elApe);
+          }
+          if (!correoDelTel) { guardarTodo(); return; }
+          var m = normMail(elMail.value);
+          if (!m) {
+            usarCorreoDelPadron(correoDelTel);
+          } else if (m === correoDelTel) {
+            correoConfirmado = m; mostrarAviso(null); actualizarCorreo();
+          } else {
+            avisarOtroCorreo();
+          }
+          guardarTodo();
+        });
+      }
+      function avisarOtroCorreo() {
+        mostrarAviso('Tu WhatsApp figura con <strong>' + enmascarar(correoDelTel) + '</strong>. ¿Usamos ese correo?', [
+          { texto: 'Sí, usar ese', si: true, accion: function () { usarCorreoDelPadron(correoDelTel); } },
+          { texto: 'No, el que escribí es el correcto', accion: function () { correoRevisado = normMail(elMail.value); mostrarAviso(null); actualizarCorreo(); elMail2.focus(); } }
+        ]);
+      }
+      elTel.addEventListener('input', function () { clearTimeout(revisarTel._t); revisarTel._t = setTimeout(revisarTel, 500); });
+      elTel.addEventListener('change', revisarTel);
+
+      // ── Al escribir el correo ──
+      function revisarCorreo() {
+        var m = normMail(elMail.value);
+        actualizarCorreo();
+        if (!m) { mostrarAviso(null); return; }
+        var sug = sugerirCorreo(m);
+        if (sug && sug !== m) {
+          mostrarAviso('¿Quisiste decir <strong></strong>?', [
+            { texto: 'Sí, corregir', si: true, accion: function () { elMail.value = sug; mostrarAviso(null); revisarCorreo(); guardarTodo(); } },
+            { texto: 'No, está bien así', accion: function () { mostrarAviso(null); } }
+          ]);
+          avisoMail.querySelector('strong').textContent = sug;
+          return;
+        }
+        if (correoDelTel && m !== correoDelTel) { avisarOtroCorreo(); return; }
+        mostrarAviso(null);
+        if (m === correoConfirmado) return;
+        buscarPorMail(m).then(function (f) {
+          if (normMail(elMail.value) !== m) return;
+          if (!f) { correoRevisado = m; actualizarCorreo(); return; }   // no está en el padrón (o sin conexión): se pide repetir
+          correoConfirmado = m;
+          marcarYaPidio();
+          if (!elNom.value.trim() && !elApe.value.trim() && f.nombre) {
+            var n = partirNombre(f.nombre); elNom.value = n[0]; elApe.value = n[1];
+          }
+          if (!elTel.value.trim() && f.tel) elTel.value = f.tel;
+          actualizarCorreo();
+          guardarTodo();
+        });
+      }
+      elMail.addEventListener('change', revisarCorreo);
+      elMail.addEventListener('blur', revisarCorreo);
+      elMail.addEventListener('input', function () {
+        if (normMail(elMail.value) !== correoConfirmado) correoEnmascarado = false;
+        actualizarCorreo();
+      });
+      elMail2.addEventListener('input', function () { NM.clearInvalid(elMail2); });
+
+      // Se llama antes de enviar: el correo repetido tiene que coincidir.
+      function controlCorreoOk() {
+        if (!hacePaltaRepetir()) return true;
+        correoRevisado = normMail(elMail.value); actualizarCorreo();
+        if (normMail(elMail2.value) === normMail(elMail.value)) return true;
+        NM.markInvalid(elMail2);
+        NM.showErrorMessage(pedidoForm, 'Revisá tu email: los dos correos no coinciden.');
+        return false;
+      }
+
+      // ── Este celular recuerda los datos del último pedido ──
+      function guardarMisDatos() {
+        if (esOtroPedido) return;    // pedido para otra persona: no se recuerda
+        try {
+          var g = document.querySelector('[name="en_grupo"]:checked');
+          localStorage.setItem(CLAVE_MIS_DATOS, JSON.stringify({
+            nombre: elNom.value.trim(), apellido: elApe.value.trim(), email: normMail(elMail.value),
+            telefono: elTel.value.trim(), en_grupo: g ? g.value : null,
+            direccion: (document.getElementById('direccion') || {}).value || '', ts: Date.now()
+          }));
+        } catch (e) {}
+      }
+      function completarDesdeCelular() {
+        if (esOtroPedido) return;
+        var d = null;
+        try { d = JSON.parse(localStorage.getItem(CLAVE_MIS_DATOS) || 'null'); } catch (e) {}
+        if (!d || !d.email) return;
+        var vacio = !elNom.value.trim() && !elApe.value.trim() && !elMail.value.trim() && !elTel.value.trim();
+        if (vacio) {
+          elNom.value = d.nombre || ''; elApe.value = d.apellido || ''; elTel.value = d.telefono || '';
+          elMail.value = d.email;
+          var dir = document.getElementById('direccion');
+          if (dir && !dir.value && d.direccion) dir.value = d.direccion;
+          if (d.en_grupo) {
+            var g = document.querySelector('[name="en_grupo"][value="' + d.en_grupo + '"]');
+            if (g) g.checked = true;
+          }
+          marcarYaPidio();
+          recordados.classList.remove('hidden');
+        }
+        if (normMail(elMail.value) === d.email) correoConfirmado = d.email;   // ya llegó bien una vez
+        ultimoTel = tel10(elTel.value);
+        actualizarCorreo();
+      }
+      document.getElementById('btn-no-soy-yo').addEventListener('click', function () {
+        try { localStorage.removeItem(CLAVE_MIS_DATOS); } catch (e) {}
+        [elNom, elApe, elMail, elTel, elMail2].forEach(function (el) { el.value = ''; });
+        chip.classList.add('hidden'); elMail.classList.remove('hidden'); hintMail.classList.remove('hidden');
+        correoConfirmado = ''; correoDelTel = null; correoEnmascarado = false; ultimoTel = '';
+        recordados.classList.add('hidden');
+        mostrarAviso(null); actualizarCorreo(); guardarTodo();
+        elTel.focus();
+      });
+      try { completarDesdeCelular(); } catch (e) {}
+      // Si el borrador (o el link con ?email=) ya trajo un correo, se revisa igual.
+      setTimeout(function () { if (elMail.value) revisarCorreo(); if (elTel.value) revisarTel(); }, 1200);
+
       // Mostrar/ocultar campo de dirección según la entrega
       var entregaRadios = document.querySelectorAll('input[name="entrega"]');
       var campoDireccion = document.getElementById('campo-direccion');
@@ -2080,6 +2425,7 @@
       }
       NM.bindFormSubmit(pedidoForm, function buildPayload() {
         var p = armarPayload();
+        if (p && !controlCorreoOk()) p = null;
         ultimoPayload = p;
         if (p) {
           p.id_envio = idEnvio();
@@ -2101,6 +2447,7 @@
         // está acá (con tolerancia) y en B1; si B1 lo rechaza, manda el correo
         // de "llegó después del cierre".
         onSuccess: mostrarListo = function () {
+          try { guardarMisDatos(); } catch (e) {}
           // Pedido enviado: el borrador guardado ya no hace falta, y no se
           // vuelve a guardar aunque se cierre la pestaña (si no, el próximo
           // pedido desde el mismo celular arrancaba con estas selecciones).
@@ -2153,6 +2500,7 @@
             'Realizar otro pedido</button>';
           otro.querySelector('#btn-otro-pedido').addEventListener('click', function () {
             borrarBorrador();
+            try { sessionStorage.setItem('nm_otro_pedido', '1'); } catch (e) {}
             window.location.reload();
           });
 
@@ -2262,6 +2610,7 @@
         var d = new Date(p.enviado_en || Date.now());
         var hhmm = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
         p.sin_conexion = true;
+        try { guardarMisDatos(); } catch (e) {}
         p.comentarios = '[Enviado sin datos a las ' + hhmm + ']' + (p.comentarios ? ' ' + p.comentarios : '');
         return NMCola.guardar({
           id_envio: p.id_envio, id_edicion: ID_EDICION_COLA, url: pedidoForm.dataset.webhook,
@@ -2289,6 +2638,6 @@
 
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 23/10 sin datos</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 30/10 datos y correo</p>
 </body>
 </html>
