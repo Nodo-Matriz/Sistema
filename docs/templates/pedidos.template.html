@@ -187,6 +187,15 @@
       border: 1.5px solid var(--c-oliva); background: var(--c-leche, #FDFBF5); color: var(--c-musgo); cursor: pointer; }
     .nm-aviso .nm-botones button.nm-si { background: var(--c-oliva); color: var(--c-leche, #FDFBF5); }
     .nm-destino { font-size: .98rem; margin: 0 0 var(--s-3); }
+    .nm-ficha { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+      border: 1.5px solid var(--c-oliva); border-radius: 14px; padding: 12px 16px; margin-bottom: var(--s-4);
+      background: rgba(74, 107, 58, 0.06); }
+    .nm-ficha__datos { display: flex; flex-direction: column; gap: 2px; }
+    .nm-ficha__datos strong { font-size: 1.05rem; }
+    .nm-ficha__datos span { font-size: .9rem; color: var(--c-tierra); }
+    .nm-ficha__acciones { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; font-size: .9rem; }
+    .nm-intro { margin: 0 0 var(--s-3); font-size: .95rem; }
+    .nm-buscando { opacity: .7; font-style: italic; }
 
   </style>
   <script>
@@ -388,18 +397,28 @@
         <div class="card">
           <h2>Tus datos</h2>
 
-          <div class="nm-recordados hidden" id="datos-recordados">
-            Completamos tus datos del último pedido.
-            <button type="button" class="nm-link" id="btn-no-soy-yo">No soy yo</button>
-          </div>
-
           <div class="field">
             <label class="field__label" for="telefono">WhatsApp *</label>
             <input class="input" type="tel" id="telefono" name="telefono" autocomplete="tel" inputmode="tel" required>
-            <span class="field__hint">Con código de área. Ej: 351 234 5678. Si ya pediste antes, completamos el resto.</span>
+            <span class="field__hint" id="tel-hint">Con código de área. Ej: 351 234 5678. Si ya pediste antes, completamos el resto.</span>
             <span class="field__error">Necesitamos un número de WhatsApp para coordinar la entrega.</span>
           </div>
 
+          <!-- Ya pidió antes: se muestran sus datos -->
+          <div class="nm-ficha hidden" id="datos-ficha">
+            <div class="nm-ficha__datos">
+              <strong id="ficha-nombre"></strong>
+              <span id="ficha-correo"></span>
+            </div>
+            <div class="nm-ficha__acciones">
+              <button type="button" class="nm-link" id="btn-modificar">Modificar datos</button>
+              <button type="button" class="nm-link" id="btn-no-soy-yo">No soy yo</button>
+            </div>
+          </div>
+
+          <!-- Primera vez (o al modificar): se cargan los datos -->
+          <div class="hidden" id="datos-detalle">
+          <p class="nm-intro" id="datos-intro"></p>
           <div class="field" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
             <div>
               <label class="field__label" for="nombre">Nombre *</label>
@@ -433,8 +452,10 @@
             <span class="field__hint">Así nos aseguramos de que el detalle te llegue bien.</span>
             <span class="field__error">Los dos correos no coinciden.</span>
           </div>
+          </div><!-- /datos-detalle -->
 
-          <div class="field">
+          <!-- Solo se pregunta si no se pudo consultar el padrón (sin conexión) -->
+          <div class="field hidden" id="campo-primera">
             <label class="field__label">¿Es la primera vez que hacés un pedido al Nodo? *</label>
             <label class="option">
               <input type="radio" name="primera_vez" value="si">
@@ -1862,16 +1883,16 @@
       // ══════════════════════════════════════════════════════════════
       // Datos de quien ya pidió + control del correo
       // ══════════════════════════════════════════════════════════════
-      // 1. Este celular recuerda los datos del último pedido enviado y los
-      //    completa solo (con "No soy yo" para borrarlos).
-      // 2. Desde otro celular: al escribir el WhatsApp, si ya está en el
-      //    padrón se completan nombre y apellido, y se ofrece el correo
-      //    registrado, mostrado a medias (ju***@gmail.com).
-      // 3. Correo: sugiere correcciones (gmial.com → gmail.com), avisa si el
-      //    WhatsApp figura con otro correo, pide repetirlo cuando es un
-      //    correo que el Nodo no conoce, y lo muestra antes de enviar.
-      // Sin conexión o si falla la consulta al padrón, el formulario sigue
-      // como siempre (solo se pide repetir el correo).
+      // Se empieza por el WhatsApp:
+      // · Si ya está en el padrón (o es el de este celular en el pedido
+      //   anterior): no se pide nada más. Se muestra "nombre · an***@gmail.com"
+      //   con "Modificar datos" (por ej. para cambiar el correo).
+      // · Si no está: se piden nombre, apellido y correo (repetido).
+      // · Si no se pudo consultar (sin conexión): se piden los datos y la
+      //   pregunta "¿Es la primera vez…?" (única vez que aparece).
+      // El correo: sugiere correcciones (gmial.com → gmail.com), pide
+      // repetirlo cuando es uno que el Nodo no conoce, y se muestra antes de
+      // enviar.
       var CLAVE_MIS_DATOS = 'nm_mis_datos';
       var elTel = document.getElementById('telefono');
       var elNom = document.getElementById('nombre');
@@ -1884,14 +1905,24 @@
       var avisoMail = document.getElementById('email-aviso');
       var hintMail = document.getElementById('email-hint');
       var destino = document.getElementById('email-destino');
-      var recordados = document.getElementById('datos-recordados');
+      var ficha = document.getElementById('datos-ficha');
+      var fichaNombre = document.getElementById('ficha-nombre');
+      var fichaCorreo = document.getElementById('ficha-correo');
+      var detalle = document.getElementById('datos-detalle');
+      var intro = document.getElementById('datos-intro');
+      var campoPrimera = document.getElementById('campo-primera');
+      var telHint = document.getElementById('tel-hint');
+      var TEL_HINT = telHint ? telHint.textContent : '';
 
+      var estadoDatos = 'vacio';   // vacio · buscando · registrado · nuevo · sin_consulta
       var correoConfirmado = '';   // correo que ya se sabe que es correcto (padrón o pedido anterior)
-      var correoDelTel = null;     // correo con el que figura el WhatsApp escrito
       var correoEnmascarado = false;
-      var correoRevisado = '';     // correo ya revisado que no está en el padrón: se pide repetirlo
+      var correoRevisado = '';     // correo revisado que el Nodo no conoce: se pide repetirlo
+      var autocompletado = false;  // nombre/correo los puso el formulario (no la persona)
       var esOtroPedido = false;
       try { esOtroPedido = sessionStorage.getItem('nm_otro_pedido') === '1'; sessionStorage.removeItem('nm_otro_pedido'); } catch (e) {}
+      var misDatos = null;
+      if (!esOtroPedido) { try { misDatos = JSON.parse(localStorage.getItem(CLAVE_MIS_DATOS) || 'null'); } catch (e) {} }
 
       function normMail(v) { return String(v || '').trim().toLowerCase(); }
       function tel10(v) { return String(v || '').replace(/\D/g, '').slice(-10); }
@@ -1905,8 +1936,8 @@
         if (partes.length > 1) { var ape = partes.pop(); return [partes.join(' '), ape]; }
         return [partes[0] || '', ''];
       }
-      function marcarYaPidio() {
-        var r = document.querySelector('input[name="primera_vez"][value="no"]');
+      function primeraVez(v) {
+        var r = document.querySelector('input[name="primera_vez"][value="' + v + '"]');
         if (r) r.checked = true;
       }
       function guardarTodo() { try { guardarBorrador(); } catch (e) {} }
@@ -1929,7 +1960,6 @@
         }).catch(function () { return null; });   // null = no se pudo consultar
       }
       function buscarPorTel(t) {
-        if (t.length !== 10) return Promise.resolve(null);
         return consultarPadron("C ends with '" + t + "'").then(function (filas) {
           if (!filas) return null;
           var f = filas.filter(function (x) { return tel10(x.tel) === t; });
@@ -1969,7 +1999,6 @@
         return mejor ? u + '@' + mejor : null;
       }
 
-      // ── Mostrar el correo ──
       function mostrarAviso(html, botones) {
         if (!html) { avisoMail.classList.add('hidden'); avisoMail.innerHTML = ''; return; }
         avisoMail.innerHTML = html + (botones ? '<div class="nm-botones"></div>' : '');
@@ -1985,7 +2014,9 @@
         }
         avisoMail.classList.remove('hidden');
       }
-      function usarCorreoDelPadron(correo) {
+
+      // ── Correo ya conocido: se muestra a medias, con "Cambiar" ──
+      function fijarCorreoConocido(correo) {
         elMail.value = correo;
         correoConfirmado = correo;
         correoEnmascarado = true;
@@ -1995,20 +2026,18 @@
         hintMail.classList.add('hidden');
         mostrarAviso(null);
         NM.clearInvalid(elMail);
-        actualizarCorreo();
-        guardarTodo();
       }
-      function cambiarCorreo() {
+      function soltarCorreo(vaciar) {
         chip.classList.add('hidden');
         elMail.classList.remove('hidden');
         hintMail.classList.remove('hidden');
-        elMail.value = '';
+        if (vaciar) elMail.value = '';
         correoConfirmado = '';
         correoEnmascarado = false;
-        actualizarCorreo();
-        elMail.focus();
       }
-      document.getElementById('btn-cambiar-email').addEventListener('click', cambiarCorreo);
+      document.getElementById('btn-cambiar-email').addEventListener('click', function () {
+        soltarCorreo(true); actualizarCorreo(); elMail.focus();
+      });
 
       function hacePaltaRepetir() {
         var m = normMail(elMail.value);
@@ -2016,7 +2045,7 @@
       }
       function actualizarCorreo() {
         var m = normMail(elMail.value);
-        var repetir = hacePaltaRepetir() && m === correoRevisado;
+        var repetir = hacePaltaRepetir() && (m === correoRevisado || estadoDatos === 'nuevo');
         campoMail2.classList.toggle('hidden', !repetir);
         if (!repetir) NM.clearInvalid(elMail2);
         if (m && NM.isValidEmail(m)) {
@@ -2028,42 +2057,83 @@
         }
       }
 
+      // ── Qué se muestra según lo que se sabe del WhatsApp ──
+      function ponerEstado(estado, datos) {
+        estadoDatos = estado;
+        if (estado !== 'vacio') NM.clearInvalid(elTel);
+        if (telHint) { telHint.textContent = estado === 'buscando' ? 'Buscando tus datos…' : TEL_HINT; telHint.classList.toggle('nm-buscando', estado === 'buscando'); }
+        ficha.classList.toggle('hidden', estado !== 'registrado');
+        detalle.classList.toggle('hidden', estado === 'vacio' || estado === 'buscando' || estado === 'registrado');
+        campoPrimera.classList.toggle('hidden', estado !== 'sin_consulta');
+        if (estado === 'registrado') {
+          var n = partirNombre(datos.nombre);
+          if (datos.nombre) { elNom.value = datos.nombre_pila || n[0]; elApe.value = datos.apellido || n[1]; }
+          if (datos.email) fijarCorreoConocido(datos.email);
+          autocompletado = true;
+          fichaNombre.textContent = ((elNom.value + ' ' + elApe.value).trim()) || 'Ya pediste antes';
+          fichaCorreo.textContent = datos.email ? '📧 ' + enmascarar(datos.email) : 'Falta tu correo: tocá "Modificar datos".';
+          primeraVez('no');
+          [elNom, elApe, elMail].forEach(NM.clearInvalid);
+        } else if (estado === 'nuevo') {
+          if (autocompletado) { elNom.value = ''; elApe.value = ''; soltarCorreo(true); autocompletado = false; }
+          intro.textContent = 'Es tu primer pedido en el Nodo: completá tus datos.';
+          primeraVez('si');
+        } else if (estado === 'sin_consulta') {
+          intro.textContent = 'No pudimos comprobar si ya pediste antes (¿sin conexión?). Completá tus datos.';
+        }
+        actualizarCorreo();
+        guardarTodo();
+      }
+      document.getElementById('btn-modificar').addEventListener('click', function () {
+        ficha.classList.add('hidden');
+        detalle.classList.remove('hidden');
+        intro.textContent = 'Revisá o cambiá tus datos.';
+        autocompletado = false;
+        elNom.focus();
+      });
+      document.getElementById('btn-no-soy-yo').addEventListener('click', function () {
+        try { localStorage.removeItem(CLAVE_MIS_DATOS); } catch (e) {}
+        misDatos = null;
+        [elNom, elApe, elTel, elMail2].forEach(function (el) { el.value = ''; });
+        soltarCorreo(true);
+        ultimoTel = ''; autocompletado = false; correoRevisado = '';
+        mostrarAviso(null);
+        ponerEstado('vacio');
+        elTel.focus();
+      });
+
       // ── Al escribir el WhatsApp ──
       var ultimoTel = '';
-      function revisarTel() {
+      function deEsteCelular(t) {
+        return misDatos && misDatos.email && tel10(misDatos.telefono) === t ? {
+          nombre: (misDatos.nombre + ' ' + misDatos.apellido).trim(), nombre_pila: misDatos.nombre,
+          apellido: misDatos.apellido, email: misDatos.email } : null;
+      }
+      function revisarTel(alSalir) {
         var t = tel10(elTel.value);
-        if (t.length !== 10 || t === ultimoTel) return;
+        var digitos = String(elTel.value || '').replace(/\D/g, '');
+        if (t.length !== 10) {
+          // número con otro formato (ej. del exterior): se piden los datos
+          if (alSalir && digitos.length >= 8 && estadoDatos === 'vacio') ponerEstado('sin_consulta');
+          return;
+        }
+        if (t === ultimoTel) return;
         ultimoTel = t;
+        var local = deEsteCelular(t);
+        ponerEstado('buscando');
         buscarPorTel(t).then(function (f) {
           if (tel10(elTel.value) !== t) return;          // ya cambió el número
-          if (!f) { correoDelTel = null; return; }
-          correoDelTel = f.email || null;
-          marcarYaPidio();
-          if (!elNom.value.trim() && !elApe.value.trim() && f.nombre) {
-            var n = partirNombre(f.nombre);
-            elNom.value = n[0]; elApe.value = n[1];
-            NM.clearInvalid(elNom); NM.clearInvalid(elApe);
-          }
-          if (!correoDelTel) { guardarTodo(); return; }
-          var m = normMail(elMail.value);
-          if (!m) {
-            usarCorreoDelPadron(correoDelTel);
-          } else if (m === correoDelTel) {
-            correoConfirmado = m; mostrarAviso(null); actualizarCorreo();
-          } else {
-            avisarOtroCorreo();
-          }
-          guardarTodo();
+          if (local) { ponerEstado('registrado', local); return; }   // lo último que usó en este celular
+          if (f) { ponerEstado('registrado', f); return; }
+          ponerEstado(f === false ? 'nuevo' : 'sin_consulta');
         });
       }
-      function avisarOtroCorreo() {
-        mostrarAviso('Tu WhatsApp figura con <strong>' + enmascarar(correoDelTel) + '</strong>. ¿Usamos ese correo?', [
-          { texto: 'Sí, usar ese', si: true, accion: function () { usarCorreoDelPadron(correoDelTel); } },
-          { texto: 'No, el que escribí es el correcto', accion: function () { correoRevisado = normMail(elMail.value); mostrarAviso(null); actualizarCorreo(); elMail2.focus(); } }
-        ]);
-      }
-      elTel.addEventListener('input', function () { clearTimeout(revisarTel._t); revisarTel._t = setTimeout(revisarTel, 500); });
-      elTel.addEventListener('change', revisarTel);
+      elTel.addEventListener('input', function () {
+        if (tel10(elTel.value) !== ultimoTel && estadoDatos === 'registrado') { ultimoTel = ''; ponerEstado('vacio'); }
+        clearTimeout(revisarTel._t); revisarTel._t = setTimeout(function () { revisarTel(false); }, 500);
+      });
+      elTel.addEventListener('change', function () { revisarTel(true); });
+      elTel.addEventListener('blur', function () { revisarTel(true); });
 
       // ── Al escribir el correo ──
       function revisarCorreo() {
@@ -2074,23 +2144,22 @@
         if (sug && sug !== m) {
           mostrarAviso('¿Quisiste decir <strong></strong>?', [
             { texto: 'Sí, corregir', si: true, accion: function () { elMail.value = sug; mostrarAviso(null); revisarCorreo(); guardarTodo(); } },
-            { texto: 'No, está bien así', accion: function () { mostrarAviso(null); } }
+            { texto: 'No, está bien así', accion: function () { mostrarAviso(null); correoRevisado = m; actualizarCorreo(); } }
           ]);
           avisoMail.querySelector('strong').textContent = sug;
           return;
         }
-        if (correoDelTel && m !== correoDelTel) { avisarOtroCorreo(); return; }
         mostrarAviso(null);
         if (m === correoConfirmado) return;
         buscarPorMail(m).then(function (f) {
           if (normMail(elMail.value) !== m) return;
-          if (!f) { correoRevisado = m; actualizarCorreo(); return; }   // no está en el padrón (o sin conexión): se pide repetir
+          if (!f) { correoRevisado = m; actualizarCorreo(); return; }   // el Nodo no lo conoce: se pide repetir
           correoConfirmado = m;
-          marcarYaPidio();
+          primeraVez('no');   // el correo ya está en el padrón: ya pidió antes
           if (!elNom.value.trim() && !elApe.value.trim() && f.nombre) {
             var n = partirNombre(f.nombre); elNom.value = n[0]; elApe.value = n[1];
           }
-          if (!elTel.value.trim() && f.tel) elTel.value = f.tel;
+          if (!elTel.value.trim() && f.tel) { elTel.value = f.tel; ultimoTel = tel10(f.tel); }
           actualizarCorreo();
           guardarTodo();
         });
@@ -2103,8 +2172,22 @@
       });
       elMail2.addEventListener('input', function () { NM.clearInvalid(elMail2); });
 
-      // Se llama antes de enviar: el correo repetido tiene que coincidir.
+      // Se llama antes de enviar.
       function controlCorreoOk() {
+        if (estadoDatos === 'vacio' || estadoDatos === 'buscando') {
+          if (estadoDatos === 'vacio' && String(elTel.value).replace(/\D/g, '').length >= 8) { ponerEstado('sin_consulta'); }
+          NM.markInvalid(elTel);
+          NM.showErrorMessage(pedidoForm, estadoDatos === 'buscando'
+            ? 'Estamos buscando tus datos, esperá un segundo y volvé a tocar Enviar.'
+            : 'Completá tus datos para enviar el pedido.');
+          return false;
+        }
+        if (estadoDatos === 'registrado' && !normMail(elMail.value)) {
+          detalle.classList.remove('hidden'); ficha.classList.add('hidden');
+          NM.markInvalid(elMail);
+          NM.showErrorMessage(pedidoForm, 'Falta tu email.');
+          return false;
+        }
         if (!hacePaltaRepetir()) return true;
         correoRevisado = normMail(elMail.value); actualizarCorreo();
         if (normMail(elMail2.value) === normMail(elMail.value)) return true;
@@ -2125,40 +2208,23 @@
           }));
         } catch (e) {}
       }
-      function completarDesdeCelular() {
-        if (esOtroPedido) return;
-        var d = null;
-        try { d = JSON.parse(localStorage.getItem(CLAVE_MIS_DATOS) || 'null'); } catch (e) {}
-        if (!d || !d.email) return;
-        var vacio = !elNom.value.trim() && !elApe.value.trim() && !elMail.value.trim() && !elTel.value.trim();
-        if (vacio) {
-          elNom.value = d.nombre || ''; elApe.value = d.apellido || ''; elTel.value = d.telefono || '';
-          elMail.value = d.email;
+      function arrancar() {
+        // el borrador (o el link con ?email=) ya pudo haber completado campos
+        if (!elTel.value.trim() && misDatos && misDatos.telefono) {
+          elTel.value = misDatos.telefono;
           var dir = document.getElementById('direccion');
-          if (dir && !dir.value && d.direccion) dir.value = d.direccion;
-          if (d.en_grupo) {
-            var g = document.querySelector('[name="en_grupo"][value="' + d.en_grupo + '"]');
+          if (dir && !dir.value && misDatos.direccion) dir.value = misDatos.direccion;
+          if (misDatos.en_grupo) {
+            var g = document.querySelector('[name="en_grupo"][value="' + misDatos.en_grupo + '"]');
             if (g) g.checked = true;
           }
-          marcarYaPidio();
-          recordados.classList.remove('hidden');
         }
-        if (normMail(elMail.value) === d.email) correoConfirmado = d.email;   // ya llegó bien una vez
-        ultimoTel = tel10(elTel.value);
-        actualizarCorreo();
+        if (elTel.value.trim()) revisarTel(true);
+        else if (elMail.value.trim()) { ponerEstado('sin_consulta'); revisarCorreo(); }
       }
-      document.getElementById('btn-no-soy-yo').addEventListener('click', function () {
-        try { localStorage.removeItem(CLAVE_MIS_DATOS); } catch (e) {}
-        [elNom, elApe, elMail, elTel, elMail2].forEach(function (el) { el.value = ''; });
-        chip.classList.add('hidden'); elMail.classList.remove('hidden'); hintMail.classList.remove('hidden');
-        correoConfirmado = ''; correoDelTel = null; correoEnmascarado = false; ultimoTel = '';
-        recordados.classList.add('hidden');
-        mostrarAviso(null); actualizarCorreo(); guardarTodo();
-        elTel.focus();
-      });
-      try { completarDesdeCelular(); } catch (e) {}
-      // Si el borrador (o el link con ?email=) ya trajo un correo, se revisa igual.
-      setTimeout(function () { if (elMail.value) revisarCorreo(); if (elTel.value) revisarTel(); }, 1200);
+      try { arrancar(); } catch (e) {}
+      // el link con ?email= completa datos un poco después
+      setTimeout(function () { if (estadoDatos === 'vacio' && elTel.value.trim()) revisarTel(true); }, 1500);
 
       // Mostrar/ocultar campo de dirección según la entrega
       var entregaRadios = document.querySelectorAll('input[name="entrega"]');
@@ -2638,6 +2704,6 @@
 
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 30/10 datos y correo</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 30/10 datos por WhatsApp</p>
 </body>
 </html>
