@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Prueba · Formulario de pedidos</title>
+</head>
+<body style="font-family:system-ui,sans-serif;background:#FDFBF5;color:#2C2418;padding:32px 20px;text-align:center;">
+  <p id="cargando">Cargando la página de prueba…</p>
+<script>
+/* =====================================================================
+ * Nodo Matríz · página de PRUEBA del formulario de pedidos
+ * ---------------------------------------------------------------------
+ * Arma el formulario a partir de la plantilla real (templates/
+ * pedidos.template.html): cada cambio que se sube a la plantilla aparece
+ * acá sin hacer nada más. Tiene 3 categorías y productos inventados.
+ *
+ * - No envía nada: ni a Make, ni a la planilla, ni correos.
+ * - No lee la planilla real: el stock limitado y el estado de la edición
+ *   se simulan acá (ver STOCK_LIMITADO).
+ * - Con ?cierre=5 en la dirección, la toma de pedidos "cierra" 5 minutos
+ *   después de abrir la página (para probar el cierre y la tolerancia).
+ *   Sin eso, no cierra nunca.
+ * ===================================================================== */
+(function () {
+  'use strict';
+
+  var CATALOGO = [
+    // Verdulería
+    { id_producto: 'PRB-01', id_productor: 'PRB-PROD1', productor: 'Huerta de Prueba', categoria: 'Verdulería',
+      nombre: 'Zapallito de prueba', unidad: 'kg', precio: 2500, fraccionable: 'No', fracciones: '', es_oferta: 'No',
+      origen: 'Río Ceballos', distancia_km: 6, descripcion: '' },
+    { id_producto: 'PRB-02', id_productor: 'PRB-PROD1', productor: 'Huerta de Prueba', categoria: 'Verdulería',
+      nombre: 'Lechuga de prueba', unidad: 'unidad', precio: 1800, fraccionable: 'No', fracciones: '', es_oferta: 'Sí',
+      origen: 'Río Ceballos', distancia_km: 6, descripcion: 'tamaños diversos' },
+    { id_producto: 'PRB-03', id_productor: 'PRB-PROD1', productor: 'Huerta de Prueba', categoria: 'Verdulería',
+      nombre: 'Acelga de prueba x atado', unidad: 'atado', precio: 1600, fraccionable: 'No', fracciones: '', es_oferta: 'No',
+      origen: 'Córdoba', distancia_km: 28, descripcion: 'Con stock limitado (prueba)' },
+    // Almacén
+    { id_producto: 'PRB-04', id_productor: 'PRB-PROD2', productor: 'Almacén de Prueba', categoria: 'Almacén',
+      nombre: 'Yerba de prueba', unidad: 'kg', precio: 8200, fraccionable: 'Sí', fracciones: '1/2, 2, 4', es_oferta: 'No',
+      origen: 'Misiones', distancia_km: 1030, descripcion: '' },
+    { id_producto: 'PRB-05', id_productor: 'PRB-PROD2', productor: 'Almacén de Prueba', categoria: 'Almacén',
+      nombre: 'Sal de prueba', unidad: 'kg', precio: 1800, fraccionable: 'Sí', fracciones: '1, 1/2', es_oferta: 'No',
+      origen: 'Salinas Grandes', distancia_km: 190, descripcion: '' },
+    { id_producto: 'PRB-06', id_productor: 'PRB-PROD2', productor: 'Almacén de Prueba', categoria: 'Almacén',
+      nombre: 'Dulce de prueba', unidad: 'frasco', precio: 9500, fraccionable: 'No', fracciones: '', es_oferta: 'No',
+      origen: '', distancia_km: '', descripcion: 'Con stock limitado (prueba)' },
+    // Panificados
+    { id_producto: 'PRB-07', id_productor: 'PRB-PROD3', productor: 'Panadería de Prueba', categoria: 'Panificados',
+      nombre: 'Galletas de prueba x 6', unidad: 'pack', precio: 6000, fraccionable: 'No', fracciones: '', es_oferta: 'Sí',
+      origen: 'Unquillo', distancia_km: 12,
+      descripcion: 'Una descripción larga para ver cómo se acomoda el texto en la tarjeta del producto cuando ocupa varios renglones.' },
+    { id_producto: 'PRB-08', id_productor: 'PRB-PROD3', productor: 'Panadería de Prueba', categoria: 'Panificados',
+      nombre: 'Empanadas de prueba', unidad: 'docena', precio: 26000, fraccionable: 'Sí', fracciones: '1, 1/2', es_oferta: 'No',
+      origen: 'Unquillo', distancia_km: 12, descripcion: '' },
+    { id_producto: 'PRB-09', id_productor: 'PRB-PROD3', productor: 'Panadería de Prueba', categoria: 'Panificados',
+      nombre: 'Pan de prueba', unidad: 'unidad', precio: 5000, fraccionable: 'No', fracciones: '', es_oferta: 'No',
+      origen: 'Unquillo', distancia_km: 12, descripcion: '' }
+  ];
+  var STOCK_LIMITADO = { 'PRB-03': 3, 'PRB-06': 2 };   // id_producto → unidades disponibles
+
+  var params = new URLSearchParams(location.search);
+  var min = parseFloat(params.get('cierre'));
+  var cierre = isFinite(min) ? new Date(Date.now() + min * 60000) : new Date('2099-12-31T23:59:00-03:00');
+  var hhmm = ('0' + cierre.getHours()).slice(-2) + ':' + ('0' + cierre.getMinutes()).slice(-2);
+  var cierreHumano = isFinite(min) ? 'hoy a las ' + hhmm + ' hs (prueba)' : '(página de prueba, no cierra)';
+
+  var REEMPLAZOS = {
+    '{{categorias_json}}': CATALOGO.map(function (p) { return JSON.stringify(p); }).join(','),
+    '{{id_edicion}}': 'PRUEBA',
+    '{{numero_edicion}}': 'de prueba',
+    '{{anio_edicion}}': String(new Date().getFullYear()),
+    '{{fecha_cierre_human}}': cierreHumano,
+    '{{fecha_cierre_iso}}': cierre.toISOString(),
+    '{{webhook_url}}': 'TEST_LOCAL',
+    '{{aporte_default_porcent}}': '15',
+    '{{retiro_human}}': 'Jueves de 16 a 19 hs · Viernes de 10 a 13 hs',
+    '{{orden_categorias}}': 'Verdulería|Almacén|Panificados'
+  };
+
+  // Simulador de la planilla: el formulario no lee la planilla real.
+  var SIMULADOR = '(' + function (stock) {
+    var original = window.fetch.bind(window);
+    function respuesta(filas) {
+      var tabla = { cols: [], rows: filas.map(function (f) {
+        return { c: f.map(function (v) { return v === null ? null : { v: v }; }) };
+      }) };
+      var cuerpo = 'google.visualization.Query.setResponse(' + JSON.stringify({ status: 'ok', table: tabla }) + ');';
+      return Promise.resolve(new Response(cuerpo, { status: 200, headers: { 'Content-Type': 'text/javascript' } }));
+    }
+    window.fetch = function (entrada, opciones) {
+      var url = typeof entrada === 'string' ? entrada : (entrada && entrada.url) || '';
+      if (url.indexOf('docs.google.com/spreadsheets') !== -1) {
+        if (navigator.onLine === false) return Promise.reject(new TypeError('Failed to fetch'));
+        var m = url.match(/[?&]sheet=([^&]*)/);
+        var hoja = m ? decodeURIComponent(m[1]) : '';
+        if (hoja === 'Ediciones') return respuesta([['PRUEBA', null, null, 'Form abierto']]);
+        if (hoja === 'Productos') return respuesta(Object.keys(stock).map(function (id) { return [id, stock[id], 'Productor']; }));
+        return respuesta([]);
+      }
+      return original(entrada, opciones);
+    };
+  }.toString() + ')(' + JSON.stringify(STOCK_LIMITADO) + ');';
+
+  var BANDA = '<div style="background:#A6402B;color:#fff;text-align:center;padding:8px 12px;' +
+    'font-family:system-ui,sans-serif;font-weight:700;">PÁGINA DE PRUEBA · no envía pedidos</div>';
+
+  var urlPlantilla = new URL('../templates/pedidos.template.html', location.href).href;
+  fetch(urlPlantilla, { cache: 'no-store' }).then(function (r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    // copia para poder abrir la prueba sin datos
+    try {
+      var copia = r.clone();
+      if (window.caches) caches.open('nm-pedidos-v1').then(function (c) { return c.put(urlPlantilla, copia); }).catch(function () {});
+    } catch (e) {}
+    return r.text();
+  }).then(function (html) {
+    Object.keys(REEMPLAZOS).forEach(function (k) { html = html.split(k).join(REEMPLAZOS[k]); });
+    html = html.replace(/<head[^>]*>/i, function (h) { return h + '\n<script>' + SIMULADOR + '<\/script>'; });
+    html = html.replace(/<body[^>]*>/i, function (b) { return b + '\n' + BANDA; });
+    document.open();
+    document.write(html);
+    document.close();
+  }).catch(function () {
+    document.getElementById('cargando').innerHTML =
+      'No se pudo cargar la página de prueba. Si el celular está sin datos, abrila una vez con datos ' +
+      'y después ya se puede abrir sin conexión.';
+  });
+})();
+</script>
+</body>
+</html>

@@ -8,8 +8,8 @@
  * 2. En Android (Chrome), envía los pedidos que quedaron pendientes aunque
  *    la pestaña esté cerrada, apenas vuelven los datos.
  *
- * Solo atiende las páginas pedidos-*.html / prueba-categorias.html y la
- * carpeta assets. Las demás apps (recepción, panel, stock…) no se tocan.
+ * Solo atiende las páginas pedidos-*.html / prueba-categorias.html, la
+ * plantilla (para la página de prueba) y la carpeta assets. Las demás apps (recepción, panel, stock…) no se tocan.
  *
  * Para desactivarlo de emergencia: reemplazar este archivo por
  *   self.addEventListener('install', function () { self.skipWaiting(); });
@@ -25,6 +25,7 @@ self.addEventListener('activate', function (e) { e.waitUntil(self.clients.claim(
 function esDelFormulario(url) {
   if (url.origin !== self.location.origin) return false;
   return /\/forms\/(pedidos-[^\/]+|prueba-categorias)\.html$/.test(url.pathname) ||
+         /\/templates\/pedidos\.template\.html$/.test(url.pathname) ||
          /\/assets\/[^\/]+$/.test(url.pathname);
 }
 
