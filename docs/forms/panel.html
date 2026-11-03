@@ -71,6 +71,29 @@
     .resumen-linea { margin-top: var(--s-3); font-size: .95rem; color: var(--c-suelo); }
     .resumen-linea strong { color: var(--c-musgo); }
     [data-tab].tab-oculta { display: none !important; }
+    /* ── Consultas replegables ── */
+    .card-eq.plegable > h2 { cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 0; user-select: none; }
+    .card-eq.plegable > h2::after { content: "▸"; font-family: var(--f-body); font-size: .95rem; color: var(--c-tierra); transition: transform .15s; }
+    .card-eq.plegable:not(.plegada) > h2 { margin-bottom: var(--s-2); }
+    .card-eq.plegable:not(.plegada) > h2::after { transform: rotate(90deg); }
+    .card-eq.plegada > :not(h2) { display: none !important; }
+    .card-eq.plegada { padding-top: 12px; padding-bottom: 12px; }
+    /* ── Consulta de consumidores ── */
+    .cs-res { display: grid; gap: 6px; margin-top: 8px; }
+    .cs-res button { text-align: left; font: inherit; border: 1.5px solid rgba(74,107,58,.28); background: #fff; color: inherit; padding: 9px 12px;
+      border-radius: 10px; cursor: pointer; display: flex; justify-content: space-between; gap: 10px; }
+    .cs-res button[aria-pressed="true"] { border-color: var(--c-musgo); background: rgba(74,107,58,.08); }
+    .cs-ficha { border-top: 1px dashed rgba(74,107,58,.35); margin-top: 10px; padding-top: 10px; display: grid; gap: 10px; }
+    .cs-datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; }
+    .cs-dato { background: rgba(74,107,58,.07); border-radius: 10px; padding: 8px 12px; min-width: 0; }
+    .cs-dato small { display: block; font-size: .7rem; color: var(--c-tierra); text-transform: uppercase; letter-spacing: .05em; }
+    .cs-dato span { font-weight: 600; overflow-wrap: anywhere; }
+    .cs-mini { font: inherit; font-size: .78rem; font-weight: 700; padding: 2px 10px; border-radius: 999px; border: 1.5px solid var(--c-oliva);
+      background: transparent; color: var(--c-musgo); cursor: pointer; margin-left: 6px; text-decoration: none; display: inline-block; }
+    .cs-estado { font-size: .75rem; font-weight: 700; padding: 2px 9px; border-radius: 999px; background: rgba(74,107,58,.12); color: var(--c-musgo); }
+    .cs-hist details { border: 1px solid rgba(74,107,58,.25); border-radius: 10px; margin-top: 6px; }
+    .cs-hist summary { cursor: pointer; padding: 8px 12px; display: flex; justify-content: space-between; gap: 10px; font-weight: 600; }
+    .cs-hist .det { padding: 0 12px 10px; }
   </style>
 </head>
 <body>
@@ -494,6 +517,10 @@
 
       function pintar(rp, ri, rc, rpr, rprod, rext) {
         var ed = ediciones.filter(function (e) { return e.id === edicionActual; })[0] || {};
+        try {
+          window.__nmPanelDatos = { rp: rp, ri: ri, rc: rc, ed: edicionActual };
+          document.dispatchEvent(new Event('nm-panel-datos'));
+        } catch (e) { console.error(e); }
 
         // ── Pedidos de la edición ─────────────────────────────
         var cEd = idx(rp, /^id_edicion$/i), cId = idx(rp, /^id_pedido$/i), cCons = idx(rp, /^id_consumidor$/i),
@@ -1040,6 +1067,200 @@
       resumen();
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 30/10 pestañas</p>
+
+  <script>
+    // ── Consultas replegables + consulta de Consumidores (03/11) ──
+    (function () {
+      var zona = document.getElementById('zona-consultas');
+      if (!zona) return;
+      function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+      function money(n) { return '$ ' + Math.round(n || 0).toLocaleString('es-AR'); }
+      function sinTildes(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+
+      // ── tarjeta nueva: Consumidores ──
+      var card = document.createElement('div');
+      card.className = 'card-eq';
+      card.id = 'card-consumidores';
+      card.innerHTML =
+        '<h2>Consumidores</h2>' +
+        '<p class="meta">Buscá por nombre, WhatsApp o N.º de pedido: datos de contacto, qué pidió en esta edición y su historial.</p>' +
+        '<input type="search" id="busca-cons" placeholder="Nombre, WhatsApp o N.º de pedido…" autocomplete="off" ' +
+        'style="padding:8px 12px; border-radius:10px; border:1px solid rgba(74,107,58,.3); font:inherit; width:100%; max-width:380px;">' +
+        '<div class="cs-res" id="cs-res"></div><div id="cs-ficha"></div>';
+      zona.insertBefore(card, zona.firstChild);
+
+      // ── replegar cada consulta (se recuerda en este dispositivo) ──
+      var guardado = {};
+      try { guardado = JSON.parse(localStorage.getItem('nm_panel_plegadas') || '{}') || {}; } catch (e) {}
+      Array.prototype.forEach.call(zona.querySelectorAll(':scope > .card-eq'), function (c, i) {
+        var h = c.querySelector(':scope > h2'); if (!h) return;
+        var clave = c.id || ('consulta-' + i);
+        c.classList.add('plegable');
+        var plegada = guardado.hasOwnProperty(clave) ? guardado[clave] : true;   // por defecto, cerradas
+        c.classList.toggle('plegada', plegada);
+        h.setAttribute('role', 'button'); h.setAttribute('tabindex', '0');
+        h.setAttribute('aria-expanded', !plegada);
+        function alternar() {
+          var p = !c.classList.contains('plegada');
+          c.classList.toggle('plegada', p);
+          h.setAttribute('aria-expanded', !p);
+          guardado[clave] = p;
+          try { localStorage.setItem('nm_panel_plegadas', JSON.stringify(guardado)); } catch (e) {}
+          if (!p && c.id === 'card-consumidores') document.getElementById('busca-cons').focus();
+        }
+        h.addEventListener('click', alternar);
+        h.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); alternar(); } });
+      });
+
+      // ── datos ──
+      var D = null;        // { cons: {id: {...}}, pedidos: [...], items: {id_pedido: [...]}, ed }
+      function col(res, re) {
+        var cols = (res && res.table && res.table.cols) || [];
+        for (var i = 0; i < cols.length; i++) if (re.test(String(cols[i].label || '').trim())) return i;
+        return -1;
+      }
+      function v(r, i) { if (i < 0 || !r.c || !r.c[i]) return ''; var c = r.c[i]; return c.v == null ? '' : c.v; }
+      function n(x) { var y = typeof x === 'number' ? x : parseFloat(String(x).replace(/\./g, '').replace(',', '.')); return isFinite(y) ? y : 0; }
+      function armar(datos) {
+        var rp = datos.rp, ri = datos.ri, rc = datos.rc;
+        var cons = {};
+        var cId = col(rc, /^id_consumidor$/i), cNom = col(rc, /nombre/i), cTel = col(rc, /telefono|whatsapp/i), cMail = col(rc, /email/i);
+        rc.table.rows.forEach(function (r) {
+          var id = String(v(r, cId)).trim(); if (!id) return;
+          cons[id] = { id: id, nombre: String(v(r, cNom)).trim(), tel: String(v(r, cTel)).trim(), mail: String(v(r, cMail)).trim(), pedidos: [] };
+        });
+        var pId = col(rp, /^id_pedido$/i), pEd = col(rp, /^id_edicion$/i), pCons = col(rp, /^id_consumidor$/i), pCorr = col(rp, /correlativo/i),
+            pEst = col(rp, /^estado$/i), pTot = col(rp, /^total_a_abonar$/i), pPorc = col(rp, /aporte_porcentaje/i), pAp = col(rp, /^monto_aporte$/i),
+            pObs = col(rp, /^observaciones$/i), pDia = col(rp, /dia_retiro/i);
+        var pedidos = [];
+        rp.table.rows.forEach(function (r) {
+          var id = String(v(r, pId)).trim(); if (!id) return;
+          var obs = String(v(r, pObs));
+          var mEnt = obs.match(/Entrega:\s*([^·]+)/i), mPago = obs.match(/Pago:\s*([^·]+)/i);
+          var p = { id: id, ed: String(v(r, pEd)).trim(), cons: String(v(r, pCons)).trim(), corr: n(v(r, pCorr)),
+            estado: String(v(r, pEst)).trim(), total: n(v(r, pTot)), porc: n(v(r, pPorc)), aporte: n(v(r, pAp)),
+            entrega: mEnt ? mEnt[1].trim() : '', pago: mPago ? mPago[1].trim() : '', dia: String(v(r, pDia)).trim() };
+          pedidos.push(p);
+          if (!cons[p.cons]) cons[p.cons] = { id: p.cons, nombre: p.cons, tel: '', mail: '', pedidos: [] };
+          cons[p.cons].pedidos.push(p);
+        });
+        var iPed = col(ri, /^id_pedido$/i), iNom = col(ri, /aux_nombre/i), iProd = col(ri, /^id_producto$/i), iDet = col(ri, /aux_detalle_nuevo/i),
+            iCant = col(ri, /^cantidad$/i), iSub = col(ri, /^subtotal$/i), iEst = col(ri, /estado_item/i);
+        var items = {};
+        ri.table.rows.forEach(function (r) {
+          var idp = String(v(r, iPed)).trim(); if (!idp) return;
+          (items[idp] = items[idp] || []).push({
+            nombre: String(v(r, iNom)).trim() || String(v(r, iProd)).trim(),
+            det: String(v(r, iDet)).trim() || String(v(r, iCant)),
+            sub: n(v(r, iSub)), est: String(v(r, iEst)).trim()
+          });
+        });
+        Object.keys(cons).forEach(function (k) { cons[k].pedidos.sort(function (a, b) { return a.ed < b.ed ? 1 : a.ed > b.ed ? -1 : 0; }); });
+        D = { cons: cons, items: items, ed: datos.ed };
+      }
+
+      var elegido = '';
+      function buscar() {
+        var res = document.getElementById('cs-res'), ficha = document.getElementById('cs-ficha');
+        if (!D) { res.innerHTML = '<p class="meta">Leyendo la planilla…</p>'; return; }
+        var q = sinTildes(document.getElementById('busca-cons').value.trim());
+        var dig = q.replace(/\D/g, '');
+        if (q.length < 2 && !(dig && dig.length >= 1 && /^\d+$/.test(q))) { res.innerHTML = '<p class="meta">Escribí al menos 2 letras, parte del WhatsApp o el N.º de pedido.</p>'; ficha.innerHTML = ''; return; }
+        var hall = Object.keys(D.cons).map(function (k) { return D.cons[k]; }).filter(function (c) {
+          if (!c.pedidos.length && !c.mail) return false;
+          if (sinTildes(c.nombre).indexOf(q) !== -1) return true;
+          if (dig.length >= 4 && c.tel.replace(/\D/g, '').indexOf(dig) !== -1) return true;
+          if (/^\d{1,3}$/.test(q)) return c.pedidos.some(function (p) { return p.ed === D.ed && String(p.corr) === q; });
+          return false;
+        });
+        hall.sort(function (a, b) {
+          var aa = a.pedidos.some(function (p) { return p.ed === D.ed; }), bb = b.pedidos.some(function (p) { return p.ed === D.ed; });
+          return (bb - aa) || a.nombre.localeCompare(b.nombre, 'es');
+        });
+        hall = hall.slice(0, 12);
+        if (!hall.length) { res.innerHTML = '<p class="meta">No hay consumidores con ese dato.</p>'; ficha.innerHTML = ''; return; }
+        if (!hall.some(function (c) { return c.id === elegido; })) elegido = hall[0].id;
+        res.innerHTML = '';
+        hall.forEach(function (c) {
+          var act = c.pedidos.filter(function (p) { return p.ed === D.ed; })[0];
+          var b = document.createElement('button'); b.type = 'button';
+          b.setAttribute('aria-pressed', c.id === elegido);
+          b.innerHTML = '<strong>' + esc(c.nombre) + '</strong><span class="meta">' +
+            (act ? 'Pedido N.º ' + act.corr : 'Sin pedido en esta edición') + '</span>';
+          b.addEventListener('click', function () { elegido = c.id; buscar(); });
+          res.appendChild(b);
+        });
+        pintarFicha(D.cons[elegido]);
+      }
+
+      function textoPedido(c, p) {
+        var its = (D.items[p.id] || []).filter(function (x) { return x.est.toLowerCase() !== 'cancelado'; });
+        return 'Pedido N.º ' + p.corr + ' · ' + c.nombre + '\n' +
+          its.map(function (x) { return '• ' + x.nombre + ' — ' + x.det + (x.est.toLowerCase() === 'faltante' ? ' (no llegó)' : ''); }).join('\n') +
+          '\nTotal a abonar: ' + money(p.total);
+      }
+      function tablaItems(p) {
+        var its = D.items[p.id] || [];
+        if (!its.length) return '<p class="meta">Sin productos registrados.</p>';
+        return '<div style="overflow-x:auto;"><table class="lista"><thead><tr><th>Producto</th><th>Cantidad</th><th class="num">$</th></tr></thead><tbody>' +
+          its.map(function (x) {
+            var falt = x.est.toLowerCase() === 'faltante';
+            return '<tr' + (falt ? ' style="color:#9A9488;"' : '') + '><td>' + esc(x.nombre) + (falt ? ' · <em>no llegó</em>' : '') + '</td><td>' + esc(x.det) +
+              '</td><td class="num">' + money(x.sub) + '</td></tr>';
+          }).join('') + '</tbody></table></div>';
+      }
+      function pintarFicha(c) {
+        var f = document.getElementById('cs-ficha');
+        if (!c) { f.innerHTML = ''; return; }
+        var act = c.pedidos.filter(function (p) { return p.ed === D.ed; })[0];
+        var otros = c.pedidos.filter(function (p) { return p !== act; });
+        var wa = String(c.tel || '').replace(/\D/g, '');
+        if (wa && wa.indexOf('54') !== 0) wa = '549' + wa;
+        var primera = c.pedidos.length ? c.pedidos[c.pedidos.length - 1].ed : '';
+        var h = '<div class="cs-ficha"><h3 style="margin:0;">' + esc(c.nombre) + '</h3><div class="cs-datos">' +
+          '<div class="cs-dato"><small>WhatsApp</small><span>' + esc(c.tel || '—') + '</span>' +
+            (c.tel ? '<button type="button" class="cs-mini" data-copiar="' + esc(c.tel) + '">Copiar</button>' +
+              '<a class="cs-mini" href="https://wa.me/' + wa + '" target="_blank" rel="noopener">Abrir chat</a>' : '') + '</div>' +
+          '<div class="cs-dato"><small>Email</small><span>' + esc(c.mail || '—') + '</span>' +
+            (c.mail ? '<button type="button" class="cs-mini" data-copiar="' + esc(c.mail) + '">Copiar</button>' : '') + '</div>' +
+          '<div class="cs-dato"><small>Pedidos</small><span>' + c.pedidos.length + (c.pedidos.length === 1 ? ' edición' : ' ediciones') +
+            (primera ? ' · desde ' + esc(primera) : '') + '</span></div></div>';
+        if (act) {
+          h += '<div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px; flex-wrap:wrap;">' +
+            '<strong>Esta edición · pedido N.º ' + act.corr + '</strong><span class="cs-estado">' + esc(act.estado || '—') + '</span></div>' +
+            '<p class="meta" style="margin:0;">' + esc([act.entrega, act.dia, act.pago].filter(Boolean).join(' · ')) + '</p>' +
+            tablaItems(act) +
+            '<p style="margin:0; display:flex; justify-content:space-between; gap:8px;"><span>Aporte ' + act.porc + ' %: ' + money(act.aporte) +
+            '</span><strong>Total ' + money(act.total) + '</strong></p>' +
+            '<p style="margin:0;"><button type="button" class="cs-mini" style="margin-left:0;" data-copiar-pedido="' + esc(act.id) + '">Copiar pedido para WhatsApp</button></p>';
+        } else {
+          h += '<p class="meta" style="margin:0;">No hizo pedido en esta edición.</p>';
+        }
+        if (otros.length) {
+          h += '<div class="cs-hist"><strong>Historial</strong>' + otros.map(function (p) {
+            return '<details><summary><span>' + esc(p.ed) + ' · N.º ' + p.corr + '</span><span class="num">' + money(p.total) + '</span></summary>' +
+              '<div class="det">' + tablaItems(p) + '</div></details>';
+          }).join('') + '</div>';
+        }
+        f.innerHTML = h + '</div>';
+        Array.prototype.forEach.call(f.querySelectorAll('[data-copiar],[data-copiar-pedido]'), function (b) {
+          b.addEventListener('click', function () {
+            var t = b.dataset.copiar || textoPedido(c, c.pedidos.filter(function (p) { return p.id === b.dataset.copiarPedido; })[0]);
+            var orig = b.textContent;
+            var ok = function () { b.textContent = '✓ Copiado'; setTimeout(function () { b.textContent = orig; }, 1400); };
+            (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(ok, function () { window.prompt('Copiá:', t); });
+          });
+        });
+      }
+
+      document.getElementById('busca-cons').addEventListener('input', buscar);
+      document.addEventListener('nm-panel-datos', function () {
+        try { armar(window.__nmPanelDatos); buscar(); } catch (e) { console.error(e); }
+      });
+      if (window.__nmPanelDatos) { try { armar(window.__nmPanelDatos); } catch (e) {} }
+      buscar();
+    })();
+  </script>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 03/11 consumidores</p>
 </body>
 </html>
