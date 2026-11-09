@@ -23,7 +23,7 @@
  *   A id_especial · B id_edicion · C nombre · D cierre (2026-11-15 20:00)
  *   E estado (Abierta / Cerrada) · F productos (ids separados por coma)
  *   G retiro (texto, ej. "Jueves 20/11 de 16 a 19 hs") · H descripcion
- *   I aporte (% por defecto, ej. 15)
+ *   I aporte (ya no se usa: las especiales van sin aporte consciente)
  *
  * Los pedidos entran a B1 como los de la edición B (mismo id_edicion), con
  * id_especial y el cierre de la especial, y en el comentario "[⭐ Especial
@@ -130,7 +130,11 @@
       '{{fecha_cierre_human}}': humano(E.cierre),
       '{{fecha_cierre_iso}}': isoLocal(E.cierre),
       '{{webhook_url}}': prueba ? 'TEST_LOCAL' : B1,
-      '{{aporte_default_porcent}}': String(Math.round(E.aporte)),
+      '{{aporte_default_porcent}}': '0',
+      // (09/11) las especiales van SIN aporte consciente: el cálculo da 0 y no se muestra
+      'function getAportePorc() {': 'function getAportePorc() { return 0;',
+      '<div class="aporte-box" id="aporte-box">': '<div class="aporte-box" id="aporte-box" style="display:none">',
+      '<span>Aporte consciente (<span id="aporte-porc">': '<span data-sin-aporte>Aporte consciente (<span id="aporte-porc">',
       '{{retiro_human}}': E.retiro || 'Junto con la entrega de la edición',
       '{{orden_categorias}}': cats.join('|')
     };
@@ -182,6 +186,7 @@
     html = html.replace(/<head[^>]*>/i, function (h) { return h + '\n<script>' + AJUSTE + '<\/script>'; });
     var BANDA = '<div style="background:#B07D62;color:#fff;text-align:center;padding:8px 12px;font-family:system-ui,sans-serif;font-weight:700;">' +
       '⭐ EDICIÓN ESPECIAL · ' + esc(E.nombre) + (prueba ? ' · PRUEBA: no envía pedidos' : '') + '</div>';
+    BANDA += '<style>.summary__total-row:has(> [data-sin-aporte]){display:none}</style>';   // sin aporte en las especiales
     html = html.replace(/<body[^>]*>/i, function (b) { return b + '\n' + BANDA; });
     document.open(); document.write(html); document.close();
   }).catch(function (err) {
