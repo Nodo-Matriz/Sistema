@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Edición especial · Nodo Matríz</title>
+</head>
+<body style="font-family:system-ui,sans-serif;background:#FDFBF5;color:#2C2418;padding:32px 20px;text-align:center;">
+  <p id="cargando">Cargando la edición especial…</p>
+<script>
+/* =====================================================================
+ * Nodo Matríz · formulario de EDICIÓN ESPECIAL (09/11)
+ * ---------------------------------------------------------------------
+ * Una edición especial (ej. "solo yerbas") es una fila en la hoja
+ * "Especiales" de la planilla. Esta página la lee y arma el formulario con
+ * la plantilla de siempre (templates/pedidos.template.html), así que tiene
+ * todas las funciones del formulario normal.
+ *
+ * Dirección: forms/especial.html?e=<id_especial>   (ej. ?e=ESP-21-YERBAS)
+ *            agregando &prueba=1 no envía nada (para probar).
+ *
+ * Hoja "Especiales" (fila 1 = encabezados):
+ *   A id_especial · B id_edicion · C nombre · D cierre (2026-11-15 20:00)
+ *   E estado (Abierta / Cerrada) · F productos (ids separados por coma)
+ *   G retiro (texto, ej. "Jueves 20/11 de 16 a 19 hs") · H descripcion
+ *   I aporte (% por defecto, ej. 15)
+ *
+ * Los pedidos entran a B1 como los de la edición B (mismo id_edicion), con
+ * id_especial y el cierre de la especial, y en el comentario "[⭐ Especial
+ * <nombre>]" para reconocerlos en el panel y en el galpón.
+ * ===================================================================== */
+(function () {
+  'use strict';
+  var SS = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
+  var B1 = 'https://hook.us2.make.com/2jxawiuq920ut1mcu6jvgbvkoq89kpgm';
+  var params = new URLSearchParams(location.search);
+  var idEsp = (params.get('e') || '').trim();
+  var prueba = params.get('prueba') === '1';
+  var cargando = document.getElementById('cargando');
+  function fallo(t) { cargando.textContent = t; }
+  if (!idEsp) { fallo('Falta el código de la edición especial en la dirección (…/especial.html?e=CÓDIGO).'); return; }
+
+  function gviz(params) {
+    return fetch('https://docs.google.com/spreadsheets/d/' + SS + '/gviz/tq?tqx=out:json&' + params + '&_=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { return r.text(); })
+      .then(function (t) {
+        var m = t.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+        if (!m) throw new Error('sin datos');
+        var res = JSON.parse(m[1]);
+        if (!res.table) throw new Error('sin tabla');
+        return res.table;
+      });
+  }
+  function v(r, i) { var c = r.c && r.c[i]; return c && c.v != null ? c.v : ''; }
+  function f(r, i) { var c = r.c && r.c[i]; return c && c.f != null ? c.f : v(r, i); }
+  // fecha de la planilla → Date (acepta Date(…) de gviz, "2026-11-15 20:00" y "15/11/2026 20:00")
+  function aFecha(x, fx) {
+    var s = String(x || '');
+    var m = s.match(/^Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+)(?:,(\d+))?)?\)$/);
+    if (m) return new Date(+m[1], +m[2], +m[3], +(m[4] || 0), +(m[5] || 0));
+    s = String(fx || x || '').trim().replace(/^'/, '');
+    m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{2})/);
+    if (m) return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+    m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/);
+    if (m) return new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5]);
+    var d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  function isoLocal(d) {   // 2026-11-15T20:00:00-03:00
+    var p = function (n) { return ('0' + n).slice(-2); };
+    var off = -d.getTimezoneOffset(), sg = off >= 0 ? '+' : '-';
+    off = Math.abs(off);
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes()) +
+      ':00' + sg + p(Math.floor(off / 60)) + ':' + p(off % 60);
+  }
+  var DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  var MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  function humano(d) {
+    return DIAS[d.getDay()] + ' ' + d.getDate() + ' de ' + MESES[d.getMonth()] + ', ' +
+      ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + ' hs';
+  }
+  function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+  Promise.all([
+    gviz('sheet=Especiales&range=A1:I300&headers=1'),
+    gviz('sheet=Productos&range=A1:U3000&headers=1'),
+    fetch(new URL('../templates/pedidos.template.html', location.href).href, { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('plantilla ' + r.status); return r.text(); })
+  ]).then(function (res) {
+    var tEsp = res[0], tProd = res[1], html = res[2];
+    if (!/especial/i.test(String((tEsp.cols[0] || {}).label || ''))) throw new Error('No encuentro la hoja "Especiales" en la planilla.');
+    var fila = null;
+    tEsp.rows.forEach(function (r) { if (String(v(r, 0)).trim().toUpperCase() === idEsp.toUpperCase()) fila = r; });
+    if (!fila) throw new Error('No existe la edición especial "' + idEsp + '".');
+    var E = {
+      id: String(v(fila, 0)).trim(), edicion: String(v(fila, 1)).trim(), nombre: String(v(fila, 2)).trim() || 'Edición especial',
+      cierre: aFecha(v(fila, 3), f(fila, 3)), estado: String(v(fila, 4)).trim().toLowerCase(),
+      productos: String(v(fila, 5)).split(/[\s,;]+/).map(function (x) { return x.trim().toUpperCase(); }).filter(Boolean),
+      retiro: String(v(fila, 6)).trim(), descripcion: String(v(fila, 7)).trim(),
+      aporte: parseFloat(String(v(fila, 8)).replace(',', '.')) || 15
+    };
+    if (!/^ED\d{4}-\d+$/.test(E.edicion)) throw new Error('La especial "' + E.id + '" no tiene una edición válida en la columna B (ej. ED2026-22).');
+    if (!E.cierre) throw new Error('La especial "' + E.id + '" no tiene una fecha de cierre válida en la columna D (ej. 2026-11-15 20:00).');
+    var abierta = E.estado === 'abierta' && E.cierre.getTime() > Date.now();
+
+    // catálogo: los productos de la columna F, en ese orden, con los datos de la hoja Productos
+    var porId = {};
+    tProd.rows.forEach(function (r) { var id = String(v(r, 0)).trim().toUpperCase(); if (id) porId[id] = r; });
+    var catalogo = [], cats = [];
+    E.productos.forEach(function (id) {
+      var r = porId[id]; if (!r) return;
+      var cat = String(v(r, 8)).trim() || 'Otros';
+      if (cats.indexOf(cat) === -1) cats.push(cat);
+      catalogo.push({
+        id_producto: String(v(r, 0)).trim(), id_productor: String(v(r, 1)).trim(), nombre: String(v(r, 2)).trim(),
+        unidad: String(v(r, 3)).trim(), fraccionable: String(v(r, 4)).trim() || 'No', fracciones: String(v(r, 5)).trim(),
+        precio: Number(v(r, 6)) || 0, origen: String(v(r, 7)).trim(), categoria: cat,
+        es_oferta: String(v(r, 11)).trim() || 'No', descripcion: String(v(r, 15)).trim(),
+        productor: String(v(r, 16)).trim(), distancia_km: v(r, 17)
+      });
+    });
+    if (!catalogo.length) throw new Error('La especial "' + E.id + '" no tiene productos válidos en la columna F.');
+
+    var REEMPLAZOS = {
+      "'nm_pedido_{{id_edicion}}'": "'nm_pedido_" + E.id + "'",       // su propio borrador
+      '{{categorias_json}}': catalogo.map(function (p) { return JSON.stringify(p); }).join(','),
+      '{{id_edicion}}': E.edicion,
+      '{{numero_edicion}}': 'especial · ' + E.nombre,
+      '{{anio_edicion}}': String(E.cierre.getFullYear()),
+      '{{fecha_cierre_human}}': humano(E.cierre),
+      '{{fecha_cierre_iso}}': isoLocal(E.cierre),
+      '{{webhook_url}}': prueba ? 'TEST_LOCAL' : B1,
+      '{{aporte_default_porcent}}': String(Math.round(E.aporte)),
+      '{{retiro_human}}': E.retiro || 'Junto con la entrega de la edición',
+      '{{orden_categorias}}': cats.join('|')
+    };
+    Object.keys(REEMPLAZOS).forEach(function (k) { html = html.split(k).join(REEMPLAZOS[k]); });
+
+    // Lo que se agrega a la página del formulario
+    var AJUSTE = '(' + function (cfg) {
+      // 1) El estado lo da la especial, no la edición (que puede estar cerrada).
+      // 2) Cada pedido sale marcado como de la especial.
+      var original = window.fetch.bind(window);
+      function marcar(p) {
+        if (!p || typeof p !== 'object' || p.id_especial) return p;
+        p.id_especial = cfg.id; p.especial_nombre = cfg.nombre; p.especial_cierre = cfg.cierreIso;
+        var tag = '[⭐ Especial ' + cfg.nombre + ']';
+        p.comentarios = p.comentarios ? (String(p.comentarios).indexOf(tag) === 0 ? p.comentarios : tag + ' ' + p.comentarios) : tag;
+        return p;
+      }
+      window.fetch = function (entrada, op) {
+        var url = typeof entrada === 'string' ? entrada : (entrada && entrada.url) || '';
+        if (url.indexOf('docs.google.com/spreadsheets') !== -1 && /[?&]sheet=Ediciones(&|$)/.test(url)) {
+          if (navigator.onLine === false) return Promise.reject(new TypeError('Failed to fetch'));
+          var cuerpo = 'google.visualization.Query.setResponse(' + JSON.stringify({ status: 'ok', table: {
+            cols: [{ label: 'id_edicion' }, { label: 'numero' }, { label: 'anio' }, { label: 'estado' }],
+            rows: [{ c: [{ v: cfg.edicion }, null, null, { v: cfg.abierta ? 'Form abierto' : 'Form cerrado' }] }] } }) + ');';
+          return Promise.resolve(new Response(cuerpo, { status: 200 }));
+        }
+        if (url === cfg.b1 && op && op.method === 'POST' && typeof op.body === 'string') {
+          try { op = Object.assign({}, op, { body: JSON.stringify(marcar(JSON.parse(op.body))) }); } catch (e) {}
+        }
+        return original(entrada, op);
+      };
+      document.addEventListener('DOMContentLoaded', function () {
+        // pedidos que quedan pendientes sin conexión: también marcados
+        if (window.NMCola && window.NMCola.guardar) {
+          var g = window.NMCola.guardar;
+          window.NMCola.guardar = function (reg) { if (reg && reg.payload) marcar(reg.payload); return g(reg); };
+        }
+        var h1 = document.querySelector('h1');
+        if (h1) h1.textContent = '⭐ ' + cfg.nombre;
+        var lead = document.querySelector('p.lead');
+        if (lead) lead.textContent = cfg.descripcion ||
+          ('Edición especial del Nodo: ' + cfg.nombre + '. Se retira junto con la edición en curso.');
+        document.title = cfg.nombre + ' · Edición especial · Nodo Matríz';
+      });
+    }.toString() + ')(' + JSON.stringify({
+      id: E.id, nombre: E.nombre, edicion: E.edicion, abierta: abierta, cierreIso: isoLocal(E.cierre),
+      descripcion: E.descripcion, b1: B1
+    }) + ');';
+    html = html.replace(/<head[^>]*>/i, function (h) { return h + '\n<script>' + AJUSTE + '<\/script>'; });
+    var BANDA = '<div style="background:#B07D62;color:#fff;text-align:center;padding:8px 12px;font-family:system-ui,sans-serif;font-weight:700;">' +
+      '⭐ EDICIÓN ESPECIAL · ' + esc(E.nombre) + (prueba ? ' · PRUEBA: no envía pedidos' : '') + '</div>';
+    html = html.replace(/<body[^>]*>/i, function (b) { return b + '\n' + BANDA; });
+    document.open(); document.write(html); document.close();
+  }).catch(function (err) {
+    fallo('No se pudo abrir la edición especial. ' + (err && err.message || '') +
+      ' Si el celular está sin datos, probá de nuevo cuando vuelva la señal.');
+  });
+})();
+</script>
+</body>
+</html>

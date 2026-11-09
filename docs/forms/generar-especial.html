@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Nueva edición especial · Nodo Matríz</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+  <link rel="icon" type="image/png" href="../assets/favicon-nodo.png">
+  <style>
+    .card-eq { background: #fff; border: 1px solid rgba(74,107,58,.25); border-radius: var(--r-card, 16px); padding: 16px 18px; margin-top: 16px; }
+    .card-eq h2 { font-size: 1.2rem; margin: 0 0 8px; }
+    .campo { display: grid; gap: 4px; margin-top: 10px; }
+    .campo label { font-weight: 700; font-size: .92rem; }
+    .campo input, .campo select, .campo textarea { font: inherit; padding: 9px 12px; border-radius: 10px; border: 1.5px solid rgba(74,107,58,.3); background: #fff; }
+    .meta { font-size: .84rem; color: var(--c-tierra, #6E6253); }
+    .filtros { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .filtros input, .filtros select { font: inherit; padding: 8px 10px; border-radius: 10px; border: 1.5px solid rgba(74,107,58,.3); }
+    .lista { max-height: 420px; overflow: auto; border: 1px solid rgba(74,107,58,.2); border-radius: 12px; margin-top: 8px; }
+    .prod { display: flex; gap: 10px; align-items: center; padding: 8px 12px; border-bottom: 1px solid rgba(74,107,58,.12); cursor: pointer; }
+    .prod:last-child { border-bottom: 0; }
+    .prod input { width: 20px; height: 20px; accent-color: var(--c-oliva, #4A6B3A); flex: 0 0 auto; }
+    .prod .n { flex: 1; min-width: 0; }
+    .prod .n small { display: block; color: var(--c-tierra, #6E6253); }
+    .prod.sel { background: rgba(74,107,58,.08); }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .chip { font-size: .85rem; background: rgba(74,107,58,.1); color: var(--c-musgo, #34502A); border-radius: 999px; padding: 3px 10px; }
+    .chip button { border: 0; background: none; color: inherit; cursor: pointer; font-weight: 700; margin-left: 4px; }
+    pre.fila { white-space: pre-wrap; word-break: break-all; background: rgba(74,107,58,.06); border-radius: 10px; padding: 10px; font-size: .82rem; }
+    .err { color: #A6402B; font-weight: 600; }
+    .ok { color: var(--c-musgo, #34502A); font-weight: 600; }
+    ol.pasos li { margin: 4px 0; }
+  </style>
+</head>
+<body>
+<main class="wrap">
+  <p><a href="../" class="btn btn--ghost btn--small">← Volver a la guía</a></p>
+  <h1>Nueva edición especial</h1>
+  <p class="lead">Para vender algo puntual (por ejemplo, solo yerbas) con su propio formulario y su propio cierre. Se entrega junto con la edición en curso.</p>
+
+  <div class="card-eq">
+    <h2>1 · Datos</h2>
+    <div class="campo"><label for="nombre">Nombre (lo ven los consumidores)</label><input id="nombre" placeholder="Ej.: Yerbas"></div>
+    <div class="campo"><label for="edicion">Se entrega con la edición</label><select id="edicion"></select>
+      <span class="meta">Los pedidos quedan en esa edición: comandas, recepción, armado, entrega y liquidación los toman como siempre.</span></div>
+    <div class="campo"><label for="cierre">Cierre del formulario</label><input id="cierre" type="datetime-local"></div>
+    <div class="campo"><label for="retiro">Retiro (texto)</label><input id="retiro" placeholder="Ej.: Jueves 20/11 de 16 a 19 hs"></div>
+    <div class="campo"><label for="descripcion">Texto de presentación (opcional)</label><textarea id="descripcion" rows="2" placeholder="Ej.: Yerbas agroecológicas de Misiones, a granel y en paquete."></textarea></div>
+    <div class="campo"><label for="aporte">Aporte consciente por defecto (%)</label><input id="aporte" type="number" min="15" value="15" style="max-width:120px;"></div>
+  </div>
+
+  <div class="card-eq">
+    <h2>2 · Productos</h2>
+    <p class="meta">Tildá los productos que entran. Si falta alguno, cargalo antes en la hoja <strong>Productos</strong> (con <em>disponible</em> en "No" para que no aparezca en el formulario normal) y tocá ↻.</p>
+    <div class="filtros">
+      <input id="buscar" type="search" placeholder="Buscar producto o productor…" style="flex:1; min-width:180px;">
+      <select id="f-cat"><option value="">Todas las categorías</option></select>
+      <button type="button" class="btn btn--ghost btn--small" id="recargar">↻</button>
+    </div>
+    <div class="lista" id="lista"><p class="meta" style="padding:10px;">Leyendo la planilla…</p></div>
+    <div class="chips" id="elegidos"></div>
+  </div>
+
+  <div class="card-eq">
+    <h2>3 · Crear</h2>
+    <p id="validacion" class="err"></p>
+    <div id="resultado" style="display:none;">
+      <p>Código: <strong id="codigo"></strong></p>
+      <ol class="pasos">
+        <li>Abrí la planilla, hoja <strong>Especiales</strong>, y hacé clic en la primera celda vacía de la columna A.</li>
+        <li>Tocá <strong>Copiar fila</strong> y pegala ahí (Ctrl+V). Ocupa de la columna A a la I.</li>
+        <li>Probá el formulario con el link de <strong>prueba</strong> (no envía nada).</li>
+        <li>Compartí el <strong>link para consumidores</strong>.</li>
+      </ol>
+      <p><button type="button" class="btn btn--primary" id="copiar-fila">Copiar fila</button> <span id="ok-copia" class="ok"></span></p>
+      <pre class="fila" id="fila"></pre>
+      <p>Link para consumidores:<br><a id="link" target="_blank" rel="noopener"></a> <button type="button" class="btn btn--ghost btn--small" id="copiar-link">Copiar</button></p>
+      <p>Link de prueba (no envía pedidos):<br><a id="link-prueba" target="_blank" rel="noopener"></a></p>
+      <p class="meta">Para cerrarla antes de tiempo: en la hoja Especiales, columna E, poner <strong>Cerrada</strong>.</p>
+    </div>
+  </div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var SS = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
+  function $(id) { return document.getElementById(id); }
+  function gviz(p) {
+    return fetch('https://docs.google.com/spreadsheets/d/' + SS + '/gviz/tq?tqx=out:json&' + p + '&_=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { return r.text(); }).then(function (t) {
+        var m = t.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+        if (!m) throw new Error('sin datos'); return JSON.parse(m[1]).table;
+      });
+  }
+  function v(r, i) { var c = r.c && r.c[i]; return c && c.v != null ? c.v : ''; }
+  function sinT(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+  function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  var productos = [], elegidos = [], ediciones = [];
+
+  function cargar() {
+    $('lista').innerHTML = '<p class="meta" style="padding:10px;">Leyendo la planilla…</p>';
+    Promise.all([gviz('sheet=Productos&range=A1:U3000&headers=1'), gviz('sheet=Ediciones&range=A1:D1000&headers=1')]).then(function (t) {
+      productos = [];
+      t[0].rows.forEach(function (r) {
+        var id = String(v(r, 0)).trim(); if (!/^P/i.test(id)) return;
+        productos.push({ id: id, nombre: String(v(r, 2)).trim(), unidad: String(v(r, 3)).trim(), precio: v(r, 6),
+          cat: String(v(r, 8)).trim(), disp: String(v(r, 9)).trim(), productor: String(v(r, 16)).trim() });
+      });
+      productos.sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); });
+      var cats = {}; productos.forEach(function (p) { if (p.cat) cats[p.cat] = 1; });
+      var sc = $('f-cat'), act = sc.value;
+      sc.innerHTML = '<option value="">Todas las categorías</option>' + Object.keys(cats).sort().map(function (c) { return '<option>' + esc(c) + '</option>'; }).join('');
+      sc.value = act;
+      ediciones = [];
+      t[1].rows.forEach(function (r) { var id = String(v(r, 0)).trim(); if (/^ED\d{4}-\d+$/.test(id)) ediciones.push({ id: id, estado: String(v(r, 3)).trim() }); });
+      var se = $('edicion'), actE = se.value;
+      se.innerHTML = ediciones.slice().reverse().map(function (e) { return '<option value="' + esc(e.id) + '">' + esc(e.id) + ' · ' + esc(e.estado) + '</option>'; }).join('');
+      var enCurso = ediciones.filter(function (e) { return e.estado.toLowerCase() !== 'cerrada'; }).pop();
+      se.value = actE || (enCurso ? enCurso.id : (ediciones.length ? ediciones[ediciones.length - 1].id : ''));
+      pintar(); validar();
+    }).catch(function () { $('lista').innerHTML = '<p class="err" style="padding:10px;">No pude leer la planilla. Probá de nuevo con ↻.</p>'; });
+  }
+  function pintar() {
+    var q = sinT($('buscar').value.trim()), c = $('f-cat').value;
+    var l = productos.filter(function (p) {
+      return (!c || p.cat === c) && (!q || sinT(p.nombre + ' ' + p.productor).indexOf(q) !== -1);
+    }).slice(0, 300);
+    $('lista').innerHTML = l.length ? '' : '<p class="meta" style="padding:10px;">Nada con ese filtro.</p>';
+    l.forEach(function (p) {
+      var d = document.createElement('label'); d.className = 'prod' + (elegidos.indexOf(p.id) !== -1 ? ' sel' : '');
+      d.innerHTML = '<input type="checkbox"' + (elegidos.indexOf(p.id) !== -1 ? ' checked' : '') + '><span class="n"><strong></strong><small></small></span>';
+      d.querySelector('strong').textContent = p.nombre;
+      d.querySelector('small').textContent = [p.productor, p.cat, (p.precio ? '$ ' + Number(p.precio).toLocaleString('es-AR') : '') + (p.unidad ? ' / ' + p.unidad : ''), p.disp === 'Sí' ? 'en el formulario normal' : ''].filter(Boolean).join(' · ');
+      d.querySelector('input').addEventListener('change', function (e) {
+        var i = elegidos.indexOf(p.id);
+        if (e.target.checked && i === -1) elegidos.push(p.id);
+        if (!e.target.checked && i !== -1) elegidos.splice(i, 1);
+        d.classList.toggle('sel', e.target.checked); pintarElegidos(); validar();
+      });
+      $('lista').appendChild(d);
+    });
+  }
+  function pintarElegidos() {
+    var porId = {}; productos.forEach(function (p) { porId[p.id] = p; });
+    $('elegidos').innerHTML = elegidos.length ? '' : '<span class="meta">Ningún producto elegido.</span>';
+    elegidos.forEach(function (id) {
+      var s = document.createElement('span'); s.className = 'chip';
+      s.textContent = (porId[id] ? porId[id].nombre : id);
+      var b = document.createElement('button'); b.type = 'button'; b.textContent = '×'; b.title = 'Quitar';
+      b.addEventListener('click', function () { elegidos.splice(elegidos.indexOf(id), 1); pintar(); pintarElegidos(); validar(); });
+      s.appendChild(b); $('elegidos').appendChild(s);
+    });
+  }
+  function slug(t) { return sinT(t).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').toUpperCase().slice(0, 20) || 'ESPECIAL'; }
+  var filaTxt = '';
+  function validar() {
+    var nombre = $('nombre').value.trim(), ed = $('edicion').value, cierre = $('cierre').value, retiro = $('retiro').value.trim();
+    var faltan = [];
+    if (!nombre) faltan.push('el nombre');
+    if (!ed) faltan.push('la edición');
+    if (!cierre) faltan.push('el cierre');
+    else if (new Date(cierre).getTime() < Date.now()) faltan.push('un cierre en el futuro');
+    if (!retiro) faltan.push('el retiro');
+    if (!elegidos.length) faltan.push('al menos un producto');
+    $('validacion').textContent = faltan.length ? 'Falta: ' + faltan.join(', ') + '.' : '';
+    $('resultado').style.display = faltan.length ? 'none' : 'block';
+    if (faltan.length) return;
+    var num = (ed.match(/-(\d+)$/) || [])[1] || '';
+    var codigo = 'ESP-' + num + '-' + slug(nombre);
+    var aporte = Math.max(15, parseInt($('aporte').value, 10) || 15);
+    var cierreTxt = cierre.replace('T', ' ');
+    var celdas = [codigo, ed, nombre, "'" + cierreTxt, 'Abierta', elegidos.join(', '), retiro, $('descripcion').value.trim().replace(/\s+/g, ' '), aporte];
+    filaTxt = celdas.join('\t');
+    $('codigo').textContent = codigo;
+    $('fila').textContent = celdas.map(function (c, i) { return 'ABCDEFGHI'[i] + ': ' + c; }).join('\n');
+    var base = new URL('especial.html', location.href).href;
+    var url = base + '?e=' + encodeURIComponent(codigo);
+    $('link').href = url; $('link').textContent = url;
+    $('link-prueba').href = url + '&prueba=1'; $('link-prueba').textContent = url + '&prueba=1';
+  }
+  function copiar(txt, el) {
+    var ok = function () { if (el) { el.textContent = '✓ Copiado'; setTimeout(function () { el.textContent = ''; }, 2500); } };
+    (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(ok, function () { window.prompt('Copiá:', txt); });
+  }
+  ['nombre', 'edicion', 'cierre', 'retiro', 'descripcion', 'aporte'].forEach(function (id) { $(id).addEventListener('input', validar); $(id).addEventListener('change', validar); });
+  $('buscar').addEventListener('input', pintar);
+  $('f-cat').addEventListener('change', pintar);
+  $('recargar').addEventListener('click', cargar);
+  $('copiar-fila').addEventListener('click', function () { copiar(filaTxt, $('ok-copia')); });
+  $('copiar-link').addEventListener('click', function () { copiar($('link').href, $('ok-copia')); });
+  pintarElegidos(); cargar();
+})();
+</script>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 09/11 especiales</p>
+</body>
+</html>
