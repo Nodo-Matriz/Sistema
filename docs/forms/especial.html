@@ -109,7 +109,7 @@
     var catalogo = [], cats = [];
     E.productos.forEach(function (id) {
       var r = porId[id]; if (!r) return;
-      var cat = String(v(r, 8)).trim() || 'Otros';
+      var cat = String(v(r, 8)).trim() || E.nombre;   // productos nuevos sin categoría: van con el nombre de la especial
       if (cats.indexOf(cat) === -1) cats.push(cat);
       catalogo.push({
         id_producto: String(v(r, 0)).trim(), id_productor: String(v(r, 1)).trim(), nombre: String(v(r, 2)).trim(),

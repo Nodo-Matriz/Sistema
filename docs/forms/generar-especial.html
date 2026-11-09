@@ -51,7 +51,7 @@
 
   <div class="card-eq">
     <h2>2 · Productos</h2>
-    <p class="meta">Tildá los productos que entran. Si falta alguno, cargalo antes en la hoja <strong>Productos</strong> (con <em>disponible</em> en "No" para que no aparezca en el formulario normal) y tocá ↻.</p>
+    <p class="meta">Tildá los productos que entran. Si falta alguno, agregalo abajo en <strong>Producto nuevo</strong>: se carga en la planilla y queda elegido (no aparece en el formulario normal).</p>
     <div class="filtros">
       <input id="buscar" type="search" placeholder="Buscar producto o productor…" style="flex:1; min-width:180px;">
       <select id="f-cat"><option value="">Todas las categorías</option></select>
@@ -59,6 +59,19 @@
     </div>
     <div class="lista" id="lista"><p class="meta" style="padding:10px;">Leyendo la planilla…</p></div>
     <div class="chips" id="elegidos"></div>
+
+    <details class="nuevo" id="caja-nuevo" style="margin-top:14px;">
+      <summary style="cursor:pointer;font-weight:700;color:var(--c-musgo,#34502A);">＋ Producto nuevo</summary>
+      <div class="campo"><label for="np-productor">Productor</label><select id="np-productor"><option value="">— elegí —</option></select></div>
+      <div class="campo"><label for="np-nombre">Nombre del producto</label><input id="np-nombre" placeholder="Ej.: Yerba Kalena Barbacuá x 500 g"></div>
+      <div class="filtros">
+        <div class="campo" style="flex:1;min-width:140px;"><label for="np-unidad">Se vende por</label>
+          <select id="np-unidad"><option>unidad</option><option>paquete</option><option>kg</option><option>frasco</option><option>botella</option><option>litro</option><option>atado</option><option>docena</option><option>bolsa</option></select></div>
+        <div class="campo" style="flex:1;min-width:140px;"><label for="np-precio">Precio ($, sin puntos)</label><input id="np-precio" inputmode="numeric" placeholder="Ej.: 4500"></div>
+      </div>
+      <div class="campo"><label for="np-desc">Descripción (opcional)</label><input id="np-desc"></div>
+      <p style="margin-top:10px;"><button type="button" class="btn btn--primary btn--small" id="np-agregar">Agregar a la planilla</button> <span id="np-msg" class="meta"></span></p>
+    </details>
   </div>
 
   <div class="card-eq">
@@ -96,16 +109,25 @@
   function sinT(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   var productos = [], elegidos = [], ediciones = [];
+  var A2 = 'https://hook.us2.make.com/thlpwqa9epg354ekwp44ijr1fhpg5xsq';   // escenario A2 (carga de productos)
+  var creando = [];   // productos nuevos enviados, esperando que la planilla les dé un id
 
   function cargar() {
     $('lista').innerHTML = '<p class="meta" style="padding:10px;">Leyendo la planilla…</p>';
-    Promise.all([gviz('sheet=Productos&range=A1:U3000&headers=1'), gviz('sheet=Ediciones&range=A1:D1000&headers=1')]).then(function (t) {
+    Promise.all([gviz('sheet=Productos&range=A1:U3000&headers=1'), gviz('sheet=Ediciones&range=A1:D1000&headers=1'),
+                 gviz('sheet=Productores&range=A1:B2000&headers=1')]).then(function (t) {
+      var sp = $('np-productor'), actP = sp.value, prs = [];
+      t[2].rows.forEach(function (r) { var id = String(v(r, 0)).trim(); if (/^PROD/i.test(id)) prs.push({ id: id, nombre: String(v(r, 1)).trim() || id }); });
+      prs.sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); });
+      sp.innerHTML = '<option value="">— elegí —</option>' + prs.map(function (x) { return '<option value="' + esc(x.id) + '">' + esc(x.nombre) + '</option>'; }).join('');
+      sp.value = actP;
       productos = [];
       t[0].rows.forEach(function (r) {
         var id = String(v(r, 0)).trim(); if (!/^P/i.test(id)) return;
-        productos.push({ id: id, nombre: String(v(r, 2)).trim(), unidad: String(v(r, 3)).trim(), precio: v(r, 6),
+        productos.push({ id: id, idProductor: String(v(r, 1)).trim(), nombre: String(v(r, 2)).trim(), unidad: String(v(r, 3)).trim(), precio: v(r, 6),
           cat: String(v(r, 8)).trim(), disp: String(v(r, 9)).trim(), productor: String(v(r, 16)).trim() });
       });
+      buscarCreados();
       productos.sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); });
       var cats = {}; productos.forEach(function (p) { if (p.cat) cats[p.cat] = 1; });
       var sc = $('f-cat'), act = sc.value;
@@ -140,9 +162,73 @@
       $('lista').appendChild(d);
     });
   }
+  // ── productos nuevos: se cargan con el escenario A2 y se eligen solos ──
+  function buscarCreados() {
+    creando = creando.filter(function (c) {
+      var hall = productos.filter(function (p) {
+        return c.antes.indexOf(p.id) === -1 && p.idProductor === c.idProductor && sinT(p.nombre) === sinT(c.nombre);
+      })[0];
+      if (hall) {
+        if (elegidos.indexOf(hall.id) === -1) elegidos.push(hall.id);
+        $('np-msg').innerHTML = '<span class="ok">✓ ' + esc(hall.nombre) + ' quedó cargado (' + esc(hall.id) + ') y elegido.</span>';
+        return false;
+      }
+      if (Date.now() - c.ts > 120000) {
+        $('np-msg').innerHTML = '<span class="err">No veo "' + esc(c.nombre) + '" en la planilla todavía. Revisá el escenario A2 en Make y tocá ↻.</span>';
+        return false;
+      }
+      return true;
+    });
+    pintarElegidos(); validar();
+    if (creando.length) setTimeout(function () { cargarSilencioso(); }, 5000);
+  }
+  function cargarSilencioso() {
+    gviz('sheet=Productos&range=A1:U3000&headers=1').then(function (t) {
+      productos = [];
+      t.rows.forEach(function (r) {
+        var id = String(v(r, 0)).trim(); if (!/^P/i.test(id)) return;
+        productos.push({ id: id, idProductor: String(v(r, 1)).trim(), nombre: String(v(r, 2)).trim(), unidad: String(v(r, 3)).trim(), precio: v(r, 6),
+          cat: String(v(r, 8)).trim(), disp: String(v(r, 9)).trim(), productor: String(v(r, 16)).trim() });
+      });
+      productos.sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); });
+      pintar(); buscarCreados();
+    }).catch(function () { setTimeout(cargarSilencioso, 5000); });
+  }
+  $('np-agregar').addEventListener('click', function () {
+    var idP = $('np-productor').value, nombre = $('np-nombre').value.trim(), unidad = $('np-unidad').value;
+    var precio = parseInt(String($('np-precio').value).replace(/\D/g, ''), 10);
+    if (!idP || !nombre || !(precio >= 50)) {
+      $('np-msg').innerHTML = '<span class="err">Completá productor, nombre y precio (en pesos, ej.: 4500).</span>'; return;
+    }
+    if (productos.some(function (p) { return p.idProductor === idP && sinT(p.nombre) === sinT(nombre); })) {
+      $('np-msg').innerHTML = '<span class="err">Ese producto ya existe: buscalo en la lista y tildalo.</span>'; return;
+    }
+    var btn = $('np-agregar'); btn.disabled = true;
+    $('np-msg').textContent = '⏳ Cargando en la planilla…';
+    fetch(A2, {
+      method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id_productor: idP, enviado_en: new Date().toISOString(), notas: '', comentario_app: null,
+        productos: [{ id_producto: null, nombre: nombre, unidad: unidad, precio: precio, stock_estimado: null,
+          descripcion: $('np-desc').value.trim() || null, disponible: false, es_oferta: false, accion: 'nuevo' }]
+      })
+    }).then(fin, fin);
+    function fin() {
+      btn.disabled = false;
+      creando.push({ idProductor: idP, nombre: nombre, ts: Date.now(), antes: productos.map(function (p) { return p.id; }) });
+      $('np-nombre').value = ''; $('np-precio').value = ''; $('np-desc').value = '';
+      $('np-msg').textContent = '⏳ Cargando "' + nombre + '" en la planilla… (puede tardar hasta un minuto)';
+      pintarElegidos();
+      setTimeout(cargarSilencioso, 4000);
+    }
+  });
+
   function pintarElegidos() {
     var porId = {}; productos.forEach(function (p) { porId[p.id] = p; });
-    $('elegidos').innerHTML = elegidos.length ? '' : '<span class="meta">Ningún producto elegido.</span>';
+    $('elegidos').innerHTML = (elegidos.length || creando.length) ? '' : '<span class="meta">Ningún producto elegido.</span>';
+    creando.forEach(function (c) {
+      var s = document.createElement('span'); s.className = 'chip'; s.textContent = '⏳ ' + c.nombre; $('elegidos').appendChild(s);
+    });
     elegidos.forEach(function (id) {
       var s = document.createElement('span'); s.className = 'chip';
       s.textContent = (porId[id] ? porId[id].nombre : id);
@@ -162,6 +248,7 @@
     else if (new Date(cierre).getTime() < Date.now()) faltan.push('un cierre en el futuro');
     if (!retiro) faltan.push('el retiro');
     if (!elegidos.length) faltan.push('al menos un producto');
+    if (creando.length) faltan.push('que termine de cargarse el producto nuevo');
     $('validacion').textContent = faltan.length ? 'Falta: ' + faltan.join(', ') + '.' : '';
     $('resultado').style.display = faltan.length ? 'none' : 'block';
     if (faltan.length) return;
@@ -191,6 +278,6 @@
   pintarElegidos(); cargar();
 })();
 </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 09/11 especiales</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 09/11 especiales + producto nuevo</p>
 </body>
 </html>
