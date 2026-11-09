@@ -188,7 +188,8 @@
     .fr-chip.marcado .x, .fr-chip.hecho .x, .fr-chip.marcado .ant, .fr-chip.hecho .ant { color: #fff; }
     .fr-chip.hecho { opacity: .85; cursor: default; }
     .fr-chip.cambio { border-color: #9A5B0E; }
-    .fr-chip.nope { border-style: dashed; border-color: #9A9488; color: #6E6253; cursor: default; }
+    .fr-chip.nope, .fr-chip.espera { border-color: #c9c3b6; color: #8a8273; background: #f4f1ea; cursor: default; }
+    .fr-chip.espera .x, .fr-chip.nope .x { color: #8a8273; }
     .fr-chip.cero { border-color: #c9c3b6; color: #9A9488; text-decoration: line-through; cursor: default; }
     .fr-chip:focus-visible { outline: 3px solid rgba(74,107,58,.4); outline-offset: 2px; }
     .fr-aviso { margin-top: 8px; font-size: .84rem; color: #8a5a10; font-weight: 600; }
@@ -1313,10 +1314,8 @@
       // sub-título que se muestra en el cajón
       function etiquetaCategoria(id) {
         var cat = categoriaProd[id] || 'Otros';
-        if (!esVerduleria(id)) return cat;
-        var pos = posVerduleria(id);
-        if (pos === -1) return normCat(cat) === 'frutas' ? 'Otras frutas' : 'Otras hortalizas';
-        return pos < IDX_FRUTAS ? 'Hortalizas' : 'Frutas';
+        // (09/11) siempre la categoría real del producto
+        return cat;
       }
       function compararPorCategoria(a, b) {
         var ida = a.it.id_producto, idb = b.it.id_producto;
@@ -1327,6 +1326,10 @@
         if (ra[1] !== rb[1]) return ra[1] - rb[1];
         if (ra[2] !== rb[2]) return ra[2] < rb[2] ? -1 : 1;
         if (va && vb) {
+          // primero Hortalizas y después Frutas (categoría real); dentro de
+          // cada una, el orden fijo de verdulería y al final las que no están
+          var cra = normCat(categoriaProd[ida]) === 'frutas' ? 1 : 0, crb = normCat(categoriaProd[idb]) === 'frutas' ? 1 : 0;
+          if (cra !== crb) return cra - crb;
           var pa = posVerduleria(ida), pb = posVerduleria(idb);
           var oa = pa === -1 ? 1000 : pa, ob = pb === -1 ? 1000 : pb;
           if (oa !== ob) return oa - ob;
@@ -3400,7 +3403,9 @@
         });
         // lo que espera recepción va al final
         grupos.forEach(function (g) {
-          g.bloq = g.filas.every(function (f) { return f.r.estado === 'bloq'; });
+          var rp = recepPorProducto[g.id];
+          g.sinRecepcion = !rp && !recepCorruptas[g.id];
+          g.bloq = g.sinRecepcion || g.filas.every(function (f) { return f.r.estado === 'bloq'; });
           g.listo = g.filas.every(function (f) { return f.r.preparado ||
             (f.r.estado === 'entero' && !f.r.p.id_plan && enterosHechos()[idEdicion + '|' + f.r.p.id_producto]) || f.r.estado === 'cero' || (f.r.ahora <= EPS && f.r.estado !== 'entero'); });
         });
@@ -3416,7 +3421,7 @@
           g.filas.forEach(function (f) { if (f.r.estado !== 'cero') total += f.r.unidades || 0; });
           div.innerHTML = '<div class="fr-cab"><strong></strong><span class="fr-tot"></span></div><div class="fr-chips"></div>';
           div.querySelector('strong').textContent = (g.listo ? '✓ ' : '') + g.nombre;
-          div.querySelector('.fr-tot').textContent = g.bloq ? 'esperando recepción'
+          div.querySelector('.fr-tot').textContent = g.sinRecepcion ? '⏳ falta recibir' : g.bloq ? '⚠ revisar'
             : (total > EPS ? (/^(kg|kilo|kilos|l|lt|litro|litros)$/i.test(uni) ? 'pesar ' : 'total ') + numeroAmable(redondear3(total)) + ' ' + uni : '');
           var chips = div.querySelector('.fr-chips'), avisos = [];
           g.filas.forEach(function (f) {
@@ -3447,6 +3452,8 @@
               b.classList.add('cero'); b.disabled = true;
               b.querySelector('.t').textContent = texto + ' · no se arma';
               if (b.querySelector('.x')) b.querySelector('.x').remove();
+            } else if (g.sinRecepcion) {
+              b.classList.add('espera'); b.disabled = true;      // todavía no llegó: nada se arma
             } else if (r.estado === 'entero' && !p.id_plan) {
               // enteros que no están en el plan: se marcan solo en este celular
               b.dataset.local = idEdicion + '|' + p.id_producto;
@@ -3462,9 +3469,10 @@
             }
             // avisos: solo lo que cambia lo que hay que hacer
             if (r.alerta) avisos.push({ t: texto + ': ' + r.alerta.replace(/^⚠\s*/, ''), bloq: false });
+            else if (g.sinRecepcion) { /* el estado ya está arriba: "falta recibir" */ }
             else if (r.estado === 'bloq' && !g.bloq) avisos.push({ t: texto + ': ' + r.msg, bloq: true });
             else if (r.estado === 'cambio' && !r.preparado && /^Llegaron/.test(r.msg)) avisos.push({ t: 'Llegó menos de lo pedido; alcanza para estas bolsas. El faltante se reparte en Ajustes.', bloq: false });
-            else if (r.estado === 'bloq' && g.bloq && avisos.length === 0) avisos.push({ t: r.msg, bloq: true });
+            else if (r.estado === 'bloq' && g.bloq && !avisos.some(function (a) { return a.t === r.msg; })) avisos.push({ t: r.msg, bloq: true });
             chips.appendChild(b);
           });
           avisos.forEach(function (a) {
@@ -4441,9 +4449,11 @@
         otro: 'Otro motivo'
       };
       function recortePorPeso(it) {
-        // parcial (ej. 0,8 kg) solo en productos por kg/litro sin fracción
+        // Productos por kg o litro (con o sin fracción): se recorta por peso.
+        // Ej.: pidió 1 × ½ kg y va ¼ kg → "va 0,25 kg". (09/11: antes con
+        // fracción solo se aceptaban presentaciones enteras.)
         var u = String(infoProducto(it.id_producto).unidad || '').toLowerCase();
-        return !it.fraccion && (u === 'kg' || u === 'litro' || u === 'l' || u === 'lt');
+        return (u === 'kg' || u === 'kilo' || u === 'kilos' || u === 'litro' || u === 'l' || u === 'lt') && it.efectiva > 0;
       }
       function etiquetaRecorte(it) {
         var o = recortesLocales[it.id_item];
@@ -4451,15 +4461,14 @@
           if (Math.abs(it.cantidad - o.nueva) < 0.0001) {
             delete recortesLocales[it.id_item];
             guardarRecortes();
-            avisarRecorte(o.ped || it.id_pedido, o.clave || $('clave-entrega').value.trim());
+            // (09/11) ya no se manda un correo por recorte: el consumidor recibe
+            // UN solo aviso al final, desde la guía, cuando todo está armado.
           }
           else if (Date.now() - o.ts < 240000) return '⏳ guardando recorte…';
           else return '⚠ el recorte no se aplicó: probá de nuevo o revisá D3';
         }
         if (/^Recorte en armado/i.test(it.obs || '')) {
-          var av = avisosRecorte[it.id_pedido];
-          return '✂ ' + it.obs.replace(/^Recorte en armado\s*·\s*/i, '') +
-            (av ? (av.estado === 'enviado' ? ' · 📧 aviso enviado' : ' · 📧 enviando aviso…') : '');
+          return '✂ ' + it.obs.replace(/^Recorte en armado\s*·\s*/i, '');
         }
         return '';
       }
@@ -4472,6 +4481,7 @@
         var pidio = peso ? numeroAmable(it.efectiva) + ' ' + u
           : it.cantidad + (it.fraccion ? ' × ' + it.fraccion + (u ? ' ' + u : '') : (u ? ' ' + u : ''));
         var unidadVa = peso ? u : (it.fraccion ? '× ' + it.fraccion + (u ? ' ' + u : '') : (u || 'unidad'));
+        if (peso && it.fraccion) pidio = it.cantidad + ' × ' + it.fraccion + ' ' + u + ' (= ' + numeroAmable(it.efectiva) + ' ' + u + ')';
         d.innerHTML =
           '<div><strong>✂ Recorte en armado</strong> · ' + escH(info.nombre) + ' · pidió ' + escH(pidio) + '</div>' +
           '<div class="fila"><label>Motivo: <select class="rc-motivo">' +
@@ -4479,11 +4489,11 @@
             '<option value="descarte">Descarte por calidad (no se le paga al productor)</option>' +
             '<option value="otro">Otro motivo (lo absorbe el Nodo)</option>' +
           '</select></label></div>' +
-          '<div class="fila"><label>Va en el cajón: <input type="number" class="rc-va" inputmode="decimal" min="0" value="0" ' +
+          '<div class="fila"><label>Va en el cajón: <input type="text" class="rc-va" inputmode="decimal" autocomplete="off" value="0" ' +
             (peso ? 'step="0.05" max="' + it.efectiva + '"' : 'step="1" max="' + Math.max(0, it.cantidad - 1) + '"') +
             ' style="width:80px;"> ' + escH(unidadVa) + '</label>' +
             '<div class="muted" style="font-size:.8rem;">' + (peso
-              ? 'Poné lo que realmente va (ej. 0,8). 0 = no va nada.'
+              ? 'Poné el peso que realmente va, en ' + escH(u) + ' (¼ = 0,25 · ½ = 0,5 · 800 g = 0,8). 0 = no va nada.'
               : 'Cuántas van (0 = no va nada).') + '</div></div>' +
           '<div class="acciones"><button type="button" class="rc-aplicar">Aplicar recorte</button>' +
           '<button type="button" class="rc-cancelar">Cancelar</button></div>' +
@@ -4509,8 +4519,9 @@
         var cantNueva, efNueva;
         if (peso) {
           if (va >= it.efectiva) { err('Tiene que ser menos de lo pedido (' + numeroAmable(it.efectiva) + ').'); return; }
-          cantNueva = Math.round(va * 1000) / 1000;          // sin fracción: E está en kg
-          efNueva = cantNueva;
+          efNueva = Math.round(va * 1000) / 1000;
+          // sin fracción E está en kg; con fracción, E = cuántas presentaciones (puede ser 0,5)
+          cantNueva = it.fraccion && fac > 0 ? Math.round(efNueva / fac * 10000) / 10000 : efNueva;
         } else {
           if (va % 1 !== 0) { err('Tiene que ser un número entero.'); return; }
           if (va >= it.cantidad) { err('Tiene que ser menos de lo pedido (' + it.cantidad + ').'); return; }
@@ -5330,6 +5341,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 03/11 fraccionamiento</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 09/11 estabilización</p>
 </body>
 </html>
