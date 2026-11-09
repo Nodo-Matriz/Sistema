@@ -284,6 +284,10 @@
       <div id="ed-datos"></div>
     </div>
 
+    <p class="fade-in" data-delay="3" style="margin:14px 0 0;">
+      <a href="forms/generar-especial.html" class="btn btn--ghost btn--small">⭐ Nueva edición especial</a>
+      <span style="font-size:.85rem;color:var(--c-tierra);">para vender algo puntual con su propio formulario y cierre</span>
+    </p>
     <div class="tl fade-in" data-delay="3">
 
       <div class="paso" id="paso-1">
@@ -1120,15 +1124,18 @@
             var est = String(celda(r, 8)).trim().toLowerCase();   // I estado_item
             if (est === 'descontado' || est === 'faltante') conRecortes[idPed] = true;
           });
-          var pend = 0, hechos = 0;
+          var pend = 0, hechos = 0, sinArmar = 0;
           res[0].table.rows.forEach(function (r) {
             if (String(celda(r, 1)).trim() !== id) return;
             var idPed = String(celda(r, 0)).trim();
+            // (09/11) cajones que todavía no se armaron ni entregaron
+            var estPed = String(celda(r, 5)).trim().toLowerCase();   // F estado
+            if (estPed !== 'cancelado' && !/armado|entregado/.test(estPed)) sinArmar++;
             var q = String(celda(r, 16)).trim().toLowerCase();   // Q aviso_faltante_enviado
             if (q === 'sí' || q === 'si') { hechos++; return; }
             if (conRecortes[idPed]) pend++;
           });
-          return { pendientes: pend, avisados: hechos };
+          return { pendientes: pend, avisados: hechos, sinArmar: sinArmar };
         });
       }
 
@@ -1452,6 +1459,12 @@
               var ct = $('control-totales');
               ca.innerHTML = (itemsConProblemas && itemsConProblemas.length) ? htmlProblemasItems(itemsConProblemas)
                 : (ct && ct.innerHTML ? ct.innerHTML : '⛔ No pude controlar los totales. Recargá la página.');
+            } else if (a.pendientes > 0 && a.sinArmar > 0) {
+              // (09/11) un solo correo por pedido, con el total final: se avisa
+              // recién cuando todos los cajones están armados
+              gate('btn-avisos', 'porque-avisos', false,
+                (a.sinArmar === 1 ? 'Falta armar 1 cajón' : 'Faltan armar ' + a.sinArmar + ' cajones') +
+                '. El aviso se habilita cuando estén todos armados, así cada consumidor recibe un solo correo con su total final.');
             } else if (a.pendientes > 0) {
               gate('btn-avisos', 'porque-avisos', true, '');
               $('btn-avisos').textContent = 'Avisar a los consumidores (' + a.pendientes + ')';
@@ -1490,6 +1503,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 14/10 11:15</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 09/11 aviso al final</p>
 </body>
 </html>
