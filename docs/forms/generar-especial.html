@@ -42,11 +42,13 @@
     <h2>1 · Datos</h2>
     <div class="campo"><label for="nombre">Nombre (lo ven los consumidores)</label><input id="nombre" placeholder="Ej.: Yerbas"></div>
     <div class="campo"><label for="edicion">Se entrega con la edición</label><select id="edicion"></select>
+      <span class="err" id="sin-edicion" style="display:none;">No hay ninguna edición en curso. Creá primero la próxima con <a href="generar-edicion.html">Generar edición</a> (no hace falta abrir su formulario) y volvé.</span>
+      <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:6px;"><input type="checkbox" id="es-prueba" style="width:18px;height:18px;"> Es una prueba (deja elegir una edición ya cerrada)</label>
       <span class="meta">Los pedidos quedan en esa edición: comandas, recepción, armado, entrega y liquidación los toman como siempre.</span></div>
     <div class="campo"><label for="cierre">Cierre del formulario</label><input id="cierre" type="datetime-local"></div>
     <div class="campo"><label for="retiro">Retiro (texto)</label><input id="retiro" placeholder="Ej.: Jueves 20/11 de 16 a 19 hs"></div>
     <div class="campo"><label for="descripcion">Texto de presentación (opcional)</label><textarea id="descripcion" rows="2" placeholder="Ej.: Yerbas agroecológicas de Misiones, a granel y en paquete."></textarea></div>
-    <div class="campo"><label for="aporte">Aporte consciente por defecto (%)</label><input id="aporte" type="number" min="15" value="15" style="max-width:120px;"></div>
+    <p class="meta">Las ediciones especiales van <strong>sin aporte consciente</strong>.</p>
   </div>
 
   <div class="card-eq">
@@ -79,18 +81,31 @@
     <p id="validacion" class="err"></p>
     <div id="resultado" style="display:none;">
       <p>Código: <strong id="codigo"></strong></p>
+      <div id="caja-publicar">
+        <p>Publicala con un toque: queda cargada en la planilla y el link empieza a funcionar.</p>
+        <div class="filtros">
+          <input type="password" id="clave" placeholder="Clave de equipo" style="flex:1;min-width:160px;">
+          <button type="button" class="btn btn--primary" id="publicar">Publicar especial</button>
+        </div>
+        <p id="pub-msg" class="meta"></p>
+      </div>
+      <details style="margin:10px 0;"><summary style="cursor:pointer;">Otra forma: pegar la fila a mano en la planilla</summary>
       <ol class="pasos">
         <li>Abrí la planilla, hoja <strong>Especiales</strong>, y hacé clic en la primera celda vacía de la columna A.</li>
         <li>Tocá <strong>Copiar fila</strong> y pegala ahí (Ctrl+V). Ocupa de la columna A a la I.</li>
-        <li>Probá el formulario con el link de <strong>prueba</strong> (no envía nada).</li>
-        <li>Compartí el <strong>link para consumidores</strong>.</li>
       </ol>
-      <p><button type="button" class="btn btn--primary" id="copiar-fila">Copiar fila</button> <span id="ok-copia" class="ok"></span></p>
+      <p><button type="button" class="btn btn--ghost btn--small" id="copiar-fila">Copiar fila</button> <span id="ok-copia" class="ok"></span></p>
       <pre class="fila" id="fila"></pre>
+      </details>
       <p>Link para consumidores:<br><a id="link" target="_blank" rel="noopener"></a> <button type="button" class="btn btn--ghost btn--small" id="copiar-link">Copiar</button></p>
       <p>Link de prueba (no envía pedidos):<br><a id="link-prueba" target="_blank" rel="noopener"></a></p>
-      <p class="meta">Para cerrarla antes de tiempo: en la hoja Especiales, columna E, poner <strong>Cerrada</strong>.</p>
     </div>
+  </div>
+
+  <div class="card-eq">
+    <h2>Especiales publicadas</h2>
+    <div id="publicadas"><p class="meta">Leyendo…</p></div>
+    <p class="meta">"Cerrar ahora" corta los pedidos antes de la fecha de cierre. Pide la clave de equipo (la del campo de arriba).</p>
   </div>
 </main>
 <script>
@@ -111,6 +126,78 @@
   var productos = [], elegidos = [], ediciones = [];
   var A2 = 'https://hook.us2.make.com/thlpwqa9epg354ekwp44ijr1fhpg5xsq';   // escenario A2 (carga de productos)
   var creando = [];   // productos nuevos enviados, esperando que la planilla les dé un id
+  // Escenario H1 "Ajustes del equipo" (agrega filas en Especiales / Config_App).
+  var WEBHOOK_H1 = 'https://hook.us2.make.com/w69ib4j3s2gqosu1zm7f1pp4ndqrepar';
+  var especiales = [];   // última fila de cada código
+  var CLAVE_KEY = 'nm_clave_equipo';
+  try { if (sessionStorage.getItem(CLAVE_KEY)) setTimeout(function () { $('clave').value = sessionStorage.getItem(CLAVE_KEY); }, 0); } catch (e) {}
+  function h1Listo() { return WEBHOOK_H1.indexOf('https://hook.') === 0; }
+  function mandarEspecial(celdas, clave) {
+    try { sessionStorage.setItem(CLAVE_KEY, clave); } catch (e) {}
+    return fetch(WEBHOOK_H1, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ tipo: 'especial', clave: clave, id_especial: celdas[0], id_edicion: celdas[1], nombre: celdas[2],
+        cierre: String(celdas[3]).replace(/^'/, ''), estado: celdas[4], productos: celdas[5], retiro: celdas[6], descripcion: celdas[7], aporte: 0 }) });
+  }
+  function cargarEspeciales() {
+    return gviz('sheet=Especiales&range=A1:I300&headers=1').then(function (t) {
+      if (!/especial/i.test(String((t.cols[0] || {}).label || ''))) { $('publicadas').innerHTML = '<p class="err">No encuentro la hoja "Especiales" en la planilla.</p>'; especiales = []; return; }
+      var m = {}, orden = [];
+      t.rows.forEach(function (r) {
+        var id = String(v(r, 0)).trim().toUpperCase(); if (!id) return;
+        if (!m[id]) orden.push(id);
+        var c = r.c[3], cierre = c ? (c.f || c.v) : '';
+        m[id] = [id, String(v(r, 1)).trim(), String(v(r, 2)).trim(), String(cierre || '').replace(/^'/, ''), String(v(r, 4)).trim(), String(v(r, 5)).trim(), String(v(r, 6)).trim(), String(v(r, 7)).trim(), 0];
+      });
+      especiales = orden.map(function (id) { return m[id]; });
+      pintarEspeciales();
+    }).catch(function () { $('publicadas').innerHTML = '<p class="err">No pude leer las especiales. Probá con ↻.</p>'; });
+  }
+  function fechaDe(txt) {
+    var m = String(txt).match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+    if (m) return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+    m = String(txt).match(/Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+))?/);
+    if (m) return new Date(+m[1], +m[2], +m[3], +(m[4] || 0), +(m[5] || 0));
+    m = String(txt).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/);
+    if (m) return new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5]);
+    return null;
+  }
+  function pintarEspeciales() {
+    var d = $('publicadas');
+    if (!especiales.length) { d.innerHTML = '<p class="meta">Todavía no hay ninguna.</p>'; return; }
+    d.innerHTML = '';
+    especiales.slice().reverse().forEach(function (e) {
+      var f = fechaDe(e[3]), abierta = /^abierta$/i.test(e[4]) && f && f.getTime() > Date.now();
+      var url = new URL('especial.html', location.href).href + '?e=' + encodeURIComponent(e[0]);
+      var p = document.createElement('p');
+      p.innerHTML = '<strong>' + esc(e[2] || e[0]) + '</strong> · ' + esc(e[1]) + ' · ' + (abierta ? '<span class="ok">abierta</span> hasta ' + esc(e[3]) : 'cerrada') +
+        '<br><a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(e[0]) + '</a> ';
+      if (abierta && h1Listo()) {
+        var b = document.createElement('button'); b.type = 'button'; b.className = 'btn btn--ghost btn--small'; b.textContent = 'Cerrar ahora';
+        b.addEventListener('click', function () {
+          var clave = $('clave').value.trim();
+          if (!clave) { $('validacion').textContent = ''; b.textContent = 'Falta la clave (campo de arriba)'; return; }
+          b.disabled = true; b.textContent = 'Cerrando…';
+          var fila = e.slice(); fila[4] = 'Cerrada';
+          var fin = function () { esperar(function () { var x = especiales.filter(function (y) { return y[0] === e[0]; })[0]; return x && /cerrada/i.test(x[4]); },
+            function (ok) { if (!ok) { b.disabled = false; b.textContent = 'No se cerró: revisá la clave'; } }); };
+          mandarEspecial(fila, clave).then(fin, fin);
+        });
+        p.appendChild(b);
+      }
+      d.appendChild(p);
+    });
+  }
+  // relee la hoja cada 4 s hasta que se cumpla la condición (o pasen 90 s)
+  function esperar(cond, alFinal) {
+    var t0 = Date.now();
+    (function otra() {
+      cargarEspeciales().then(function () {
+        if (cond()) return alFinal(true);
+        if (Date.now() - t0 > 90000) return alFinal(false);
+        setTimeout(otra, 4000);
+      });
+    })();
+  }
 
   function cargar() {
     $('lista').innerHTML = '<p class="meta" style="padding:10px;">Leyendo la planilla…</p>';
@@ -135,12 +222,19 @@
       sc.value = act;
       ediciones = [];
       t[1].rows.forEach(function (r) { var id = String(v(r, 0)).trim(); if (/^ED\d{4}-\d+$/.test(id)) ediciones.push({ id: id, estado: String(v(r, 3)).trim() }); });
-      var se = $('edicion'), actE = se.value;
-      se.innerHTML = ediciones.slice().reverse().map(function (e) { return '<option value="' + esc(e.id) + '">' + esc(e.id) + ' · ' + esc(e.estado) + '</option>'; }).join('');
-      var enCurso = ediciones.filter(function (e) { return e.estado.toLowerCase() !== 'cerrada'; }).pop();
-      se.value = actE || (enCurso ? enCurso.id : (ediciones.length ? ediciones[ediciones.length - 1].id : ''));
-      pintar(); validar();
+      pintarEdiciones();
+      pintar(); validar(); cargarEspeciales();
     }).catch(function () { $('lista').innerHTML = '<p class="err" style="padding:10px;">No pude leer la planilla. Probá de nuevo con ↻.</p>'; });
+  }
+  // Una especial se cuelga de una edición que todavía no se entregó. Las
+  // que están en Liquidación o Cerrada solo se ofrecen para pruebas.
+  function terminada(e) { return /cerrada|liquidaci/i.test(e.estado); }
+  function pintarEdiciones() {
+    var se = $('edicion'), actE = se.value, prueba = $('es-prueba').checked;
+    var l = ediciones.filter(function (e) { return prueba || !terminada(e); });
+    se.innerHTML = l.slice().reverse().map(function (e) { return '<option value="' + esc(e.id) + '">' + esc(e.id) + ' · ' + esc(e.estado) + '</option>'; }).join('');
+    if (l.some(function (e) { return e.id === actE; })) se.value = actE;
+    $('sin-edicion').style.display = l.length ? 'none' : 'block';
   }
   function pintar() {
     var q = sinT($('buscar').value.trim()), c = $('f-cat').value;
@@ -238,7 +332,7 @@
     });
   }
   function slug(t) { return sinT(t).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').toUpperCase().slice(0, 20) || 'ESPECIAL'; }
-  var filaTxt = '';
+  var filaTxt = '', celdasAct = null;
   function validar() {
     var nombre = $('nombre').value.trim(), ed = $('edicion').value, cierre = $('cierre').value, retiro = $('retiro').value.trim();
     var faltan = [];
@@ -254,8 +348,10 @@
     if (faltan.length) return;
     var num = (ed.match(/-(\d+)$/) || [])[1] || '';
     var codigo = 'ESP-' + num + '-' + slug(nombre);
-    var aporte = Math.max(15, parseInt($('aporte').value, 10) || 15);
+    var aporte = 0;   // especiales sin aporte consciente
     var cierreTxt = cierre.replace('T', ' ');
+    celdasAct = [codigo, ed, nombre, cierreTxt, 'Abierta', elegidos.join(', '), retiro, $('descripcion').value.trim().replace(/\s+/g, ' '), 0];
+    $('caja-publicar').style.display = h1Listo() ? 'block' : 'none';
     var celdas = [codigo, ed, nombre, "'" + cierreTxt, 'Abierta', elegidos.join(', '), retiro, $('descripcion').value.trim().replace(/\s+/g, ' '), aporte];
     filaTxt = celdas.join('\t');
     $('codigo').textContent = codigo;
@@ -269,15 +365,36 @@
     var ok = function () { if (el) { el.textContent = '✓ Copiado'; setTimeout(function () { el.textContent = ''; }, 2500); } };
     (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(ok, function () { window.prompt('Copiá:', txt); });
   }
-  ['nombre', 'edicion', 'cierre', 'retiro', 'descripcion', 'aporte'].forEach(function (id) { $(id).addEventListener('input', validar); $(id).addEventListener('change', validar); });
+  ['nombre', 'edicion', 'cierre', 'retiro', 'descripcion'].forEach(function (id) { $(id).addEventListener('input', validar); $(id).addEventListener('change', validar); });
   $('buscar').addEventListener('input', pintar);
   $('f-cat').addEventListener('change', pintar);
   $('recargar').addEventListener('click', cargar);
   $('copiar-fila').addEventListener('click', function () { copiar(filaTxt, $('ok-copia')); });
+  $('es-prueba').addEventListener('change', function () { pintarEdiciones(); validar(); });
+  $('publicar').addEventListener('click', function () {
+    var clave = $('clave').value.trim(), msg = $('pub-msg'), btn = $('publicar');
+    if (!clave) { msg.innerHTML = '<span class="err">Falta la clave de equipo.</span>'; return; }
+    if (!celdasAct) return;
+    var fila = celdasAct.slice();
+    if (especiales.some(function (e) { return e[0] === fila[0].toUpperCase() && /^abierta$/i.test(e[4]); }) &&
+        !window.confirm('Ya hay una especial abierta con el código ' + fila[0] + '. ¿Reemplazarla con estos datos?')) return;
+    btn.disabled = true; msg.textContent = '⏳ Publicando…';
+    var fin = function () {
+      esperar(function () {
+        var x = especiales.filter(function (y) { return y[0] === fila[0].toUpperCase(); })[0];
+        return x && x[5].replace(/\s/g, '') === fila[5].replace(/\s/g, '') && x[2] === fila[2] && /^abierta$/i.test(x[4]);
+      }, function (ok) {
+        btn.disabled = false;
+        msg.innerHTML = ok ? '<span class="ok">✓ Publicada. Ya podés probar y compartir el link.</span>'
+          : '<span class="err">No la veo en la planilla. Revisá la clave y el escenario H1 en Make, o usá "pegar la fila a mano".</span>';
+      });
+    };
+    mandarEspecial(fila, clave).then(fin, fin);
+  });
   $('copiar-link').addEventListener('click', function () { copiar($('link').href, $('ok-copia')); });
   pintarElegidos(); cargar();
 })();
 </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 09/11 especiales + producto nuevo</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 12/11 publicar y cerrar</p>
 </body>
 </html>

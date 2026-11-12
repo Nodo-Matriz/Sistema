@@ -9,7 +9,8 @@
   <p id="cargando">Cargando la edición especial…</p>
 <script>
 /* =====================================================================
- * Nodo Matríz · formulario de EDICIÓN ESPECIAL (09/11)
+ * Nodo Matríz · formulario de EDICIÓN ESPECIAL (12/11)
+ * Si un código aparece en varias filas de la hoja, vale la ÚLTIMA (así se publica y se cierra desde el generador).
  * ---------------------------------------------------------------------
  * Una edición especial (ej. "solo yerbas") es una fila en la hoja
  * "Especiales" de la planilla. Esta página la lee y arma el formulario con
@@ -97,7 +98,7 @@
       cierre: aFecha(v(fila, 3), f(fila, 3)), estado: String(v(fila, 4)).trim().toLowerCase(),
       productos: String(v(fila, 5)).split(/[\s,;]+/).map(function (x) { return x.trim().toUpperCase(); }).filter(Boolean),
       retiro: String(v(fila, 6)).trim(), descripcion: String(v(fila, 7)).trim(),
-      aporte: parseFloat(String(v(fila, 8)).replace(',', '.')) || 15
+      aporte: 0   // las especiales van sin aporte consciente
     };
     if (!/^ED\d{4}-\d+$/.test(E.edicion)) throw new Error('La especial "' + E.id + '" no tiene una edición válida en la columna B (ej. ED2026-22).');
     if (!E.cierre) throw new Error('La especial "' + E.id + '" no tiene una fecha de cierre válida en la columna D (ej. 2026-11-15 20:00).');

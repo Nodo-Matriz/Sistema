@@ -798,6 +798,23 @@
       border: 1.5px solid var(--c-crema-osc); background: transparent; color: var(--c-corteza);
       border-radius: 999px; padding: 6px 14px; font-size: 0.9rem; cursor: pointer;
     }
+    .btn-orden { border: 1px solid var(--c-oliva); background: transparent; color: var(--c-musgo, #34502A); border-radius: 999px; padding: 6px 14px; font: inherit; font-size: .9rem; cursor: pointer; }
+    .orden-panel { border: 1px solid rgba(74,107,58,.35); border-radius: 12px; padding: 12px; margin: 8px 0 14px; background: rgba(74,107,58,.05); }
+    .orden-fila { display: flex; align-items: center; gap: 6px; padding: 4px 0; border-bottom: 1px solid rgba(74,107,58,.12); }
+    .orden-fila .orden-pos { width: 44px; text-align: center; padding: 6px 2px; border: 1px solid #c9c3b6; border-radius: 8px; font: inherit; }
+    .orden-fila .orden-nom { flex: 1; min-width: 0; }
+    .orden-fila button, .orden-panel .acciones button { min-width: 40px; min-height: 40px; border: 1px solid #c9c3b6; background: #fff; border-radius: 8px; font: inherit; cursor: pointer; }
+    .orden-fila button:disabled { opacity: .35; }
+    .orden-panel .btn-orden-ok { background: var(--c-oliva); border-color: var(--c-oliva); color: var(--c-leche, #fff); padding: 0 16px; }
+    .btn-recorte.peso { border-color: #7a2e3a; color: #7a2e3a; }
+    .bolsa { border: 1px solid rgba(122,46,58,.35); border-radius: 12px; padding: 10px 12px; margin: 8px 0; background: #fff; }
+    .bolsa.llego { background: rgba(74,107,58,.07); border-color: rgba(74,107,58,.5); }
+    .bolsa .cab { display: flex; gap: 10px; align-items: center; font-weight: 700; }
+    .bolsa .cab input { width: 24px; height: 24px; accent-color: var(--c-oliva); flex: 0 0 auto; }
+    .bolsa .corte { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 6px 0 2px 34px; font-size: .95rem; }
+    .bolsa .corte .n { flex: 1; min-width: 150px; }
+    .bolsa .corte input { width: 84px; padding: 8px 6px; border: 1px solid #c9c3b6; border-radius: 8px; font: inherit; text-align: center; }
+    .bolsa .corte .av { flex-basis: 100%; color: #A6402B; font-size: .82rem; }
     .filtros-entrega button.activa { background: var(--c-oliva); border-color: var(--c-oliva); color: var(--c-leche); }
     .resumen-frio {
       background: rgba(47, 107, 143, 0.08); border-left: 4px solid #2f6b8f; border-radius: 8px;
@@ -955,6 +972,7 @@
       </p>
       <div class="aviso rojo" id="aviso-dup" style="display:none;"></div>
       <div class="aviso" id="aviso-borrador" style="display:none;"></div>
+      <div id="bolsas" style="display:none;"></div>
       <div id="lista-items"></div>
       <p class="progreso" id="progreso"></p>
 
@@ -1167,6 +1185,8 @@
           <button type="button" data-vista="frio">❄ Puesto de frío</button>
         </div>
         <div class="resumen-frio" id="resumen-frio" style="display:none;"></div>
+        <p style="margin:8px 0;"><button type="button" id="orden-abrir" class="btn-orden">⚙ Orden de armado</button> <span id="orden-aviso" class="muted" style="font-size:.85rem;"></span></p>
+        <div id="orden-panel" class="orden-panel" style="display:none;"></div>
 
         <div class="campo">
           <label for="buscar-entrega">Buscar por nombre, N° de pedido o producto</label>
@@ -1217,6 +1237,8 @@
       var WEBHOOK_D5B    = 'https://hook.us2.make.com/panfqk3ruawq5q9kdt3fdkwp7y12fyr5';
       // D7 · Venta de sobrantes (solapa 📦 Sobrantes): cada venta y el cierre
       // (donación/merma) van a Movimientos_Stock. Pegar acá la dirección del webhook.
+      // H1 "Ajustes del equipo": guarda el orden de armado (hoja Config_App)
+      var WEBHOOK_H1     = 'https://hook.us2.make.com/w69ib4j3s2gqosu1zm7f1pp4ndqrepar';
       var WEBHOOK_D7     = 'https://hook.us2.make.com/1vgo1q9prjhkrx8pir4r6k6wkroerf0s';
       var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
 
@@ -1239,6 +1261,7 @@
 
       var idEdicion = '';
       var productores = {};   // id -> nombre
+      var tipoRecepcion = {}; // id -> "Por pedido" (Productores!S): recepción por bolsa
       var lineas = [];        // filas de Comandas_Calc A:H
       var registrados = {};   // id_productor -> true (en esta sesión)
       var recibidosVivo = {}; // id_productor -> quién lo recibió (según la hoja Recepciones)
@@ -1354,6 +1377,142 @@
           ordenArmado[c] = isNaN(n) ? 1000 + i : n;
         });
       }
+      // ── Orden de armado guardado desde la app (12/11) ─────────────
+      // Hoja Config_App (A clave, B valor, C fecha, D quien): cada guardado
+      // agrega una fila; vale la ÚLTIMA con clave "orden_armado". El valor
+      // es {"cats":[categorías en orden],"verd":[verdulería en orden, con
+      // 'FRUTAS' separando hortalizas de frutas]}. Si no hay nada guardado,
+      // todo sigue como antes (hoja Orden_Armado y lista fija).
+      var LS_ORDEN = 'nm_orden_armado_local';
+      var ordenGuardado = null;      // lo último aplicado ({cats, verd})
+      function aplicarOrden(cfg) {
+        if (!cfg || typeof cfg !== 'object') return;
+        if (cfg.cats && cfg.cats.length) {
+          ordenArmado = {};
+          cfg.cats.forEach(function (c, i) { var n = normCat(c); if (n && !ordenArmado.hasOwnProperty(n)) ordenArmado[n] = i; });
+        }
+        if (cfg.verd && cfg.verd.length && cfg.verd.indexOf('FRUTAS') !== -1) {
+          ORDEN_VERDULERIA = cfg.verd.slice();
+          IDX_FRUTAS = ORDEN_VERDULERIA.indexOf('FRUTAS');
+          verdPalabras = ORDEN_VERDULERIA.map(function (e) { return normCat(e).replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(Boolean); });
+          cacheVerd = {};
+        }
+        ordenGuardado = cfg;
+      }
+      function parseConfigApp(res) {
+        var cfg = null;
+        if (res && res.table && res.table.cols && res.table.cols.length && /clave/i.test(String(res.table.cols[0].label || ''))) {
+          res.table.rows.forEach(function (r) {
+            if (String(celda(r, 0)).trim() !== 'orden_armado') return;
+            try { var j = JSON.parse(String(celda(r, 1))); if (j && typeof j === 'object') cfg = j; } catch (e) {}
+          });
+        }
+        // lo recién guardado en este teléfono manda 10 minutos (hasta que la planilla lo muestre)
+        try {
+          var loc = JSON.parse(localStorage.getItem(LS_ORDEN) || 'null');
+          if (loc && loc.cfg && Date.now() - loc.ts < 600000) {
+            if (cfg && JSON.stringify(cfg) === JSON.stringify(loc.cfg)) localStorage.removeItem(LS_ORDEN);
+            else cfg = loc.cfg;
+          }
+        } catch (e) {}
+        if (cfg) aplicarOrden(cfg);
+      }
+      // listas para el editor, a partir de lo vigente + lo que hay en esta edición
+      function listasOrden() {
+        var vistos = {}, cats = [];
+        var sumar = function (c) {
+          var n = normCat(c); if (!n || n === 'frutas' || vistos[n]) return;
+          vistos[n] = 1; cats.push(n === 'hortalizas' ? 'Hortalizas' : String(c).trim());
+        };
+        if (ordenGuardado && ordenGuardado.cats) ordenGuardado.cats.forEach(sumar);
+        var enEd = {};
+        itemsEd.forEach(function (it) { enEd[it.id_producto] = 1; });
+        Object.keys(enEd).forEach(function (id) { sumar(categoriaProd[id]); });
+        cats.sort(function (a, b) {
+          var ra = rangoCategoria(a), rb = rangoCategoria(b);
+          return ra[0] - rb[0] || ra[1] - rb[1] || (ra[2] < rb[2] ? -1 : ra[2] > rb[2] ? 1 : 0);
+        });
+        var hort = ORDEN_VERDULERIA.slice(0, IDX_FRUTAS), frut = ORDEN_VERDULERIA.slice(IDX_FRUTAS + 1), nuevos = {};
+        Object.keys(enEd).forEach(function (id) {
+          if (!esVerduleria(id) || posVerduleria(id) !== -1) return;
+          var nom = String(infoProducto(id).nombre || '').trim();
+          if (!nom || nom === id || nuevos[normCat(nom)]) return;
+          nuevos[normCat(nom)] = 1;
+          (normCat(categoriaProd[id]) === 'frutas' ? frut : hort).push(nom);
+        });
+        return { cats: cats, hort: hort, frut: frut, nuevos: nuevos };
+      }
+      var ordenEdit = null;
+      function pintarOrden() {
+        var caja = $('orden-panel');
+        if (!ordenEdit) { caja.style.display = 'none'; caja.innerHTML = ''; return; }
+        caja.style.display = 'block';
+        var bloque = function (clave, titulo, ayuda) {
+          var l = ordenEdit[clave];
+          return '<h4 style="margin:14px 0 4px;">' + titulo + '</h4><p class="muted" style="font-size:.82rem;margin:0 0 6px;">' + ayuda + '</p>' +
+            l.map(function (n, i) {
+              return '<div class="orden-fila" data-l="' + clave + '" data-i="' + i + '">' +
+                '<input type="text" inputmode="numeric" class="orden-pos" value="' + (i + 1) + '" aria-label="Posición">' +
+                '<span class="orden-nom">' + escH(n === 'Hortalizas' && clave === 'cats' ? 'Hortalizas y Frutas' : n) +
+                  (ordenEdit.nuevos[normCat(n)] && clave !== 'cats' ? ' <small>(nuevo)</small>' : '') + '</span>' +
+                '<button type="button" data-m="-1" aria-label="Subir"' + (i === 0 ? ' disabled' : '') + '>▲</button>' +
+                '<button type="button" data-m="1" aria-label="Bajar"' + (i === l.length - 1 ? ' disabled' : '') + '>▼</button>' +
+                (clave === 'cats' ? '' : '<button type="button" data-m="x" aria-label="Quitar">✕</button>') + '</div>';
+            }).join('');
+        };
+        caja.innerHTML = '<strong>⚙ Orden de armado</strong>' +
+          '<p class="muted" style="font-size:.85rem;margin:4px 0;">Ordená como está el galpón: así salen los renglones de cada cajón. Usá ▲ ▼ o escribí el número de posición. Vale para todos los teléfonos y para las próximas ediciones.</p>' +
+          bloque('cats', 'Categorías', 'El orden en que se recorre el galpón.') +
+          bloque('hort', 'Hortalizas', 'Alcanza con el nombre corto (por ejemplo "Zanahoria").') +
+          bloque('frut', 'Frutas', '') +
+          '<div class="acciones" style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">' +
+          '<button type="button" id="orden-guardar" class="btn-orden-ok">Guardar orden</button>' +
+          '<button type="button" id="orden-cancelar">Cancelar</button></div><div id="orden-msg" style="margin-top:8px;"></div>';
+      }
+      function moverOrden(clave, i, j) {
+        var l = ordenEdit[clave];
+        if (j < 0) j = 0; if (j > l.length - 1) j = l.length - 1;
+        if (i === j) return;
+        l.splice(j, 0, l.splice(i, 1)[0]);
+        pintarOrden();
+      }
+      function guardarOrden() {
+        var msg = $('orden-msg');
+        var err = function (t) { msg.innerHTML = '<span style="color:#A6402B;font-weight:600;">' + t + '</span>'; };
+        if (WEBHOOK_H1.indexOf('https://hook.') !== 0) { err('Todavía no está conectado el escenario H1 de Make. Avisale a quien administra el sistema.'); return; }
+        var quien = valorQuien('entregado-por'), clave = $('clave-entrega').value.trim();
+        if (!quien) { err('Antes, elegí tu nombre arriba de todo.'); return; }
+        if (!clave) { err('Falta la clave de equipo (arriba de todo).'); return; }
+        var cfg = { cats: ordenEdit.cats.slice(), verd: ordenEdit.hort.concat(['FRUTAS'], ordenEdit.frut) };
+        $('orden-guardar').disabled = true; msg.textContent = '⏳ Guardando…';
+        var fin = function () {
+          try { localStorage.setItem(LS_ORDEN, JSON.stringify({ ts: Date.now(), cfg: cfg })); } catch (e) {}
+          aplicarOrden(cfg); ordenEdit = null; pintarOrden();
+          $('orden-aviso').textContent = '✓ Orden guardado. Si en unos minutos vuelve al anterior, revisá la clave.';
+          try { renderEntrega(); } catch (e) {}
+        };
+        fetch(WEBHOOK_H1, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ tipo: 'config', clave: clave, clave_config: 'orden_armado', valor: JSON.stringify(cfg), quien: quien }) }).then(fin, fin);
+      }
+      document.addEventListener('click', function (ev) {
+        var t = ev.target;
+        if (t.id === 'orden-abrir') { ordenEdit = ordenEdit ? null : listasOrden(); $('orden-aviso').textContent = ''; pintarOrden(); return; }
+        if (t.id === 'orden-cancelar') { ordenEdit = null; pintarOrden(); return; }
+        if (t.id === 'orden-guardar') { guardarOrden(); return; }
+        var fila = t.closest ? t.closest('.orden-fila') : null;
+        if (!fila || !ordenEdit || !t.dataset || !t.dataset.m) return;
+        var cl = fila.dataset.l, i = parseInt(fila.dataset.i, 10);
+        if (t.dataset.m === 'x') { ordenEdit[cl].splice(i, 1); pintarOrden(); }
+        else moverOrden(cl, i, i + parseInt(t.dataset.m, 10));
+      });
+      document.addEventListener('change', function (ev) {
+        var t = ev.target;
+        if (!t.classList || !t.classList.contains('orden-pos') || !ordenEdit) return;
+        var fila = t.closest('.orden-fila'), n = parseInt(t.value, 10);
+        if (isNaN(n)) { pintarOrden(); return; }
+        moverOrden(fila.dataset.l, parseInt(fila.dataset.i, 10), n - 1);
+      });
+
       // Orden de categorías del formulario de la edición (lo eligió el equipo
       // en generar-edicion y A3 lo dejó escrito en el HTML del formulario).
       function cargarOrdenForm() {
@@ -2133,7 +2292,7 @@
         Promise.all([
           gviz('sheet=Comandas_Calc&range=K1&headers=0'),
           gviz('sheet=Comandas_Calc&range=A1:I5000&headers=1'),
-          gviz('sheet=Productores&range=A1:B2000&headers=1'),
+          gviz('sheet=Productores&range=A1:S2000&headers=1'),
           gviz('sheet=Plan_Fraccionamiento&range=A1:L20000&headers=1'),
           gviz('sheet=Pedidos&range=A1:U20000&headers=1'),
           gviz('sheet=Consumidores&range=A1:D20000&headers=1'),
@@ -2151,7 +2310,9 @@
           // Respuestas "en el grupo" / "primera vez" que guarda B1 (Pedidos AA:AB, opcional)
           gviz('sheet=Pedidos&headers=1&tq=' + encodeURIComponent('select A, AA, AB')).catch(function () { return null; }),
           // Movimientos_Stock: ventas y merma de sobrantes (D7), opcional
-          gviz('sheet=Movimientos_Stock&range=A1:L20000&headers=1').catch(function () { return null; })
+          gviz('sheet=Movimientos_Stock&range=A1:L20000&headers=1').catch(function () { return null; }),
+          // Config_App: ajustes guardados desde la app (orden de armado), opcional
+          gviz('sheet=Config_App&range=A1:D3000&headers=1').catch(function () { return null; })
         ]).then(function (res) {
           // Edición en curso = última fila de Ediciones con id ED####-##
           var edVigente = '';
@@ -2187,6 +2348,7 @@
             });
           }
           parseOrdenArmado(res[12]);
+          parseConfigApp(res[15]);
           parseExtrasPedidos(res[13]);
           var rowsK = res[0].table.rows;
           idEdicion = rowsK.length ? String(celda(rowsK[0], 0)).trim() : '';
@@ -2194,6 +2356,7 @@
           res[2].table.rows.forEach(function (r) {
             var id = String(celda(r, 0)).trim();
             if (id) productores[id] = String(celda(r, 1)).trim();
+            if (id) tipoRecepcion[id] = String(celda(r, 18) || '').trim();   // S: "Por pedido" = carnes
           });
 
           lineas = [];
@@ -2787,6 +2950,10 @@
       });
 
       function renderItems(idProd) {
+        renderItemsBase(idProd);
+        try { renderBolsas(idProd); } catch (e) { $('bolsas').style.display = 'none'; $('lista-items').style.display = ''; }
+      }
+      function renderItemsBase(idProd) {
         var cont = $('lista-items');
         cont.innerHTML = '';
         $('ok-box').style.display = 'none';
@@ -3061,6 +3228,156 @@
         actualizarProgreso();
       });
 
+      // ── Recepción por pedido (productores de carnes) ──────────────
+      // Productores!S = "Por pedido": el productor trae una bolsa etiquetada
+      // por consumidor. Se tilda cada bolsa que llegó y se carga el peso de
+      // cada corte. Los renglones de siempre (por producto) siguen ahí,
+      // ocultos: se completan solos con lo que suman las bolsas tildadas, y
+      // "Registrar recepción" manda lo mismo de siempre (D1) más los pesos y
+      // las bolsas que faltaron (D3).
+      function porPedido(idProd) { return /por pedido/i.test(tipoRecepcion[idProd] || ''); }
+      function bolsasDe(idProd) {
+        var m = {}, l = [];
+        itemsEd.forEach(function (it) {
+          if ((it.id_productor || productorDeProducto(it.id_producto)) !== idProd) return;
+          if (!m[it.id_pedido]) {
+            var p = null;
+            for (var i = 0; i < pedidos.length; i++) if (pedidos[i].id_pedido === it.id_pedido) p = pedidos[i];
+            if (!p || estadoCerrado(p.estado)) return;
+            m[it.id_pedido] = { p: p, its: [] }; l.push(m[it.id_pedido]);
+          }
+          m[it.id_pedido].its.push(it);
+        });
+        l.sort(function (a, b) { return a.p.correlativo - b.p.correlativo; });
+        return l;
+      }
+      function claveBolsas(idProd) { return 'nm_bolsas_' + idEdicion + '_' + idProd; }
+      function leerBolsas(idProd) { try { return JSON.parse(localStorage.getItem(claveBolsas(idProd)) || '{}'); } catch (e) { return {}; } }
+      function yaRecibido(idProd) { return !!(recibidosVivo[idProd] || registrados[idProd]); }
+      function renderBolsas(idProd) {
+        var caja = $('bolsas'), lista = $('lista-items');
+        if (!porPedido(idProd)) { caja.style.display = 'none'; caja.innerHTML = ''; lista.style.display = ''; $('progreso').style.display = ''; return; }
+        var ya = yaRecibido(idProd), est = leerBolsas(idProd), bolsas = bolsasDe(idProd);
+        caja.style.display = 'block'; lista.style.display = 'none'; $('progreso').style.display = 'none';
+        caja.dataset.idProd = idProd;
+        caja.innerHTML = '<p><strong>🥩 Entrega por pedido.</strong> ' + (ya
+          ? 'Ya está registrada. Para corregir un peso: solapa 🛍 Entrega → abrí el pedido → <strong>⚖ Peso real</strong>.'
+          : 'Tildá cada bolsa que llegó y cargá el <strong>peso de la etiqueta</strong> de cada corte (en kg: 1230 g = 1,23). La bolsa que quede sin tildar se registra como no recibida y no se le cobra a la persona.') + '</p>' +
+          '<p class="muted" id="bolsas-prog"></p>';
+        if (!bolsas.length) caja.insertAdjacentHTML('beforeend', '<p class="muted">No hay pedidos con productos de este productor.</p>');
+        bolsas.forEach(function (b) {
+          var e = est[b.p.id_pedido] || {};
+          var llego = ya ? (b.its.some(function (it) { return it.efectiva > 0; }) && e.llego !== false) : !!e.llego;
+          var d = document.createElement('div');
+          d.className = 'bolsa' + (llego ? ' llego' : ''); d.dataset.ped = b.p.id_pedido;
+          d.innerHTML = '<label class="cab"><input type="checkbox" class="bolsa-chk"' + (llego ? ' checked' : '') + (ya ? ' disabled' : '') + '>' +
+            '<span>N° ' + b.p.correlativo + ' · ' + escH(consumidores[b.p.id_consumidor] || b.p.id_consumidor) + '</span></label>';
+          b.its.forEach(function (it) {
+            var c = document.createElement('div'); c.className = 'corte'; c.dataset.item = it.id_item;
+            var carne = esCarne(it);
+            var val = (ya && pesado(it)) ? numeroAmable(it.efectiva) : ((e.pesos || {})[it.id_item] || '');
+            c.innerHTML = '<span class="n">' + escH(nombreProducto(it.id_producto)) + ' — pidió ' +
+              escH(carne ? numeroAmable(pedidoKg(it)) + ' kg' : textoItem(it).replace(/^.*?—\s*/, '')) + '</span>' +
+              (carne ? '<input type="text" class="bolsa-peso" inputmode="decimal" autocomplete="off" placeholder="peso" value="' + escH(val) + '"' + (ya ? ' disabled' : '') + '> kg<span class="av"></span>' : '');
+            d.appendChild(c);
+          });
+          caja.appendChild(d);
+        });
+        if (!ya) sincronizarBolsas(idProd);
+        avisosBolsas();
+      }
+      function avisosBolsas() {
+        var caja = $('bolsas'), tot = 0, lleg = 0, sinPeso = 0;
+        Array.prototype.forEach.call(caja.querySelectorAll('.bolsa'), function (d) {
+          tot++; var llego = d.querySelector('.bolsa-chk').checked; if (llego) lleg++;
+          d.classList.toggle('llego', llego);
+          Array.prototype.forEach.call(d.querySelectorAll('.corte'), function (c) {
+            var inp = c.querySelector('.bolsa-peso'); if (!inp) return;
+            var it = null; for (var i = 0; i < itemsEd.length; i++) if (itemsEd[i].id_item === c.dataset.item) it = itemsEd[i];
+            var kg = aNumero(inp.value), ped = it ? pedidoKg(it) : 0, av = '';
+            if (llego && (kg === null || kg <= 0)) sinPeso++;
+            if (kg !== null && kg > 50) av = '⚠ Va en kilos: 1230 g = 1,23.';
+            else if (kg > 0 && ped > 0 && Math.abs(kg - ped) / ped > TOLERANCIA_CARNE) av = '⚠ Revisá la etiqueta: pidió ' + numeroAmable(ped) + ' kg.';
+            c.querySelector('.av').textContent = av;
+          });
+        });
+        var pr = $('bolsas-prog');
+        if (pr) pr.textContent = lleg + ' de ' + tot + ' bolsas' + (sinPeso ? ' · faltan ' + sinPeso + ' pesos (se pueden cargar después en 🛍 Entrega)' : '');
+      }
+      // guarda lo tildado y completa los renglones por producto (ocultos)
+      function sincronizarBolsas(idProd) {
+        var caja = $('bolsas'), est = {}, llegaron = {};
+        Array.prototype.forEach.call(caja.querySelectorAll('.bolsa'), function (d) {
+          var e = { llego: d.querySelector('.bolsa-chk').checked, pesos: {} };
+          Array.prototype.forEach.call(d.querySelectorAll('.bolsa-peso'), function (i) { if (i.value.trim()) e.pesos[i.closest('.corte').dataset.item] = i.value.trim(); });
+          est[d.dataset.ped] = e; if (e.llego) llegaron[d.dataset.ped] = 1;
+        });
+        try { localStorage.setItem(claveBolsas(idProd), JSON.stringify(est)); } catch (e) {}
+        var propias = lineas.filter(function (l) { return l.id_productor === idProd; });
+        var claves = {}; propias.forEach(function (l) { claves[l.id_producto + '|' + (l.fraccion || '')] = 1; });
+        var suma = {};
+        bolsasDe(idProd).forEach(function (b) {
+          if (!llegaron[b.p.id_pedido]) return;
+          b.its.forEach(function (it) {
+            var k = it.id_producto + '|' + (it.fraccion || ''), conFr = !!it.fraccion;
+            if (!claves[k]) { k = it.id_producto + '|'; conFr = false; }
+            // se informa lo PEDIDO (no el peso real): la diferencia de peso va por D3, no como sobrante
+            var o = it.original > 0 ? it.original : it.cantidad;
+            suma[k] = (suma[k] || 0) + (conFr ? o : o * facItem(it));
+          });
+        });
+        var divs = $('lista-items').querySelectorAll('.item');
+        propias.forEach(function (l, i) {
+          var div = divs[i]; if (!div) return;
+          var v = Math.round((suma[l.id_producto + '|' + (l.fraccion || '')] || 0) * 1000) / 1000;
+          var chk = div.querySelector('.chk'), inp = div.querySelector('.cant');
+          if (chk.disabled) return;
+          if (chk.checked !== (v > 0)) { chk.checked = v > 0; chk.dispatchEvent(new Event('change', { bubbles: true })); }
+          inp.value = numeroAmable(v); inp.dataset.tocado = '1';
+          try { marcarNovedad(div); } catch (e) {}
+        });
+        actualizarProgreso();
+        try { guardarBorrador(); } catch (e) {}
+      }
+      ['change', 'input'].forEach(function (ev) {
+        $('bolsas').addEventListener(ev, function (e) {
+          if (!e.target.classList.contains('bolsa-chk') && !e.target.classList.contains('bolsa-peso')) return;
+          sincronizarBolsas($('bolsas').dataset.idProd); avisosBolsas();
+        });
+      });
+      // lo que va a D3 al registrar: pesos reales y bolsas que no llegaron
+      function payloadBolsas(idProd, base) {
+        var caja = $('bolsas'), items = [], peds = [];
+        var bolsas = {}; bolsasDe(idProd).forEach(function (b) { bolsas[b.p.id_pedido] = b; });
+        Array.prototype.forEach.call(caja.querySelectorAll('.bolsa'), function (d) {
+          var b = bolsas[d.dataset.ped]; if (!b) return;
+          var llego = d.querySelector('.bolsa-chk').checked, det = [], dif = 0;
+          b.its.forEach(function (it) {
+            var fila = null;
+            if (!llego) {
+              if (it.efectiva > 0) { fila = itemD3Peso(it, 0, 'Faltante del productor · bolsa no recibida'); det.push('• ' + fila.producto + ': no llegó'); }
+            } else if (esCarne(it)) {
+              var c = d.querySelector('.corte[data-item="' + it.id_item + '"] .bolsa-peso'), kg = c ? aNumero(c.value) : null;
+              if (kg > 0 && kg <= 50) { fila = itemD3Peso(it, kg, obsPeso(it, kg)); det.push('• ' + fila.producto + ': pediste ' + numeroAmable(pedidoKg(it)) + ' kg y pesó ' + numeroAmable(kg) + ' kg'); }
+            }
+            if (fila) { items.push(fila); dif += Math.round((it.efectiva - fila.cantidad_efectiva_nueva) * it.precio); }
+          });
+          if (det.length) {
+            var c2 = contactos[b.p.id_consumidor] || {};
+            peds.push({ id_pedido: b.p.id_pedido, correlativo: b.p.correlativo, nombre: consumidores[b.p.id_consumidor] || b.p.id_consumidor,
+              email: c2.email || '', telefono: c2.tel || '', total_anterior: b.p.total, monto_devuelto: dif, detalle_recortes: det.join('\n') });
+          }
+        });
+        if (!items.length) return null;
+        return { tipo: 'ajustes', id_edicion: idEdicion, aprobado_por: base.recibido_por, clave: base.clave, items: items, pedidos: peds, propuestas: [], origen: 'recepcion_por_pedido' };
+      }
+      function enviarBolsas(payload) {
+        if (!payload || WEBHOOK_D3.indexOf('https://hook.') !== 0) return;
+        fetch(WEBHOOK_D3, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) }).catch(function () {});
+        payload.items.forEach(function (f) { recortesLocales[f.id_item] = { nueva: f.cantidad_nueva, ts: Date.now(), ped: f.id_pedido, clave: payload.clave }; });
+        try { guardarRecortes(); } catch (e) {}
+      }
+
       function actualizarProgreso() {
         var total = $('lista-items').querySelectorAll('.item').length;
         var tildados = $('lista-items').querySelectorAll('.chk:checked').length;
@@ -3197,6 +3514,7 @@
           items: items
         };
 
+        var extraCarnes = porPedido(idProd) ? payloadBolsas(idProd, payload) : null;
         var btn = $('btn-confirmar');
         btn.disabled = true;
         btn.dataset.enviando = '1';
@@ -3211,8 +3529,10 @@
 
         function fin() {
           delete btn.dataset.enviando;
+          if (extraCarnes) { enviarBolsas(extraCarnes); extraCarnes = null; }
           $('ok-box').style.display = 'block';
           registrados[idProd] = true;
+          try { renderBolsas(idProd); } catch (e) {}
           recibidosVivo[idProd] = valorQuien('recibido-por');
           borrarBorrador(idProd);
           mostrarAvisoBorrador(null);
@@ -3880,6 +4200,7 @@
               fila.querySelector('.txt').appendChild(tag);
             }
             var etRec = etiquetaRecorte(it);
+            if (!etRec && esCarne(it)) etRec = '⚖ falta pesar';
             if (etRec) {
               var tr = document.createElement('span');
               tr.className = 'tag-recorte';
@@ -3893,6 +4214,7 @@
               br.dataset.k = String(k);
               br.title = 'No entra completo en el cajón (merma, descarte…)';
               br.textContent = '✂ Recorte';
+              if (esCarne(it)) { br.textContent = '⚖ Peso real'; br.title = 'Cargar el peso de la etiqueta'; br.classList.add('peso'); }
               fila.appendChild(br);
             }
             cuerpo.appendChild(fila);
@@ -3937,7 +4259,20 @@
                 tagF.textContent = productores[idProdF] || idProdF;
                 fila.querySelector('.txt').appendChild(tagF);
               }
+              if (esCarne(it)) {
+                var etF = etiquetaRecorte(it) || '⚖ falta pesar';
+                var trF = document.createElement('span');
+                trF.className = 'tag-recorte'; trF.textContent = etF;
+                fila.querySelector('.txt').appendChild(trF);
+                if (!frioListo && !recortesLocales[it.id_item]) {
+                  var bp = document.createElement('button');
+                  bp.type = 'button'; bp.className = 'btn-recorte peso'; bp.dataset.k = String(k);
+                  bp.textContent = '⚖ Peso real';
+                  fila.appendChild(bp);
+                }
+              }
               cuerpo.appendChild(fila);
+              if (esCarne(it) && recorteAbierto === p.id_pedido + '|' + k) cuerpo.appendChild(formRecorte(p, it, k));
             });
             if (!frioListo) {
               var progF = document.createElement('div');
@@ -4445,6 +4780,7 @@
       }
       var MOTIVOS_RECORTE = {
         merma: 'Merma al fraccionar',
+        peso: 'Peso real',
         faltante: 'Faltante del productor',
         descarte: 'Descarte por calidad',
         otro: 'Otro motivo'
@@ -4456,7 +4792,41 @@
         var u = String(infoProducto(it.id_producto).unidad || '').toLowerCase();
         return (u === 'kg' || u === 'kilo' || u === 'kilos' || u === 'litro' || u === 'l' || u === 'lt') && it.efectiva > 0;
       }
+      // ── Carnes (12/11): se cobra el peso real ─────────────────────
+      // Un corte es "de carnes" si su categoría es Carnes y se vende por kg.
+      // El peso real se guarda con el mismo escenario D3 de los recortes:
+      // E pasa a ser el peso real (puede ser MÁS que lo pedido) y la
+      // observación empieza con "Peso real": así se le paga al productor
+      // lo que pesó y el consumidor recibe el total final en el aviso.
+      var TOLERANCIA_CARNE = 0.15;
+      function esCarne(it) {
+        return normCat(categoriaProd[it.id_producto]) === 'carnes' && recortePorPeso({ id_producto: it.id_producto, efectiva: 1 });
+      }
+      function facItem(it) { return it.fraccion ? (factorFraccion(it.fraccion) || 1) : 1; }
+      // lo que pidió la persona, en kg (antes de pesar)
+      function pedidoKg(it) {
+        var o = it.original > 0 ? it.original : it.cantidad;
+        return Math.round(o * facItem(it) * 1000) / 1000;
+      }
+      function pesado(it) { return /^Peso real/i.test(it.obs || ''); }
+      function obsPeso(it, kg) {
+        return 'Peso real · ' + numeroAmable(kg) + ' kg (pidió ' + numeroAmable(pedidoKg(it)) + ' kg)';
+      }
+      // un renglón del envío a D3 para dejar un ítem en "kg" kilos (0 = no llegó)
+      function itemD3Peso(it, kg, obs) {
+        var fac = facItem(it), ef = Math.round(kg * 1000) / 1000;
+        var cant = it.fraccion ? Math.round(ef / fac * 10000) / 10000 : ef;
+        return {
+          id_item: it.id_item, id_pedido: it.id_pedido, id_producto: it.id_producto, producto: nombreProducto(it.id_producto),
+          recorte_efectiva: Math.round((it.efectiva - ef) * 10000) / 10000,
+          recorte_cantidad: Math.round((it.cantidad - cant) * 10000) / 10000,
+          cantidad_antes: it.cantidad, cantidad_nueva: cant,
+          cantidad_efectiva_antes: it.efectiva, cantidad_efectiva_nueva: ef,
+          precio: it.precio, observacion: obs
+        };
+      }
       function etiquetaRecorte(it) {
+        if (!recortesLocales[it.id_item] && pesado(it)) return '⚖ ' + it.obs.replace(/^Peso real\s*·\s*/i, 'pesó ');
         var o = recortesLocales[it.id_item];
         if (o) {
           if (Math.abs(it.cantidad - o.nueva) < 0.0001) {
@@ -4465,7 +4835,7 @@
             // (09/11) ya no se manda un correo por recorte: el consumidor recibe
             // UN solo aviso al final, desde la guía, cuando todo está armado.
           }
-          else if (Date.now() - o.ts < 240000) return '⏳ guardando recorte…';
+          else if (Date.now() - o.ts < 240000) return esCarne(it) ? '⏳ guardando peso…' : '⏳ guardando recorte…';
           else return '⚠ el recorte no se aplicó: probá de nuevo o revisá D3';
         }
         if (/^Recorte en armado/i.test(it.obs || '')) {
@@ -4494,6 +4864,7 @@
         return f === 'menos' ? oFalt + resto : resto + oFalt;
       }
       function formRecorte(p, it, k) {
+        if (esCarne(it)) return formPeso(p, it, k);
         var info = infoProducto(it.id_producto), peso = recortePorPeso(it);
         var u = info.unidad || '';
         var d = document.createElement('div');
@@ -4519,7 +4890,65 @@
           '<div class="rc-msg"></div>';
         return d;
       }
+      function formPeso(p, it, k) {
+        var d = document.createElement('div');
+        d.className = 'form-recorte'; d.dataset.ped = p.id_pedido; d.dataset.k = String(k); d.dataset.carne = '1';
+        d.innerHTML =
+          '<div><strong>⚖ Peso real</strong> · ' + escH(infoProducto(it.id_producto).nombre) + ' · pidió ' + escH(numeroAmable(pedidoKg(it))) + ' kg</div>' +
+          '<div class="fila"><label>Pesó: <input type="text" class="rc-va" inputmode="decimal" autocomplete="off" value="' +
+            escH(numeroAmable(it.efectiva > 0 ? it.efectiva : pedidoKg(it))) + '" style="width:90px;"> kg</label>' +
+            '<div class="muted" style="font-size:.8rem;">El peso de la etiqueta, en kg (1230 g = 1,23). Se cobra lo que pesó. 0 = no llegó.</div></div>' +
+          '<select class="rc-motivo" style="display:none;"><option value="peso" selected>Peso real</option></select>' +
+          '<div class="acciones"><button type="button" class="rc-aplicar">Guardar peso</button>' +
+          '<button type="button" class="rc-cancelar">Cancelar</button></div>' +
+          '<div class="rc-msg"></div>';
+        return d;
+      }
+      function aplicarPeso(fr, btn) {
+        var msg = fr.querySelector('.rc-msg');
+        function err(t) { msg.textContent = t; }
+        if (!webhookListo(WEBHOOK_D3, 'D3 · Ajustes', 'aviso-entrega')) return;
+        var quien = valorQuien('entregado-por'), clave = $('clave-entrega').value.trim();
+        if (!quien) { err('Antes, elegí tu nombre arriba de todo.'); return; }
+        if (!clave) { err('Falta la clave de equipo (arriba de todo).'); return; }
+        var p = null;
+        for (var i = 0; i < pedidos.length; i++) if (pedidos[i].id_pedido === fr.dataset.ped) p = pedidos[i];
+        var it = itemsDePedido(fr.dataset.ped)[parseInt(fr.dataset.k, 10)];
+        if (!p || !it) { err('No encuentro el ítem: actualizá la pantalla.'); return; }
+        var kg = aNumero(fr.querySelector('.rc-va').value);
+        if (kg === null || kg < 0) { err('Poné el peso en kg (por ejemplo 1,23).'); return; }
+        if (kg > 50) { err('¿Más de 50 kg? Va en kilos: 1230 g = 1,23.'); return; }
+        var ped = pedidoKg(it);
+        // fuera de la tolerancia: se avisa una vez y se guarda si insisten
+        if (kg > 0 && ped > 0 && Math.abs(kg - ped) / ped > TOLERANCIA_CARNE && fr.dataset.avisado !== String(kg)) {
+          fr.dataset.avisado = String(kg);
+          err('⚠ Revisá la etiqueta: pidió ' + numeroAmable(ped) + ' kg y cargaste ' + numeroAmable(kg) + ' kg. Si está bien, tocá "Guardar peso" de nuevo.');
+          return;
+        }
+        var obs = kg > 0 ? obsPeso(it, kg) : 'Faltante del productor · no llegó';
+        var fila = itemD3Peso(it, kg, obs);
+        var dif = Math.round((it.efectiva - fila.cantidad_efectiva_nueva) * it.precio);
+        var c = contactos[p.id_consumidor] || {};
+        btn.disabled = true; btn.textContent = 'Enviando…';
+        fetch(WEBHOOK_D3, {
+          method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            tipo: 'ajustes', id_edicion: idEdicion, aprobado_por: quien, clave: clave, items: [fila],
+            pedidos: [{ id_pedido: p.id_pedido, correlativo: p.correlativo, nombre: consumidores[p.id_consumidor] || p.id_consumidor,
+              email: c.email || '', telefono: c.tel || '', total_anterior: p.total, monto_devuelto: dif,
+              detalle_recortes: '• ' + fila.producto + ': pediste ' + numeroAmable(ped) + ' kg y pesó ' + numeroAmable(kg) + ' kg' }],
+            propuestas: []
+          })
+        }).then(fin).catch(fin);
+        function fin() {
+          recortesLocales[it.id_item] = { nueva: fila.cantidad_nueva, ts: Date.now(), ped: p.id_pedido, clave: clave };
+          guardarRecortes();
+          recorteAbierto = '';
+          renderEntrega();
+        }
+      }
       function aplicarRecorte(fr, btn) {
+        if (fr.dataset.carne) return aplicarPeso(fr, btn);
         var msg = fr.querySelector('.rc-msg');
         function err(t) { msg.textContent = t; }
         if (!webhookListo(WEBHOOK_D3, 'D3 · Ajustes', 'aviso-entrega')) return;
@@ -5360,6 +5789,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 11/11 faltante del productor</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 12/11 orden de armado y carnes</p>
 </body>
 </html>
