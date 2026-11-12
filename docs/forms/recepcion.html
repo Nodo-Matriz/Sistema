@@ -4445,6 +4445,7 @@
       }
       var MOTIVOS_RECORTE = {
         merma: 'Merma al fraccionar',
+        faltante: 'Faltante del productor',
         descarte: 'Descarte por calidad',
         otro: 'Otro motivo'
       };
@@ -4472,6 +4473,26 @@
         }
         return '';
       }
+      // (11/11) Si el productor no mandó (o mandó menos), el recorte NO lo
+      // absorbe el Nodo: "Faltante del productor" no se le paga. Con el
+      // producto "No llegó" en recepción es la única opción (en ED21 se usó
+      // "Otro motivo" y la liquidación pagó Frutilla y Repollitos no recibidos).
+      function recepFalta(it) {
+        var rp = recepPorProducto[it.id_producto];
+        if (!rp || recepCorruptas[it.id_producto]) return '';
+        if (rp.recibida + (rp.deposito || 0) <= 0 && rp.pedida > 0) return 'nada';
+        if (rp.recibida + (rp.deposito || 0) < rp.pedida) return 'menos';
+        return '';
+      }
+      function opcionesMotivo(it) {
+        var f = recepFalta(it);
+        var oFalt = '<option value="faltante">Faltante del productor (no se le paga)</option>';
+        if (f === 'nada') return oFalt;
+        var resto = '<option value="merma">Merma al fraccionar (lo absorbe el Nodo)</option>' +
+          '<option value="descarte">Descarte por calidad (no se le paga al productor)</option>' +
+          '<option value="otro">Otro motivo (lo absorbe el Nodo)</option>';
+        return f === 'menos' ? oFalt + resto : resto + oFalt;
+      }
       function formRecorte(p, it, k) {
         var info = infoProducto(it.id_producto), peso = recortePorPeso(it);
         var u = info.unidad || '';
@@ -4484,11 +4505,9 @@
         if (peso && it.fraccion) pidio = it.cantidad + ' × ' + it.fraccion + ' ' + u + ' (= ' + numeroAmable(it.efectiva) + ' ' + u + ')';
         d.innerHTML =
           '<div><strong>✂ Recorte en armado</strong> · ' + escH(info.nombre) + ' · pidió ' + escH(pidio) + '</div>' +
-          '<div class="fila"><label>Motivo: <select class="rc-motivo">' +
-            '<option value="merma">Merma al fraccionar (lo absorbe el Nodo)</option>' +
-            '<option value="descarte">Descarte por calidad (no se le paga al productor)</option>' +
-            '<option value="otro">Otro motivo (lo absorbe el Nodo)</option>' +
-          '</select></label></div>' +
+          '<div class="fila"><label>Motivo: <select class="rc-motivo">' + opcionesMotivo(it) + '</select></label>' +
+          (recepFalta(it) === 'nada' ? '<div class="muted" style="font-size:.8rem;">En recepción este producto figura como <strong>no llegado</strong>: no se le paga al productor.</div>' : '') +
+          '</div>' +
           '<div class="fila"><label>Va en el cajón: <input type="text" class="rc-va" inputmode="decimal" autocomplete="off" value="0" ' +
             (peso ? 'step="0.05" max="' + it.efectiva + '"' : 'step="1" max="' + Math.max(0, it.cantidad - 1) + '"') +
             ' style="width:80px;"> ' + escH(unidadVa) + '</label>' +
@@ -5341,6 +5360,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 09/11 estabilización</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 11/11 faltante del productor</p>
 </body>
 </html>
