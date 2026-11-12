@@ -375,6 +375,26 @@
           <span class="nota">El link del form vigente aparece acá cuando hay una edición abierta.</span>
         </p>
 
+        <div id="caja-carnes" style="margin-top:14px; border:1px solid rgba(122,46,58,.35); border-radius:12px; padding:12px 14px;">
+          <strong>🥩 Carnes · cierra antes que el resto</strong>
+          <p class="nota" style="margin:6px 0 8px;">
+            Los cortes de la categoría <strong>Carnes</strong> se pueden dejar de vender antes del cierre
+            general, para pasarle el pedido al productor con tiempo. El resto del formulario sigue abierto.
+          </p>
+          <p id="carnes-estado" class="nota" style="margin:0 0 8px;">Leyendo…</p>
+          <div class="campo-a1" style="flex-wrap:wrap;">
+            <input type="datetime-local" id="carnes-cierre" style="flex:1; min-width:190px;">
+            <input type="password" id="clave-carnes" placeholder="Clave de equipo">
+            <button type="button" class="btn btn--ghost btn--small" id="btn-carnes-cierre">Guardar cierre de carnes</button>
+          </div>
+          <div class="ok-mini" id="ok-carnes"></div>
+          <p style="margin:10px 0 0;">
+            <button type="button" class="btn btn--ghost btn--small" id="btn-carnes-pedido">📋 Copiar pedido de carnes para el productor</button>
+            <span class="porque" id="porque-carnes"></span>
+          </p>
+          <div id="carnes-textos"></div>
+        </div>
+
         <div class="solo-prueba" style="margin-top:14px;">
           <div class="etiqueta">Solo para pruebas · finalizar la toma de pedidos ahora</div>
           <p class="nota" style="margin-bottom:8px;">
@@ -612,6 +632,109 @@
         if (!c || c.v === null || c.v === undefined) return '';
         return c.v;
       }
+
+      // ── Carnes: cierre anticipado y pedido para el productor (12/11) ──
+      // El cierre se guarda con el escenario H1 en la hoja Config_App
+      // (clave "cierre_carnes|<edición>"); el formulario lo lee de ahí.
+      var WEBHOOK_H1 = 'https://hook.us2.make.com/w69ib4j3s2gqosu1zm7f1pp4ndqrepar';
+      function leerCierreCarnes() {
+        if (!edicionVigente) return Promise.resolve(null);
+        return gviz('sheet=Config_App&range=A1:B3000&headers=1').then(function (res) {
+          if (!/clave/i.test(String((res.table.cols[0] || {}).label || ''))) return undefined;   // no existe la hoja
+          var val = null;
+          res.table.rows.forEach(function (r) { if (String(celda(r, 0)).trim() === 'cierre_carnes|' + edicionVigente) val = celda(r, 1); });
+          return val ? parseFecha(String(val).replace(/^'/, '')) : null;
+        }).catch(function () { return undefined; });
+      }
+      function pintarCarnes() {
+        var est = $('carnes-estado');
+        if (!est) return;
+        if (!edicionVigente) { est.textContent = 'Todavía no hay edición.'; return; }
+        leerCierreCarnes().then(function (f) {
+          if (f === undefined) { est.innerHTML = '⚠ Falta crear la hoja <strong>Config_App</strong> en la planilla (encabezados: clave, valor, fecha, quien).'; return; }
+          if (!f) { est.textContent = 'Sin cierre anticipado: en ' + edicionVigente + ' Carnes cierra junto con el formulario.'; return; }
+          est.innerHTML = (f.getTime() <= Date.now() ? '🔒 Carnes <strong>ya cerró</strong> el ' : '⏰ Carnes cierra el ') + '<strong>' + fechaHuman(f) + '</strong> (' + edicionVigente + ').';
+          var p = function (n) { return ('0' + n).slice(-2); };
+          if (!$('carnes-cierre').value) $('carnes-cierre').value = f.getFullYear() + '-' + p(f.getMonth() + 1) + '-' + p(f.getDate()) + 'T' + p(f.getHours()) + ':' + p(f.getMinutes());
+        });
+      }
+      document.addEventListener('DOMContentLoaded', function () {
+        if (!$('btn-carnes-cierre')) return;
+        $('btn-carnes-cierre').addEventListener('click', function () {
+          var ok = $('ok-carnes'), v = $('carnes-cierre').value, clave = $('clave-carnes').value.trim(), btn = this;
+          ok.style.display = 'block';
+          if (WEBHOOK_H1.indexOf('https://hook.') !== 0) { ok.textContent = '🚫 Falta conectar el escenario H1 de Make.'; return; }
+          if (!edicionVigente) { ok.textContent = 'No hay edición en curso.'; return; }
+          if (!v) { ok.textContent = 'Elegí día y hora del cierre de carnes.'; return; }
+          if (!clave) { ok.textContent = 'Falta la clave de equipo.'; return; }
+          guardarClave(clave);
+          var txt = v.replace('T', ' ');
+          btn.disabled = true; ok.textContent = '⏳ Guardando…';
+          var fin = function () {
+            var t0 = Date.now();
+            (function otra() {
+              leerCierreCarnes().then(function (f) {
+                var p = function (n) { return ('0' + n).slice(-2); };
+                var leido = f ? f.getFullYear() + '-' + p(f.getMonth() + 1) + '-' + p(f.getDate()) + ' ' + p(f.getHours()) + ':' + p(f.getMinutes()) : '';
+                if (leido === txt) { btn.disabled = false; ok.textContent = '✓ Guardado. El formulario ya lo muestra.'; pintarCarnes(); return; }
+                if (Date.now() - t0 > 60000) { btn.disabled = false; ok.textContent = '⚠ No lo veo en la planilla: revisá la clave y el escenario H1.'; return; }
+                setTimeout(otra, 4000);
+              });
+            })();
+          };
+          fetch(WEBHOOK_H1, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({ tipo: 'config', clave: clave, clave_config: 'cierre_carnes|' + edicionVigente, valor: txt, quien: 'guía' }) }).then(fin, fin);
+        });
+        // Pedido de carnes por productor, listo para WhatsApp: una bolsa por persona.
+        $('btn-carnes-pedido').addEventListener('click', function () {
+          var pq = $('porque-carnes'), caja = $('carnes-textos'); pq.textContent = 'Armando…'; caja.innerHTML = '';
+          Promise.all([gviz('sheet=Items&range=A1:N50000&headers=1'), gviz('sheet=Pedidos&range=A1:F20000&headers=1'),
+            gviz('sheet=Consumidores&range=A1:B20000&headers=1'), gviz('sheet=Productos&range=A1:I5000&headers=1'),
+            gviz('sheet=Productores&range=A1:B2000&headers=1')]).then(function (t) {
+            var prod = {}, cons = {}, prodr = {}, ped = {};
+            t[3].table.rows.forEach(function (r) { prod[String(celda(r, 0)).trim()] = { nombre: String(celda(r, 2)).trim(), unidad: String(celda(r, 3)).trim(), cat: String(celda(r, 8)).trim(), productor: String(celda(r, 1)).trim() }; });
+            // solo el nombre: a los productores no se les pasan teléfonos
+            t[2].table.rows.forEach(function (r) { cons[String(celda(r, 0)).trim()] = String(celda(r, 1)).replace(/[+\d][\d\s().-]{6,}/g, '').trim(); });
+            t[4].table.rows.forEach(function (r) { prodr[String(celda(r, 0)).trim()] = String(celda(r, 1)).trim(); });
+            t[1].table.rows.forEach(function (r) {
+              var id = String(celda(r, 0)).trim();
+              if (id.indexOf('PED-' + edicionVigente + '-') === 0 && !/cancel/i.test(String(celda(r, 5)))) ped[id] = { n: celda(r, 3), cons: String(celda(r, 2)).trim() };
+            });
+            var norm = function (x) { return String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim(); };
+            var num = function (n) { return String(Math.round(n * 1000) / 1000).replace('.', ','); };
+            var por = {};   // productor -> { bolsas: {id_pedido: [líneas]}, tot: {producto: kg} }
+            t[0].table.rows.forEach(function (r) {
+              var idPed = String(celda(r, 1)).trim(), p = prod[String(celda(r, 2)).trim()];
+              if (!ped[idPed] || !p || norm(p.cat) !== 'carnes') return;
+              var ef = parseFloat(celda(r, 10)) || 0; if (ef <= 0) return;
+              var idPr = String(celda(r, 3)).trim() || p.productor;
+              var o = por[idPr] || (por[idPr] = { bolsas: {}, tot: {} });
+              (o.bolsas[idPed] || (o.bolsas[idPed] = [])).push('   • ' + p.nombre + ': ' + num(ef) + ' ' + (p.unidad || ''));
+              o.tot[p.nombre] = (o.tot[p.nombre] || 0) + ef;
+            });
+            var ids = Object.keys(por);
+            if (!ids.length) { pq.textContent = 'No hay pedidos con productos de la categoría Carnes en ' + edicionVigente + '.'; return; }
+            pq.textContent = '';
+            ids.forEach(function (idPr) {
+              var o = por[idPr], peds = Object.keys(o.bolsas).sort(function (a, b) { return ped[a].n - ped[b].n; });
+              var txt = '🥩 *Pedido de carnes · Nodo Matríz · ' + edicionVigente + '*\n' + (prodr[idPr] || idPr) + '\n\n' +
+                '*Total por corte (aprox.)*\n' + Object.keys(o.tot).sort().map(function (k) { return '• ' + k + ': ' + num(o.tot[k]) + ' kg'; }).join('\n') +
+                '\n\n*Una bolsa por pedido, con etiqueta: N° de pedido, nombre y peso de cada corte*\n' +
+                peds.map(function (id) { return '🛍 N° ' + ped[id].n + ' · ' + (cons[ped[id].cons] || '') + '\n' + o.bolsas[id].join('\n'); }).join('\n') +
+                '\n\nSe paga el peso real de cada corte. ¡Gracias!';
+              var d = document.createElement('div'); d.style.cssText = 'margin-top:10px;';
+              d.innerHTML = '<strong></strong> · ' + peds.length + ' bolsas <button type="button" class="btn btn--ghost btn--small">Copiar</button> <span class="porque"></span><pre style="white-space:pre-wrap;background:rgba(74,107,58,.06);border-radius:10px;padding:10px;font-size:.8rem;max-height:220px;overflow:auto;"></pre>';
+              d.querySelector('strong').textContent = prodr[idPr] || idPr; d.querySelector('pre').textContent = txt;
+              d.querySelector('button').addEventListener('click', function () {
+                var sp = d.querySelector('.porque'), hecho = function () { sp.textContent = '✓ Copiado: pegalo en el WhatsApp del productor.'; };
+                if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(hecho, function () { window.prompt('Copiá el pedido:', txt); });
+                else window.prompt('Copiá el pedido:', txt);
+              });
+              caja.appendChild(d);
+            });
+          }).catch(function () { pq.textContent = 'No pude leer la planilla. Probá de nuevo.'; });
+        });
+      });
 
       function parseFecha(v) {
         if (!v) return null;
@@ -1338,6 +1461,7 @@
 
         var id = String(celda(vigente, 0)).trim();
         edicionVigente = id;
+        try { pintarCarnes(); if (claveGuardada() && !$('clave-carnes').value) $('clave-carnes').value = claveGuardada(); } catch (e) {}
         var estado = String(celda(vigente, 3)).trim();
         var cierreForm = parseFecha(celda(vigente, 7));
         var entrega = parseFecha(celda(vigente, 9));
@@ -1503,6 +1627,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 09/11 aviso al final</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 12/11 carnes</p>
 </body>
 </html>
