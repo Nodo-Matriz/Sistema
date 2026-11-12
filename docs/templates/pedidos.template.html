@@ -386,6 +386,10 @@
             <span>Total a abonar</span>
             <span id="total-final">$ 0</span>
           </div>
+          <p class="muted" id="nota-carnes" style="display:none; font-size:0.86rem; margin:6px 0 0;">
+            🥩 Tu pedido tiene cortes de carne: se cobran por <strong>peso real</strong>. Este total es
+            aproximado; el total final te llega por correo cuando armamos tu pedido.
+          </p>
         </div>
       </div>
 
@@ -1727,14 +1731,87 @@
       // ----------------------------------------------------------------
       // 5. Cálculo del resumen
       // ----------------------------------------------------------------
+      // ── Carnes (12/11) ──────────────────────────────────────────────
+      // La categoría "Carnes" se cobra por peso real y puede cerrar ANTES que
+      // el resto del formulario (el productor necesita el pedido con más
+      // anticipación). El cierre se lee de la hoja Config_App: última fila
+      // con clave "cierre_carnes|<edición>" y valor "AAAA-MM-DD HH:mm"
+      // (lo carga el equipo desde la guía). Sin esa fila, Carnes cierra con
+      // el formulario, como cualquier otra categoría.
+      var carnesCerrado = false, carnesCierre = null;
+      function esCatCarnes(cat) {
+        return String(cat && cat.nombre || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim() === 'carnes';
+      }
+      (function () {
+        var cat = null;
+        categorias.forEach(function (c) { if (esCatCarnes(c)) cat = c; });
+        if (!cat) return;
+        var paso = null;
+        Array.prototype.forEach.call(stepsContainer.querySelectorAll('.wizard__step'), function (st) {
+          if (st.dataset.stepName === cat.nombre) paso = st;
+        });
+        if (!paso) return;
+        var nota = document.createElement('div');
+        nota.className = 'note note--info'; nota.id = 'nota-cierre-carnes';
+        nota.style.cssText = 'margin: 8px 0 12px;';
+        var h2 = paso.querySelector('h2');
+        h2.parentNode.insertBefore(nota, h2.nextSibling);
+        function humano(f) {
+          var dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+          return dias[f.getDay()] + ' ' + f.getDate() + '/' + (f.getMonth() + 1) + ' a las ' + ('0' + f.getHours()).slice(-2) + ':' + ('0' + f.getMinutes()).slice(-2) + ' hs';
+        }
+        function pintar() {
+          var base = '🥩 <strong>Se cobra el peso real.</strong> Elegís el corte y un peso aproximado; el productor lo prepara y pagás lo que pesó (te avisamos el total final por correo).';
+          if (carnesCierre && !carnesCerrado) base += '<br>⏰ <strong>Carnes cierra antes:</strong> se puede pedir hasta el ' + humano(carnesCierre) + '.';
+          if (carnesCerrado) base = '🥩 <strong>El pedido de carnes ya cerró</strong>' + (carnesCierre ? ' (el ' + humano(carnesCierre) + ')' : '') +
+            '. El resto del formulario sigue abierto. Si habías elegido algún corte y todavía no enviaste el pedido, no entra.';
+          nota.innerHTML = base;
+        }
+        function revisar() {
+          if (!carnesCierre || carnesCerrado || new Date() < carnesCierre) return;
+          carnesCerrado = true;
+          paso.classList.add('carnes-cerrada');
+          Array.prototype.forEach.call(paso.querySelectorAll('.product-list input, .product-list select, .product-list button'), function (el) { el.disabled = true; });
+          var pl = paso.querySelector('.product-list'); if (pl) { pl.style.opacity = '0.45'; pl.style.pointerEvents = 'none'; }
+          pintar();
+          try { actualizarResumen(); } catch (e) {}
+        }
+        pintar();
+        var url = 'https://docs.google.com/spreadsheets/d/1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg' +
+          '/gviz/tq?tqx=out:json&sheet=Config_App&range=A1:B3000&headers=1&_=' + Date.now();
+        fetch(url, { cache: 'no-store' }).then(function (r) { return r.text(); }).then(function (t) {
+          var m = t.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+          if (!m) return;
+          var tb = JSON.parse(m[1]).table;
+          // si la hoja no existe, gviz devuelve otra: se exige el encabezado "clave"
+          if (!tb.cols || !tb.cols.length || !/clave/i.test(String(tb.cols[0].label || ''))) return;
+          var val = '';
+          tb.rows.forEach(function (r) {
+            var k = r.c[0] && r.c[0].v != null ? String(r.c[0].v).trim() : '';
+            if (k === 'cierre_carnes|{{id_edicion}}') val = r.c[1] ? String(r.c[1].v || r.c[1].f || '') : '';
+          });
+          var x = val.replace(/^'/, '').match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{1,2}):(\d{2})/);
+          if (x) carnesCierre = new Date(+x[1], +x[2] - 1, +x[3], +x[4], +x[5]);
+          else if ((x = val.match(/Date\((\d+),(\d+),(\d+),(\d+),(\d+)/))) carnesCierre = new Date(+x[1], +x[2], +x[3], +x[4], +x[5]);
+          else if ((x = val.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/))) carnesCierre = new Date(+x[3], +x[2] - 1, +x[1], +x[4], +x[5]);
+          else return;
+          pintar(); revisar();
+          setInterval(revisar, 30000);
+        }).catch(function () {});
+      })();
+
       function calcularItems() {
         var items = [];
         var subtotal = 0;
 
+        var hayCarnes = false;
         categorias.forEach(function (cat) {
+          // (12/11) Carnes cierra antes que el resto: pasado ese cierre no entra al pedido
+          if (carnesCerrado && esCatCarnes(cat)) return;
           cat.productos.forEach(function (p) {
             var s = stateProductos[p.id_producto];
             if (!s || s.cantidad <= 0) return;
+            if (esCatCarnes(cat)) hayCarnes = true;
             // Si es fraccionable y eligió fracción, multiplicar por la fracción
             var multiplicador = 1;
             if (p.fraccionable && s.fraccion) {
@@ -1759,6 +1836,8 @@
           });
         });
 
+        var nc = document.getElementById('nota-carnes');
+        if (nc) nc.style.display = hayCarnes ? 'block' : 'none';
         return { items: items, subtotal: subtotal };
       }
 
@@ -2704,6 +2783,6 @@
 
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 30/10 datos por WhatsApp</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 12/11 carnes</p>
 </body>
 </html>
