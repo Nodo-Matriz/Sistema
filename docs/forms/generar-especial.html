@@ -105,7 +105,8 @@
   <div class="card-eq">
     <h2>Especiales publicadas</h2>
     <div id="publicadas"><p class="meta">Leyendo…</p></div>
-    <p class="meta">"Cerrar ahora" corta los pedidos antes de la fecha de cierre. Pide la clave de equipo (la del campo de arriba).</p>
+    <p class="meta">"Cerrar ahora" corta los pedidos antes de la fecha de cierre. Pide la clave de equipo:</p>
+    <input type="password" id="clave-cerrar" placeholder="Clave de equipo" style="max-width:260px;">
   </div>
 </main>
 <script>
@@ -130,7 +131,7 @@
   var WEBHOOK_H1 = 'https://hook.us2.make.com/w69ib4j3s2gqosu1zm7f1pp4ndqrepar';
   var especiales = [];   // última fila de cada código
   var CLAVE_KEY = 'nm_clave_equipo';
-  try { if (sessionStorage.getItem(CLAVE_KEY)) setTimeout(function () { $('clave').value = sessionStorage.getItem(CLAVE_KEY); }, 0); } catch (e) {}
+  try { if (sessionStorage.getItem(CLAVE_KEY)) setTimeout(function () { $('clave').value = sessionStorage.getItem(CLAVE_KEY); $('clave-cerrar').value = sessionStorage.getItem(CLAVE_KEY); }, 0); } catch (e) {}
   function h1Listo() { return WEBHOOK_H1.indexOf('https://hook.') === 0; }
   function mandarEspecial(celdas, clave) {
     try { sessionStorage.setItem(CLAVE_KEY, clave); } catch (e) {}
@@ -174,8 +175,8 @@
       if (abierta && h1Listo()) {
         var b = document.createElement('button'); b.type = 'button'; b.className = 'btn btn--ghost btn--small'; b.textContent = 'Cerrar ahora';
         b.addEventListener('click', function () {
-          var clave = $('clave').value.trim();
-          if (!clave) { $('validacion').textContent = ''; b.textContent = 'Falta la clave (campo de arriba)'; return; }
+          var clave = $('clave-cerrar').value.trim() || $('clave').value.trim();
+          if (!clave) { b.textContent = 'Cerrar ahora'; $('clave-cerrar').focus(); $('clave-cerrar').placeholder = 'Falta la clave de equipo'; return; }
           b.disabled = true; b.textContent = 'Cerrando…';
           var fila = e.slice(); fila[4] = 'Cerrada';
           var fin = function () { esperar(function () { var x = especiales.filter(function (y) { return y[0] === e[0]; })[0]; return x && /cerrada/i.test(x[4]); },
@@ -395,6 +396,6 @@
   pintarElegidos(); cargar();
 })();
 </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 12/11 publicar y cerrar</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 12/11 publicar y cerrar (b)</p>
 </body>
 </html>
