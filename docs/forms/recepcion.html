@@ -785,6 +785,9 @@
       border-left: 5px solid #2f6b8f; color: #1d4a66; font-weight: 600;
     }
     .item-frio .tag-productor { color: #2f6b8f; }
+    .item-frio { flex-wrap: wrap; }
+    .item-frio .txt { flex: 1 1 150px; min-width: 0; }
+    .item-frio .btn-recorte { margin-left: auto; }
     .item-frio.ok .txt { text-decoration: line-through; opacity: 0.55; }
     .item-frio .ico { flex: 0 0 auto; }
     .item-frio { cursor: pointer; }
@@ -3271,8 +3274,8 @@
         caja.style.display = 'block'; lista.style.display = 'none'; $('progreso').style.display = 'none';
         caja.dataset.idProd = idProd;
         caja.innerHTML = '<p><strong>🥩 Entrega por pedido.</strong> ' + (ya
-          ? 'Ya está registrada. Para corregir un peso: solapa 🛍 Entrega → abrí el pedido → <strong>⚖ Peso real</strong>.'
-          : 'Tildá cada bolsa que llegó y cargá el <strong>peso de la etiqueta</strong> de cada corte (en kg: 1230 g = 1,23). La bolsa que quede sin tildar se registra como no recibida y no se le cobra a la persona.') + '</p>' +
+          ? 'Ya está registrada. El peso de cada corte se carga al armar: solapa 🛍 Entrega → abrí el pedido → <strong>⚖ Peso real</strong>.'
+          : 'Tildá cada bolsa que llegó. Acá no se pesa: el peso real de cada corte se carga al armar el pedido (🛍 Entrega → <strong>⚖ Peso real</strong>). La bolsa que quede sin tildar se registra como no recibida y no se le cobra a la persona.') + '</p>' +
           '<p class="muted" id="bolsas-prog"></p>';
         if (!bolsas.length) caja.insertAdjacentHTML('beforeend', '<p class="muted">No hay pedidos con productos de este productor.</p>');
         bolsas.forEach(function (b) {
@@ -3285,10 +3288,10 @@
           b.its.forEach(function (it) {
             var c = document.createElement('div'); c.className = 'corte'; c.dataset.item = it.id_item;
             var carne = esCarne(it);
-            var val = (ya && pesado(it)) ? numeroAmable(it.efectiva) : ((e.pesos || {})[it.id_item] || '');
+            // (13/11) en la recepción no se pesa: solo se muestra lo pedido
             c.innerHTML = '<span class="n">' + escH(nombreProducto(it.id_producto)) + ' — pidió ' +
               escH(carne ? numeroAmable(pedidoKg(it)) + ' kg' : textoItem(it).replace(/^.*?—\s*/, '')) + '</span>' +
-              (carne ? '<input type="text" class="bolsa-peso" inputmode="decimal" autocomplete="off" placeholder="peso" value="' + escH(val) + '"' + (ya ? ' disabled' : '') + '> kg<span class="av"></span>' : '');
+              (ya && pesado(it) ? '<span class="muted" style="font-size:.85rem;">⚖ pesó ' + escH(numeroAmable(it.efectiva)) + ' kg</span>' : '');
             d.appendChild(c);
           });
           caja.appendChild(d);
@@ -3312,7 +3315,7 @@
           });
         });
         var pr = $('bolsas-prog');
-        if (pr) pr.textContent = lleg + ' de ' + tot + ' bolsas' + (sinPeso ? ' · faltan ' + sinPeso + ' pesos (se pueden cargar después en 🛍 Entrega)' : '');
+        if (pr) pr.textContent = lleg + ' de ' + tot + ' bolsas recibidas';
       }
       // guarda lo tildado y completa los renglones por producto (ocultos)
       function sincronizarBolsas(idProd) {
@@ -3366,9 +3369,6 @@
             var fila = null;
             if (!llego) {
               if (it.efectiva > 0) { fila = itemD3Peso(it, 0, 'Faltante del productor · bolsa no recibida'); det.push('• ' + fila.producto + ': no llegó'); }
-            } else if (esCarne(it)) {
-              var c = d.querySelector('.corte[data-item="' + it.id_item + '"] .bolsa-peso'), kg = c ? aNumero(c.value) : null;
-              if (kg > 0 && kg <= 50) { fila = itemD3Peso(it, kg, obsPeso(it, kg)); det.push('• ' + fila.producto + ': pediste ' + numeroAmable(pedidoKg(it)) + ' kg y pesó ' + numeroAmable(kg) + ' kg'); }
             }
             if (fila) { items.push(fila); dif += Math.round((it.efectiva - fila.cantidad_efectiva_nueva) * it.precio); }
           });
@@ -4436,7 +4436,7 @@
           var ea = document.createElement('div');
           ea.className = 'resumen-busqueda en-armado-box';
           ea.innerHTML = '<h4>🛠 Cajones empezados sin terminar (' + enArmadoLista.length + ')</h4>' +
-            '<p class="muted" style="margin:0 0 4px;font-size:.82rem;">Lo tildado queda guardado en este teléfono. Tocá uno para seguir armándolo.</p><ul>' +
+            '<p class="muted" style="margin:0 0 4px;font-size:.82rem;">Lo tildado queda guardado y se ve desde cualquier teléfono (con nombre y clave cargados arriba). Tocá uno para seguir armándolo.</p><ul>' +
             enArmadoLista.map(function (x) {
               return '<li><span class="rb-ped" data-ped="' + escH(x.p.id_pedido) + '">N° ' + escH(x.p.correlativo) + ' · ' +
                 escH(nombreConsumidor(x.p)) + '</span> — ' + x.n + ' de ' + x.tot + ' productos' +
@@ -5390,7 +5390,8 @@
       function productoresSinRecepcion() {
         var pend = {};
         lineas.forEach(function (l) {
-          if (!recibidosVivo[l.id_productor]) pend[l.id_productor] = true;
+          // carnes / "Por pedido": sus diferencias no se reparten en Ajustes
+          if (!recibidosVivo[l.id_productor] && !porPedido(l.id_productor)) pend[l.id_productor] = true;
         });
         return Object.keys(pend).map(function (id) { return productores[id] || id; });
       }
@@ -5873,6 +5874,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 13/11 filtros, frío azul y tildes compartidos</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 13/11 b · recepción de carnes sin peso</p>
 </body>
 </html>
