@@ -1778,7 +1778,7 @@
         }
         pintar();
         var url = 'https://docs.google.com/spreadsheets/d/1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg' +
-          '/gviz/tq?tqx=out:json&sheet=Config_App&range=A1:B3000&headers=1&_=' + Date.now();
+          '/gviz/tq?tqx=out:json&sheet=Config_App&range=A1:B50000&headers=1&_=' + Date.now();
         fetch(url, { cache: 'no-store' }).then(function (r) { return r.text(); }).then(function (t) {
           var m = t.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
           if (!m) return;
