@@ -233,7 +233,7 @@
         </div>
         <div class="barra"><div class="barra-fill" id="barra-prods"></div></div>
         <div class="barra-linea">
-          <span class="barra-tit">Productos actualizados</span>
+          <span class="barra-tit">Productos activos actualizados</span>
           <span class="barra-num" id="num-items">—</span>
         </div>
         <div class="barra"><div class="barra-fill fill-items" id="barra-items"></div></div>
@@ -280,8 +280,8 @@
 
       var productores = [];    // {id, nombre, telefono}
       var ultimaCarga = {};    // id_productor -> Date de la última carga
-      var totProductos = 0;    // productos en el catálogo
-      var actProductos = 0;    // productos actualizados para esta edición
+      var totProductos = 0;    // productos activos (Productos!J disponible = Sí)
+      var actProductos = 0;    // de esos, los actualizados para esta edición
       var productosPorProductor = {};   // id_productor -> cantidad de productos en el catálogo
       var corteCarga = null;   // fecha_apertura_stocks de la edición vigente
       var idEdicion = '';      // ej: ED2026-13
@@ -445,10 +445,16 @@
         productosPorProductor = {};
         var idxProd = idxPorEncabezado(res, /^id_productor$/i);
         if (idxProd === -1) idxProd = 1;
+        // (13/11) la barra cuenta solo los productos activos: J disponible = Sí
+        var idxDisp = idxPorEncabezado(res, /^disponible/i);
+        if (idxDisp === -1) idxDisp = 9;
         res.table.rows.forEach(function (r) {
           if (!String(celda(r, 0)).trim()) return;
-          totProductos++;
-          if (esDeEstaEdicion(parseFecha(celda(r, idxUlt)))) actProductos++;
+          var activo = /^s[ií]$/i.test(String(celda(r, idxDisp)).trim());
+          if (activo) {
+            totProductos++;
+            if (esDeEstaEdicion(parseFecha(celda(r, idxUlt)))) actProductos++;
+          }
           var idP = String(celda(r, idxProd)).trim();
           if (idP) productosPorProductor[idP] = (productosPorProductor[idP] || 0) + 1;
         });
