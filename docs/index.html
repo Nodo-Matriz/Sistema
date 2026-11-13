@@ -1019,7 +1019,7 @@
             var motivo = '';
             // cada dato de entrada tiene que ser lo que se espera; si no, la
             // planilla lo interpretó mal (fechas, textos) y el monto no sirve
-            if (e === null || e < 0 || e > 1000 || (e % 1 !== 0 && !/^Recorte en armado/i.test(String((r.c[9] && r.c[9].v) || '')))) motivo = 'cantidad (E) inválida: ' + celda(r, 4);
+            if (e === null || e < 0 || e > 1000 || (e % 1 !== 0 && !/^(Recorte en armado|Peso real)/i.test(String((r.c[9] && r.c[9].v) || '')))) motivo = 'cantidad (E) inválida: ' + celda(r, 4);
             else if (f !== '' && fac === null) motivo = 'fracción (F) «' + celda(r, 5) + '» inválida (¿se convirtió en fecha o es un formato que el formulario no usa?)';
             else if (g === null || g < 50 || g > 10000000) motivo = 'precio (G) inválido: ' + celda(r, 6);
             else if (k === null || k < 0) motivo = 'cantidad efectiva (K) inválida';
@@ -1627,6 +1627,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 12/11 carnes</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 12/11 carnes (b)</p>
 </body>
 </html>
