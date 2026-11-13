@@ -403,7 +403,7 @@
           var fc = r.c[5], f = (fc && fc.v !== null && fc.v !== undefined) ? fc.v : '';
           var fac = (typeof f === 'string') ? factorFraccion(f) : null;
           var mot = '';
-          if (e === null || e < 0 || e > 1000 || (e % 1 !== 0 && !/^Recorte en armado/i.test(String((r.c[9] && r.c[9].v) || '')))) mot = 'cantidad (E) inválida';
+          if (e === null || e < 0 || e > 1000 || (e % 1 !== 0 && !/^(Recorte en armado|Peso real)/i.test(String((r.c[9] && r.c[9].v) || '')))) mot = 'cantidad (E) inválida';
           else if (f !== '' && fac === null) mot = /^Date\(/.test(String(f))
             ? 'la fracción (F) se convirtió en fecha: volver a escribirla con un apóstrofo delante (\'1/2)'
             : 'fracción (F) «' + esc(f) + '» inválida';
@@ -1261,6 +1261,6 @@
       buscar();
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 03/11 consumidores</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 12/11 peso real</p>
 </body>
 </html>
