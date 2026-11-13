@@ -781,8 +781,10 @@
     .bloque-tit.frio { color: #2f6b8f; }
     .item-frio {
       display: flex; align-items: center; gap: 8px; padding: 7px 10px; margin: 3px 0;
-      border-radius: 8px; background: rgba(47, 107, 143, 0.07); font-size: 0.95rem;
+      border-radius: 8px; background: rgba(47, 107, 143, 0.16); font-size: 0.95rem;
+      border-left: 5px solid #2f6b8f; color: #1d4a66; font-weight: 600;
     }
+    .item-frio .tag-productor { color: #2f6b8f; }
     .item-frio.ok .txt { text-decoration: line-through; opacity: 0.55; }
     .item-frio .ico { flex: 0 0 auto; }
     .item-frio { cursor: pointer; }
@@ -1183,6 +1185,11 @@
           <button type="button" data-vista="todos" class="activa">Todos los pedidos</button>
           <button type="button" data-vista="cajon">📦 Armado de cajones</button>
           <button type="button" data-vista="frio">❄ Puesto de frío</button>
+          <button type="button" data-vista="noentregados">🕓 No entregados</button>
+        </div>
+        <div class="campo" style="margin-top:4px;">
+          <label for="filtro-productor">Filtrar por productor</label>
+          <select id="filtro-productor"><option value="">Todos los productores</option></select>
         </div>
         <div class="resumen-frio" id="resumen-frio" style="display:none;"></div>
         <p style="margin:8px 0;"><button type="button" id="orden-abrir" class="btn-orden">⚙ Orden de armado</button> <span id="orden-aviso" class="muted" style="font-size:.85rem;"></span></p>
@@ -1273,6 +1280,8 @@
       var propuestas = [];    // faltantes pendientes de la edición
       var conservacion = {};  // id_producto -> 'Frío' | 'Ambiente' (Productos!U)
       function esFrio(idProducto) {
+        // (13/11) los cortes de Carnes van siempre al frío, aunque falte la conservación
+        if (normCat(categoriaProd[idProducto]) === 'carnes') return true;
         var c = String(conservacion[idProducto] || '').toLowerCase();
         return c.indexOf('fr') === 0 || c.indexOf('cong') === 0 || c.indexOf('refri') === 0;
       }
@@ -2312,7 +2321,7 @@
           // Movimientos_Stock: ventas y merma de sobrantes (D7), opcional
           gviz('sheet=Movimientos_Stock&range=A1:L20000&headers=1').catch(function () { return null; }),
           // Config_App: ajustes guardados desde la app (orden de armado), opcional
-          gviz('sheet=Config_App&range=A1:D3000&headers=1').catch(function () { return null; })
+          gviz('sheet=Config_App&range=A1:D50000&headers=1').catch(function () { return null; })
         ]).then(function (res) {
           // Edición en curso = última fila de Ediciones con id ED####-##
           var edVigente = '';
@@ -2352,6 +2361,7 @@
           parseExtrasPedidos(res[13]);
           var rowsK = res[0].table.rows;
           idEdicion = rowsK.length ? String(celda(rowsK[0], 0)).trim() : '';
+          parseTicksRemotos(res[15]);
 
           res[2].table.rows.forEach(function (r) {
             var id = String(celda(r, 0)).trim();
@@ -3998,11 +4008,52 @@
       }
       var vistaEntrega = 'todos';   // 'todos' | 'cajon' | 'frio'
 
-      function leerTicks(idPed) {
-        try {
-          return JSON.parse(localStorage.getItem(LS_TICKS + idEdicion + '-' + idPed)) || [];
-        } catch (e) { return []; }
+      // (13/11) Tildes del cajón: se guardan por id_item (no por posición, así
+      // no se corren si cambia algún renglón), con la hora del último cambio,
+      // en el teléfono Y en la planilla (hoja Config_App, clave "ticks|<pedido>", por H1). Al leer
+      // gana lo más nuevo: lo tildado en otro teléfono aparece solo y una
+      // recarga o un teléfono que borra sus datos no destilda nada.
+      var ticksRemotos = {};   // id_pedido -> {ts, ids}
+      function ticksCrudos(idPed) {
+        var loc = null;
+        try { loc = JSON.parse(localStorage.getItem(LS_TICKS + idEdicion + '-' + idPed)); } catch (e) {}
+        if (Array.isArray(loc)) {   // formato viejo: posiciones
+          var its0 = itemsDePedido(idPed);
+          loc = { ts: 0, ids: loc.map(function (k) { return its0[k] ? its0[k].id_item : null; }).filter(Boolean) };
+        }
+        var rem = ticksRemotos[idPed];
+        if (rem && (!loc || rem.ts > loc.ts)) return rem;
+        return loc || { ts: 0, ids: [] };
       }
+      function leerTicks(idPed) {
+        var ids = ticksCrudos(idPed).ids || [], out = [];
+        itemsDePedido(idPed).forEach(function (it, k) { if (ids.indexOf(it.id_item) !== -1) out.push(k); });
+        return out;
+      }
+      function parseTicksRemotos(res) {
+        if (!res || !res.table || !res.table.cols || !res.table.cols.length) return;
+        if (!/clave/i.test(String(res.table.cols[0].label || ''))) return;   // la hoja no existe
+        var pref = 'ticks|PED-' + idEdicion + '-', m = {};
+        res.table.rows.forEach(function (r) {
+          var k0 = String(celda(r, 0)).trim();
+          if (k0.indexOf(pref) !== 0) return;
+          var idPed = k0.slice(6);
+          try { var v = JSON.parse(String(celda(r, 1))); if (v && v.ids && (!m[idPed] || v.ts >= m[idPed].ts)) m[idPed] = v; } catch (e) {}
+        });
+        ticksRemotos = m;
+      }
+      var ticksPorEnviar = {}, timerTicks = null;
+      function enviarTicks() {
+        timerTicks = null;
+        var clave = $('clave-entrega').value.trim(), quien = valorQuien('entregado-por');
+        if (!clave || WEBHOOK_H1.indexOf('https://hook.') !== 0) return;   // quedan solo en el teléfono
+        Object.keys(ticksPorEnviar).forEach(function (idPed) {
+          var v = ticksPorEnviar[idPed]; delete ticksPorEnviar[idPed];
+          fetch(WEBHOOK_H1, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, keepalive: true,
+            body: JSON.stringify({ tipo: 'config', clave: clave, clave_config: 'ticks|' + idPed, valor: JSON.stringify(v), quien: quien || 'galpón' }) }).catch(function () {});
+        });
+      }
+      document.addEventListener('visibilitychange', function () { if (document.hidden && Object.keys(ticksPorEnviar).length) enviarTicks(); });
 
       // tildes de los refrigerados (aparte de los del cajón)
       var LS_TICKS_FRIO = 'nm_ticksfrio_';
@@ -4016,10 +4067,12 @@
         } catch (e) {}
       }
       function guardarTicks(idPed, idxs) {
-        try {
-          if (idxs.length) localStorage.setItem(LS_TICKS + idEdicion + '-' + idPed, JSON.stringify(idxs));
-          else localStorage.removeItem(LS_TICKS + idEdicion + '-' + idPed);
-        } catch (e) {}
+        var its = itemsDePedido(idPed);
+        var v = { ts: Date.now(), ids: idxs.map(function (k) { return its[k] ? its[k].id_item : null; }).filter(Boolean) };
+        try { localStorage.setItem(LS_TICKS + idEdicion + '-' + idPed, JSON.stringify(v)); } catch (e) {}
+        ticksPorEnviar[idPed] = v;
+        if (timerTicks) clearTimeout(timerTicks);
+        timerTicks = setTimeout(enviarTicks, 6000);   // se juntan los toques seguidos en un solo envío
       }
 
       function chipEstado(est) {
@@ -4099,16 +4152,23 @@
         }
 
         // qué pedidos entran en la vista elegida
+        pintarFiltroProductor();
+        var fProd = $('filtro-productor').value;
         var visibles = pedidos.filter(function (p) {
+          if (fProd && !itemsDePedido(p.id_pedido).some(function (it) {
+            return it.efectiva > 0 && (it.id_productor || productorDeProducto(it.id_producto)) === fProd;
+          })) return false;
           if (vistaEntrega === 'frio') return frioPendiente(p);
           if (vistaEntrega === 'cajon') return cajonPendiente(p);
+          if (vistaEntrega === 'noentregados') { var e0 = estadoDe(p); return e0 !== 'Entregado' && !estadoCerrado(e0); }
           return true;
         });
         renderResumenFrio(visibles);
 
         if (!visibles.length) {
-          cont.innerHTML = '<p class="muted">' + (vistaEntrega === 'frio'
-            ? '❄ Todos los refrigerados ya se entregaron.'
+          cont.innerHTML = '<p class="muted">' + (fProd ? 'Ningún pedido de ' + escH(productores[fProd] || fProd) + ' en esta vista.'
+            : vistaEntrega === 'frio' ? '❄ Todos los refrigerados ya se entregaron.'
+            : vistaEntrega === 'noentregados' ? '✓ Todos los pedidos ya se entregaron.'
             : '📦 Todos los cajones ya se entregaron.') + '</p>';
           actualizarTablero();
           return;
@@ -4193,6 +4253,7 @@
               (marcado ? ' checked' : '') + '><span class="txt"></span>';
             fila.querySelector('.txt').textContent = textoItem(it);
             var idProdIt = it.id_productor || productorDeProducto(it.id_producto);
+            if (fProd && idProdIt === fProd) fila.classList.add('coincide');
             if (idProdIt) {
               var tag = document.createElement('span');
               tag.className = 'tag-productor';
@@ -4253,6 +4314,7 @@
                 '<span class="ico">❄</span><span class="txt"></span>';
               fila.querySelector('.txt').textContent = textoItem(it);
               var idProdF = it.id_productor || productorDeProducto(it.id_producto);
+              if (fProd && idProdF === fProd) fila.classList.add('coincide');
               if (idProdF) {
                 var tagF = document.createElement('span');
                 tagF.className = 'tag-productor';
@@ -4587,6 +4649,21 @@
       });
 
       $('buscar-entrega').addEventListener('input', renderEntrega);
+      // productores que tienen algo en los pedidos de la edición
+      function pintarFiltroProductor() {
+        var sel = $('filtro-productor'), act = sel.value, ids = {};
+        itemsEd.forEach(function (it) {
+          if (it.efectiva > 0) { var id = it.id_productor || productorDeProducto(it.id_producto); if (id) ids[id] = 1; }
+        });
+        var l = Object.keys(ids).sort(function (a, b) { return String(productores[a] || a).localeCompare(String(productores[b] || b), 'es'); });
+        var firma = l.join('|');
+        if (sel.dataset.firma === firma) return;
+        sel.dataset.firma = firma;
+        sel.innerHTML = '<option value="">Todos los productores</option>' +
+          l.map(function (id) { return '<option value="' + escH(id) + '">' + escH(productores[id] || id) + '</option>'; }).join('');
+        sel.value = ids[act] ? act : '';
+      }
+      $('filtro-productor').addEventListener('change', renderEntrega);
       $('filtros-entrega').addEventListener('click', function (e) {
         var b = e.target.closest('button[data-vista]');
         if (!b) return;
@@ -5067,7 +5144,6 @@
 
         function fin() {
           overrides[p.id_pedido] = { estado: estadoNuevo, ts: Date.now() };
-          if (accion === 'armado') guardarTicks(p.id_pedido, []);
           if (accion === 'entrega') {
             delete pedAbiertos[p.id_pedido];
             // ¿era el último? -> la edición pasa a Liquidación (paso 7)
@@ -5176,9 +5252,11 @@
           gviz('sheet=Items&range=A1:N50000&headers=1').catch(function () { return null; }),
           gviz('sheet=Plan_Fraccionamiento&range=A1:L20000&headers=1').catch(function () { return null; }),
           gviz('sheet=Movimientos_Stock&range=A1:L20000&headers=1').catch(function () { return null; }),
-          gviz('sheet=Ediciones&range=A1:D1000&headers=1').catch(function () { return null; })
+          gviz('sheet=Ediciones&range=A1:D1000&headers=1').catch(function () { return null; }),
+          gviz('sheet=Config_App&range=A1:B50000&headers=1').catch(function () { return null; })
         ]).then(function (res) {
           var ocupado = hayTrabajoSinGuardar();
+          parseTicksRemotos(res[6]);
 
           // sobrantes: ventas/merma (D7) y estado de la edición (habilita el cierre)
           parseMovimientos(res[4]);
@@ -5795,6 +5873,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 13/11 carnes fuera de Ajustes</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 13/11 filtros, frío azul y tildes compartidos</p>
 </body>
 </html>
