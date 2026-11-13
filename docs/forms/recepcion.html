@@ -5284,7 +5284,13 @@
       // termina de calcular en renderAjustes contra los ítems vivos.
       function calcularFaltantes() {
         propuestas = Object.keys(recepPorProducto).filter(function (k) {
-          return !recepCorruptas[k];   // con datos rotos no se propone ningún recorte
+          if (recepCorruptas[k]) return false;   // con datos rotos no se propone ningún recorte
+          // (13/11) Carnes y productores "Por pedido" no se reparten acá: la
+          // diferencia entre lo pedido y lo que pesó cada corte se carga con
+          // ⚖ Peso real (recepción por bolsa o armado), y la bolsa que no
+          // llegó ya queda en cero para ese pedido.
+          var a0 = recepPorProducto[k];
+          return !(esCarne({ id_producto: k }) || porPedido(a0.id_productor));
         }).map(function (k) {
           var a = recepPorProducto[k];
           return {
@@ -5789,6 +5795,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 12/11 orden de armado y carnes</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 13/11 carnes fuera de Ajustes</p>
 </body>
 </html>
