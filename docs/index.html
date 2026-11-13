@@ -639,7 +639,7 @@
       var WEBHOOK_H1 = 'https://hook.us2.make.com/w69ib4j3s2gqosu1zm7f1pp4ndqrepar';
       function leerCierreCarnes() {
         if (!edicionVigente) return Promise.resolve(null);
-        return gviz('sheet=Config_App&range=A1:B3000&headers=1').then(function (res) {
+        return gviz('sheet=Config_App&range=A1:B50000&headers=1').then(function (res) {
           if (!/clave/i.test(String((res.table.cols[0] || {}).label || ''))) return undefined;   // no existe la hoja
           var val = null;
           res.table.rows.forEach(function (r) { if (String(celda(r, 0)).trim() === 'cierre_carnes|' + edicionVigente) val = celda(r, 1); });
