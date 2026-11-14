@@ -91,13 +91,15 @@
     /* Producto ya elegido (verde) y listado de lo elegido en la categoría (arena) */
     .product.product--elegido { background: #e3efd9; border-color: #4A6B3A; box-shadow: inset 5px 0 0 #4A6B3A; }
     .product.product--elegido .product__head .product__name:first-child::before { content: '✓ '; color: #34502A; font-weight: 800; }
-    .nm-elegidos { background: #fbf2dc; border: 1.5px solid #c9a55a; border-radius: 14px; padding: 10px 14px; margin: 10px 0 14px; font-size: 0.92rem; color: #4a3b1c; }
-    .nm-elegidos strong { color: #6b4e12; }
-    .nm-elegidos ul { margin: 6px 0 0; padding: 0; list-style: none; }
+    .nm-elegidos { background: #f7efdf; border: 1.5px solid #dcc8a0; border-radius: 12px; padding: 0; margin: 10px 0 0; font-size: 0.9rem; color: #4a3a1e; }
+    .nm-elegidos__cab { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; background: none; border: 0; padding: 9px 12px; font: inherit; color: inherit; cursor: pointer; text-align: left; }
+    .nm-elegidos__cab strong { color: #5f4517; }
+    .nm-elegidos__cab span { white-space: nowrap; font-size: 0.85rem; }
+    .nm-elegidos ul { margin: 0; padding: 0 12px 8px; list-style: none; max-height: 38vh; overflow-y: auto; }
     .nm-elegidos li { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; border-top: 1px dotted rgba(140, 105, 30, 0.35); }
     .nm-elegidos li span:last-child { white-space: nowrap; font-weight: 600; }
-    /* en pantallas anchas ocupa la mitad derecha; en el celular, todo el ancho */
-    @media (min-width: 720px) { .nm-elegidos { width: 50%; margin-left: auto; box-sizing: border-box; } }
+    /* el nombre de la categoría ya está en la barra fija: abajo no se repite (queda para lectores de pantalla) */
+    .wizard__step > h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
     /* Aporte consciente: opciones compactas en grilla */
     .aporte-grid {
       display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px;
@@ -1458,7 +1460,10 @@
       ['input', 'change'].forEach(function (ev) {
         stepsContainer.addEventListener(ev, function () { setTimeout(function () { try { pintarElegidos(); } catch (e) {} }, 0); });
       });
-      setInterval(function () { try { pintarElegidos(); } catch (e) {} }, 4000);   // topes de stock, cierre de carnes
+      setInterval(function () { try { pintarElegidos(); } catch (e) {} }, 1500);   // cambio de categoría, topes de stock, cierre de carnes
+      document.getElementById('wizard').addEventListener('click', function () {
+        setTimeout(function () { try { pintarElegidos(); } catch (e) {} }, 60);
+      });
 
       // Botones − / + del panel "Otra cantidad"
       stepsContainer.addEventListener('click', function (e) {
@@ -1883,31 +1888,48 @@
 
       // (13/11) Lo ya elegido se ve en cada categoría: la tarjeta del producto
       // queda en verde y arriba aparece un listado corto de lo elegido ahí.
+      var canastaAbierta = false;   // la canasta de la categoría arranca plegada (se abre con "ver")
       function pintarElegidos() {
-        var pasos = {};
-        Array.prototype.forEach.call(stepsContainer.querySelectorAll('.wizard__step'), function (st) { pasos[st.dataset.stepName] = st; });
+        var pasos = {}, actual = null;
+        Array.prototype.forEach.call(stepsContainer.querySelectorAll('.wizard__step'), function (st) {
+          pasos[st.dataset.stepName] = st;
+          if (st.classList.contains('is-current')) actual = st.dataset.stepName;
+        });
+        var filasActual = [], catActual = null;
         categorias.forEach(function (cat) {
           var st = pasos[cat.nombre]; if (!st) return;
-          var cerrada = carnesCerrado && esCatCarnes(cat), filas = [];
+          var cerrada = carnesCerrado && esCatCarnes(cat);
           cat.productos.forEach(function (p) {
             var sel = st.querySelector('[data-product="' + p.id_producto + '"]');
             var card = sel && sel.closest ? sel.closest('.product') : null;
             var e = stateProductos[p.id_producto], on = !cerrada && e && e.cantidad > 0;
             if (card) card.classList.toggle('product--elegido', !!on);
-            if (!on) return;
+            if (!on || cat.nombre !== actual) return;
             var mult = 1;
             if (p.fraccionable && e.fraccion) { var esp = parseFraccionEspecial(e.fraccion, p.unidad); mult = esp ? esp.valor : parseFraction(e.fraccion); }
-            filas.push('<li><span>' + escapeHtml(p.nombre) + ' · ' + escapeHtml(detalleItem(p, e).split(' · ')[0]) + '</span><span>' +
+            filasActual.push('<li><span>' + escapeHtml(p.nombre) + ' · ' + escapeHtml(detalleItem(p, e).split(' · ')[0]) + '</span><span>' +
               formatMoney(Math.round((p.precio || 0) * e.cantidad * mult)) + '</span></li>');
           });
-          var caja = st.querySelector('.nm-elegidos');
-          if (!filas.length) { if (caja) caja.remove(); return; }
-          if (!caja) {
-            caja = document.createElement('div'); caja.className = 'nm-elegidos';
-            var pl = st.querySelector('.product-list'); pl.parentNode.insertBefore(caja, pl);
-          }
-          caja.innerHTML = '<strong>🧺 Canasta de ' + escapeHtml(String(cat.nombre).toLowerCase()) + ' (' + filas.length + ')</strong><ul>' + filas.join('') + '</ul>';
+          if (cat.nombre === actual) catActual = cat;
         });
+        // La canasta va dentro de la barra fija de la categoría: siempre a la vista.
+        var barra = document.querySelector('.wizard__progress'); if (!barra) return;
+        var caja = document.getElementById('nm-canasta');
+        if (!catActual || !filasActual.length) { if (caja) caja.remove(); return; }
+        if (!caja) {
+          caja = document.createElement('div'); caja.id = 'nm-canasta'; caja.className = 'nm-elegidos';
+          caja.addEventListener('click', function (ev) {
+            if (!ev.target.closest('.nm-elegidos__cab')) return;
+            canastaAbierta = !canastaAbierta; caja.dataset.firma = ''; pintarElegidos();
+          });
+          barra.appendChild(caja);
+        }
+        var firma = catActual.nombre + '|' + canastaAbierta + '|' + filasActual.join('');
+        if (caja.dataset.firma === firma) return;   // sin cambios: no se redibuja
+        caja.dataset.firma = firma;
+        caja.innerHTML = '<button type="button" class="nm-elegidos__cab" aria-expanded="' + canastaAbierta + '"><strong>🧺 Canasta de ' +
+          escapeHtml(String(catActual.nombre).toLowerCase()) + ' (' + filasActual.length + ')</strong><span>' +
+          (canastaAbierta ? 'ocultar ▴' : 'ver ▾') + '</span></button>' + (canastaAbierta ? '<ul>' + filasActual.join('') + '</ul>' : '');
       }
       function actualizarResumen() {
         try { pintarElegidos(); } catch (e) {}
@@ -2827,6 +2849,6 @@
 
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 14/11 canasta a la derecha</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 14/11 canasta en la barra (plegada)</p>
 </body>
 </html>
