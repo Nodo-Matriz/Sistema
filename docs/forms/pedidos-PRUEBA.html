@@ -151,26 +151,53 @@
   var BANDA = '<div style="background:#A6402B;color:#fff;text-align:center;padding:8px 12px;' +
     'font-family:system-ui,sans-serif;font-weight:700;">PÁGINA DE PRUEBA · no envía pedidos</div>';
 
+
+  // Trae la plantilla del formulario probando tres caminos (14/11): si uno
+  // falla en algún celular, se intenta el siguiente. Si fallan todos, el
+  // error dice por qué (sirve para avisar a quien administra el sistema).
+  function cargarPlantilla(url) {
+    var errores = [];
+    function comoTexto(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); }
+    function valida(t) { if (!t || t.indexOf('categorias_json') === -1) throw new Error('respuesta incompleta (' + (t ? t.length : 0) + ')'); return t; }
+    function intento(nombre, fn) {
+      return function (prev) {
+        if (typeof prev === 'string') return prev;
+        return fn().then(valida).catch(function (e) { errores.push(nombre + ': ' + (e && e.message || e)); return null; });
+      };
+    }
+    function porXHR() {
+      return new Promise(function (ok, mal) {
+        var x = new XMLHttpRequest();
+        x.open('GET', url + '?x=' + Date.now(), true);
+        x.onload = function () { x.status >= 200 && x.status < 300 ? ok(x.responseText) : mal(new Error('HTTP ' + x.status)); };
+        x.onerror = function () { mal(new Error('sin respuesta')); };
+        x.ontimeout = function () { mal(new Error('tardó demasiado')); };
+        x.timeout = 20000; x.send();
+      });
+    }
+    return Promise.resolve(null)
+      .then(intento('1', function () { return fetch(url + '?v=' + Date.now(), { cache: 'no-store' }).then(comoTexto); }))
+      .then(intento('2', function () { return fetch(url).then(comoTexto); }))
+      .then(intento('3', porXHR))
+      .then(function (t) { if (typeof t === 'string') return t; throw new Error('plantilla · ' + errores.join(' · ')); });
+  }
+
   var urlPlantilla = new URL('../templates/pedidos.template.html', location.href).href;
-  fetch(urlPlantilla, { cache: 'no-store' }).then(function (r) {
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+  cargarPlantilla(urlPlantilla).then(function (html) {
     // copia para poder abrir la prueba sin datos
-    try {
-      var copia = r.clone();
-      if (window.caches) caches.open('nm-pedidos-v1').then(function (c) { return c.put(urlPlantilla, copia); }).catch(function () {});
-    } catch (e) {}
-    return r.text();
-  }).then(function (html) {
+    try { if (window.caches) caches.open('nm-pedidos-v1').then(function (c) { return c.put(urlPlantilla, new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })); }).catch(function () {}); } catch (e) {}
     Object.keys(REEMPLAZOS).forEach(function (k) { html = html.split(k).join(REEMPLAZOS[k]); });
     html = html.replace(/<head[^>]*>/i, function (h) { return h + '\n<script>' + SIMULADOR + '<\/script>'; });
     html = html.replace(/<body[^>]*>/i, function (b) { return b + '\n' + BANDA; });
     document.open();
     document.write(html);
     document.close();
-  }).catch(function () {
-    document.getElementById('cargando').innerHTML =
-      'No se pudo cargar la página de prueba. Si el celular está sin datos, abrila una vez con datos ' +
-      'y después ya se puede abrir sin conexión.';
+  }).catch(function (err) {
+    var c = document.getElementById('cargando'); if (!c) return;
+    c.innerHTML = 'No se pudo cargar la página de prueba. Tocá <strong>Reintentar</strong>; si sigue igual, mandale una captura de esta pantalla a quien administra el sistema.' +
+      '<br><br><button type="button" onclick="location.reload()" style="font:inherit;padding:10px 22px;border-radius:999px;border:0;background:#34502A;color:#fff;font-weight:700;">Reintentar</button>' +
+      '<br><br><small style="color:#8a8273;word-break:break-word;"></small>';
+    c.querySelector('small').textContent = 'Detalle: ' + (err && err.message || err) + ' · ' + (navigator.onLine === false ? 'sin conexión' : 'con conexión') + ' · ' + location.host;
   });
 })();
 </script>
