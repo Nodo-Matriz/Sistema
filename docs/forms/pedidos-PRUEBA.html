@@ -60,7 +60,17 @@
       origen: 'Unquillo', distancia_km: 12, descripcion: '' },
     { id_producto: 'PRB-09', id_productor: 'PRB-PROD3', productor: 'Panadería de Prueba', categoria: 'Panificados',
       nombre: 'Pan de prueba', unidad: 'unidad', precio: 5000, fraccionable: 'No', fracciones: '', es_oferta: 'No',
-      origen: 'Unquillo', distancia_km: 12, descripcion: '' }
+      origen: 'Unquillo', distancia_km: 12, descripcion: '' },
+    // Carnes (se cobra el peso real; puede cerrar antes: ver ?carnes= más abajo)
+    { id_producto: 'PRB-10', id_productor: 'PRB-PROD4', productor: 'Carnes de Prueba', categoria: 'Carnes',
+      nombre: 'Asado de prueba', unidad: 'kg', precio: 14000, fraccionable: 'Sí', fracciones: '1, 1/2', es_oferta: 'No',
+      origen: 'Punilla', distancia_km: 30, descripcion: '' },
+    { id_producto: 'PRB-11', id_productor: 'PRB-PROD4', productor: 'Carnes de Prueba', categoria: 'Carnes',
+      nombre: 'Matambre de prueba', unidad: 'kg', precio: 17000, fraccionable: 'Sí', fracciones: '1, 1/2', es_oferta: 'No',
+      origen: 'Punilla', distancia_km: 30, descripcion: '' },
+    { id_producto: 'PRB-12', id_productor: 'PRB-PROD4', productor: 'Carnes de Prueba', categoria: 'Carnes',
+      nombre: 'Pata muslo de prueba', unidad: 'kg', precio: 6500, fraccionable: 'No', fracciones: '', es_oferta: 'No',
+      origen: 'Punilla', distancia_km: 30, descripcion: '' }
   ];
   var STOCK_LIMITADO = { 'PRB-03': 3, 'PRB-06': 2 };   // id_producto → unidades disponibles
   // Consumidoras de prueba "ya registradas" (para probar que se completan los datos)
@@ -73,6 +83,17 @@
   var min = parseFloat(params.get('cierre'));
   var cierre = isFinite(min) ? new Date(Date.now() + min * 60000) : new Date('2099-12-31T23:59:00-03:00');
   var hhmm = ('0' + cierre.getHours()).slice(-2) + ':' + ('0' + cierre.getMinutes()).slice(-2);
+  // Cierre anticipado de carnes (simulado):
+  //   sin nada      → carnes cierra en 2 días (se ve el aviso "Carnes cierra antes")
+  //   ?carnes=2     → cierra en 2 minutos (para ver el bloqueo en vivo)
+  //   ?carnes=0     → ya cerró
+  //   ?carnes=no    → sin cierre anticipado
+  var pc = params.get('carnes'), minC = parseFloat(pc), cierreCarnes = '';
+  if (pc !== 'no') {
+    var fc = new Date(Date.now() + (isFinite(minC) ? minC : 2880) * 60000 - (isFinite(minC) && minC <= 0 ? 60000 : 0));
+    var p2 = function (n) { return ('0' + n).slice(-2); };
+    cierreCarnes = fc.getFullYear() + '-' + p2(fc.getMonth() + 1) + '-' + p2(fc.getDate()) + ' ' + p2(fc.getHours()) + ':' + p2(fc.getMinutes());
+  }
   var cierreHumano = isFinite(min) ? 'hoy a las ' + hhmm + ' hs (prueba)' : '(página de prueba, no cierra)';
 
   var REEMPLAZOS = {
@@ -85,11 +106,11 @@
     '{{webhook_url}}': 'TEST_LOCAL',
     '{{aporte_default_porcent}}': '15',
     '{{retiro_human}}': 'Jueves de 16 a 19 hs · Viernes de 10 a 13 hs',
-    '{{orden_categorias}}': 'Verdulería|Almacén|Panificados'
+    '{{orden_categorias}}': 'Verdulería|Almacén|Panificados|Carnes'
   };
 
   // Simulador de la planilla: el formulario no lee la planilla real.
-  var SIMULADOR = '(' + function (stock, padron) {
+  var SIMULADOR = '(' + function (stock, padron, cierreCarnes) {
     var original = window.fetch.bind(window);
     function respuesta(filas) {
       var tabla = { cols: [], rows: filas.map(function (f) {
@@ -114,12 +135,18 @@
             return false;
           }));
         }
+        if (hoja === 'Config_App') {
+          var tabla = { cols: [{ label: 'clave' }, { label: 'valor' }],
+            rows: cierreCarnes ? [{ c: [{ v: 'cierre_carnes|PRUEBA' }, { v: cierreCarnes }] }] : [] };
+          return Promise.resolve(new Response('google.visualization.Query.setResponse(' + JSON.stringify({ status: 'ok', table: tabla }) + ');',
+            { status: 200, headers: { 'Content-Type': 'text/javascript' } }));
+        }
         if (hoja === 'Productos') return respuesta(Object.keys(stock).map(function (id) { return [id, stock[id], 'Productor']; }));
         return respuesta([]);
       }
       return original(entrada, opciones);
     };
-  }.toString() + ')(' + JSON.stringify(STOCK_LIMITADO) + ', ' + JSON.stringify(PADRON) + ');';
+  }.toString() + ')(' + JSON.stringify(STOCK_LIMITADO) + ', ' + JSON.stringify(PADRON) + ', ' + JSON.stringify(cierreCarnes) + ');';
 
   var BANDA = '<div style="background:#A6402B;color:#fff;text-align:center;padding:8px 12px;' +
     'font-family:system-ui,sans-serif;font-weight:700;">PÁGINA DE PRUEBA · no envía pedidos</div>';
