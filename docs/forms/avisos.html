@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Avisos de la equipa · Nodo Matríz</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+  <link rel="icon" type="image/png" href="../assets/favicon-nodo.png">
+  <style>
+    /*
+     * Nodo Matríz · Avisos de la equipa (13/11)
+     * Un solo lugar para contar algo que falló, una idea o una duda, y ver
+     * qué pasó con cada aviso. No usa ninguna herramienta nueva: cada aviso
+     * es una fila en la hoja Config_App (por el escenario H1 de Make).
+     *   aviso|<id>      → {t tipo, x texto, u urgente, q quién, p pantalla, e edición, ts}
+     *   aviso_est|<id>  → {est tomada|hecha|no, r respuesta, ed edición en que sale, ts}
+     * Vale la última fila de cada clave. Con ?admin=1 aparecen los botones
+     * para tomar, responder o rechazar (piden la clave de equipo).
+     */
+    .card-eq { background: #fff; border: 1px solid rgba(74,107,58,.25); border-radius: var(--r-card, 16px); padding: 16px 18px; margin-top: 16px; }
+    .card-eq h2 { font-size: 1.25rem; margin: 0 0 6px; }
+    .meta { font-size: .86rem; color: var(--c-tierra, #6E6253); }
+    .campo { display: grid; gap: 5px; margin-top: 12px; }
+    .campo > label, .campo > span.lab { font-weight: 700; font-size: .92rem; }
+    .campo input, .campo select, .campo textarea { font: inherit; padding: 10px 12px; border-radius: 12px; border: 1.5px solid rgba(74,107,58,.3); background: #fff; width: 100%; box-sizing: border-box; }
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chips button { font: inherit; font-size: .92rem; border: 1.5px solid rgba(74,107,58,.3); background: #fff; color: inherit; border-radius: 999px; padding: 8px 14px; cursor: pointer; }
+    .chips button.on { background: var(--c-oliva, #4A6B3A); border-color: var(--c-oliva, #4A6B3A); color: #fff; font-weight: 600; }
+    .btn-env { display: block; width: 100%; border: 0; border-radius: 999px; background: var(--c-musgo, #34502A); color: #fff; font: inherit; font-weight: 700; padding: 13px; margin-top: 14px; cursor: pointer; }
+    .btn-env:disabled { opacity: .5; cursor: default; }
+    .err { color: #A6402B; font-weight: 600; }
+    .ok { color: var(--c-musgo, #34502A); font-weight: 600; }
+    .it { border-top: 1px solid rgba(74,107,58,.18); padding: 11px 0; }
+    .it:first-child { border-top: 0; }
+    .est { display: inline-block; border-radius: 999px; font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 2px 9px; margin-right: 6px; }
+    .est.nueva { background: #f1e7c9; color: #7a5a12; }
+    .est.tomada { background: #dbe9f2; color: #2f6b8f; }
+    .est.hecha { background: #e3efd9; color: #34502A; }
+    .est.no { background: #f3dcd6; color: #A6402B; }
+    .est.urg { background: #A6402B; color: #fff; }
+    .est.env { background: #eee; color: #666; }
+    .resp { background: rgba(74,107,58,.08); border-radius: 10px; padding: 7px 10px; margin-top: 6px; font-size: .9rem; }
+    .adm { margin-top: 8px; display: grid; gap: 8px; }
+    .adm input, .adm select { font: inherit; padding: 8px 10px; border-radius: 10px; border: 1.5px solid rgba(74,107,58,.3); }
+    .adm .bots { display: flex; gap: 8px; flex-wrap: wrap; }
+    .adm .bots button { font: inherit; font-size: .88rem; font-weight: 600; border-radius: 999px; padding: 7px 14px; cursor: pointer; background: transparent; border: 1.5px solid var(--c-oliva, #4A6B3A); color: var(--c-musgo, #34502A); }
+    .adm .bots button.rech { border-color: rgba(166,64,43,.5); color: #A6402B; }
+    .txt-aviso { white-space: pre-wrap; overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+<main class="wrap">
+  <p><a href="../" class="btn btn--ghost btn--small">← Volver a la guía</a></p>
+  <h1 id="titulo">Avisos de la equipa</h1>
+  <p class="lead">Para contar algo que falló, una idea o una duda sobre el sistema. Lo ve quien lo administra y acá mismo queda la respuesta. Así no se pierde entre los mensajes de WhatsApp.</p>
+
+  <div class="card-eq" id="card-form">
+    <h2>💬 Avisar algo</h2>
+    <div class="campo"><span class="lab">¿Qué es?</span>
+      <div class="chips" id="ch-tipo">
+        <button type="button" data-v="fallo">🐞 Algo falló</button>
+        <button type="button" data-v="idea" class="on">💡 Idea o mejora</button>
+        <button type="button" data-v="duda">❓ Duda</button>
+      </div>
+    </div>
+    <div class="campo"><label for="texto">Contalo con tus palabras</label>
+      <textarea id="texto" rows="4" maxlength="600" placeholder="Qué pasó, en qué pedido o producto, qué esperabas que pasara…"></textarea></div>
+    <div class="campo"><span class="lab">¿Es urgente? (frena el trabajo ahora)</span>
+      <div class="chips" id="ch-urg">
+        <button type="button" data-v="no" class="on">No</button>
+        <button type="button" data-v="si">Sí, es urgente</button>
+      </div>
+      <span class="err" id="nota-urg" hidden>Si frena el trabajo, además escribile ya a Juan por WhatsApp: este aviso no le suena en el teléfono.</span>
+    </div>
+    <div class="campo"><label for="quien">Tu nombre</label><select id="quien"><option value="">— Elegí tu nombre —</option></select></div>
+    <div class="campo"><label for="clave">Clave de equipo</label><input type="password" id="clave" placeholder="La clave compartida del equipo"></div>
+    <p class="meta" id="contexto" style="margin-top:8px;"></p>
+    <button type="button" class="btn-env" id="enviar">Enviar aviso</button>
+    <p id="msg" class="meta" style="margin-top:8px;"></p>
+  </div>
+
+  <div class="card-eq">
+    <h2 id="tit-lista">📋 Qué pasó con cada aviso</h2>
+    <p class="meta">Se actualiza solo cada medio minuto.</p>
+    <div class="chips" id="ch-filtro" style="margin:8px 0;">
+      <button type="button" data-v="abiertos" class="on">Sin resolver</button>
+      <button type="button" data-v="todos">Todos</button>
+      <button type="button" data-v="mios">Míos</button>
+    </div>
+    <div id="lista"><p class="meta">Leyendo…</p></div>
+  </div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var SS = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
+  var WEBHOOK_H1 = 'https://hook.us2.make.com/w69ib4j3s2gqosu1zm7f1pp4ndqrepar';
+  var CLAVE_KEY = 'nm_clave_equipo', LS_NOMBRE = 'nm_avisos_nombre', LS_PEND = 'nm_avisos_pend';
+  function $(id) { return document.getElementById(id); }
+  function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function gviz(p) {
+    return fetch('https://docs.google.com/spreadsheets/d/' + SS + '/gviz/tq?tqx=out:json&' + p + '&_=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { return r.text(); }).then(function (t) {
+        var m = t.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+        if (!m) throw new Error('sin datos'); return JSON.parse(m[1]).table;
+      });
+  }
+  function v(r, i) { var c = r.c && r.c[i]; return c && c.v != null ? c.v : ''; }
+  var qs = new URLSearchParams(location.search);
+  var ADMIN = qs.get('admin') === '1';
+  var pantalla = (qs.get('p') || '').slice(0, 40);
+  var edicion = '', avisos = [], estados = {}, pend = [], filtro = 'abiertos';
+  var tipo = 'idea', urgente = false;
+  var TIPOS = { fallo: '🐞', idea: '💡', duda: '❓' };
+
+  try { if (sessionStorage.getItem(CLAVE_KEY)) $('clave').value = sessionStorage.getItem(CLAVE_KEY); } catch (e) {}
+  try { pend = JSON.parse(localStorage.getItem(LS_PEND) || '[]').filter(function (a) { return Date.now() - a.ts < 600000; }); } catch (e) { pend = []; }
+  if (ADMIN) { $('titulo').textContent = '🛠 Tablero de mejoras'; $('tit-lista').textContent = '🛠 Avisos para resolver'; }
+
+  function chips(id, alCambiar) {
+    $(id).addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      Array.prototype.forEach.call($(id).querySelectorAll('button'), function (x) { x.classList.toggle('on', x === b); });
+      alCambiar(b.dataset.v);
+    });
+  }
+  chips('ch-tipo', function (x) { tipo = x; });
+  chips('ch-urg', function (x) { urgente = x === 'si'; $('nota-urg').hidden = !urgente; });
+  chips('ch-filtro', function (x) { filtro = x; pintar(); });
+
+  function mandar(clave_config, valor, clave) {
+    try { sessionStorage.setItem(CLAVE_KEY, clave); } catch (e) {}
+    return fetch(WEBHOOK_H1, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ tipo: 'config', clave: clave, clave_config: clave_config, valor: JSON.stringify(valor), quien: valor.q || 'avisos' }) });
+  }
+
+  function cargar() {
+    return Promise.all([
+      gviz('sheet=Config_App&range=A1:B50000&headers=1'),
+      gviz('sheet=Equipo&range=A1:E100&headers=1').catch(function () { return null; }),
+      gviz('sheet=Ediciones&range=A1:D1000&headers=1').catch(function () { return null; })
+    ]).then(function (t) {
+      if (t[2]) t[2].rows.forEach(function (r) { var id = String(v(r, 0)).trim(); if (/^ED\d{4}-\d+$/.test(id)) edicion = id; });
+      $('contexto').innerHTML = 'Se agrega solo: ' + (pantalla ? 'pantalla <strong>' + esc(pantalla) + '</strong> · ' : '') + 'edición <strong>' + esc(edicion || '—') + '</strong>.';
+      if (t[1] && $('quien').options.length <= 1) {
+        var noms = [];
+        t[1].rows.forEach(function (r) { var n = String(v(r, 1)).trim(); if (n && !/^no$/i.test(String(v(r, 4)).trim())) noms.push(n); });
+        noms.sort(function (a, b) { return a.localeCompare(b, 'es'); });
+        $('quien').innerHTML = '<option value="">— Elegí tu nombre —</option>' + noms.map(function (n) { return '<option>' + esc(n) + '</option>'; }).join('');
+        try { var g = localStorage.getItem(LS_NOMBRE); if (g) $('quien').value = g; } catch (e) {}
+      }
+      if (!/clave/i.test(String((t[0].cols[0] || {}).label || ''))) { $('lista').innerHTML = '<p class="err">No encuentro la hoja Config_App en la planilla.</p>'; return; }
+      var m = {}, orden = []; estados = {};
+      t[0].rows.forEach(function (r) {
+        var k = String(v(r, 0)).trim(), val;
+        if (k.indexOf('aviso|') !== 0 && k.indexOf('aviso_est|') !== 0) return;
+        try { val = JSON.parse(String(v(r, 1))); } catch (e) { return; }
+        if (!val || typeof val !== 'object') return;
+        if (k.indexOf('aviso|') === 0) { var id = k.slice(6); if (!m[id]) orden.push(id); val.id = id; m[id] = val; }
+        else estados[k.slice(10)] = val;
+      });
+      avisos = orden.map(function (id) { return m[id]; });
+      pend = pend.filter(function (a) { return !m[a.id]; });
+      try { localStorage.setItem(LS_PEND, JSON.stringify(pend)); } catch (e) {}
+      pintar();
+    }).catch(function () { if (!avisos.length) $('lista').innerHTML = '<p class="err">No pude leer la planilla. Revisá la conexión.</p>'; });
+  }
+
+  function fecha(ts) { var d = new Date(ts); return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2); }
+  function pintar() {
+    var yo = $('quien').value;
+    var l = pend.map(function (a) { a._pend = true; return a; }).concat(avisos).slice();
+    l.sort(function (a, b) { return b.ts - a.ts; });
+    l = l.filter(function (a) {
+      var e = (estados[a.id] || {}).est || 'nueva';
+      if (filtro === 'abiertos') return e === 'nueva' || e === 'tomada';
+      if (filtro === 'mios') return yo && a.q === yo;
+      return true;
+    });
+    // lo urgente sin resolver, primero
+    l.sort(function (a, b) {
+      var ua = a.u && !/hecha|no/.test((estados[a.id] || {}).est || '') ? 1 : 0, ub = b.u && !/hecha|no/.test((estados[b.id] || {}).est || '') ? 1 : 0;
+      return ub - ua;
+    });
+    var cont = $('lista');
+    if (!l.length) { cont.innerHTML = '<p class="meta">' + (filtro === 'abiertos' ? '🎉 No hay avisos sin resolver.' : filtro === 'mios' ? (yo ? 'Todavía no mandaste avisos.' : 'Elegí tu nombre arriba para ver los tuyos.') : 'Todavía no hay avisos.') + '</p>'; return; }
+    if (cont.contains(document.activeElement) && /INPUT|SELECT/.test(document.activeElement.tagName)) return;   // alguien está escribiendo una respuesta
+    cont.innerHTML = '';
+    l.forEach(function (a) {
+      var e = estados[a.id] || {}, est = e.est || 'nueva';
+      var nombres = { nueva: 'Nueva', tomada: 'Tomada' + (e.ed ? ' · ' + e.ed : ''), hecha: 'Hecha', no: 'No se hace' };
+      var d = document.createElement('div'); d.className = 'it';
+      d.innerHTML = (a.u && est !== 'hecha' && est !== 'no' ? '<span class="est urg">Urgente</span>' : '') +
+        (a._pend ? '<span class="est env">Enviando…</span>' : '<span class="est ' + est + '">' + esc(nombres[est] || est) + '</span>') +
+        '<span class="meta">' + esc(a.q || '') + ' · ' + fecha(a.ts) + (a.p ? ' · ' + esc(a.p) : '') + (ADMIN && a.e ? ' · ' + esc(a.e) : '') + '</span>' +
+        '<div class="txt-aviso">' + (TIPOS[a.t] || '') + ' ' + esc(a.x) + '</div>' +
+        (e.r ? '<div class="resp">↳ ' + esc(e.r) + '</div>' : '');
+      if (ADMIN && !a._pend) {
+        var num = parseInt((edicion.match(/-(\d+)$/) || [])[1], 10) || 0;
+        var adm = document.createElement('div'); adm.className = 'adm';
+        adm.innerHTML = '<input type="text" class="a-resp" maxlength="300" placeholder="Respuesta (la ve la equipa)" value="' + esc(e.r || '') + '">' +
+          '<label class="meta">Sale en: <select class="a-ed"><option value="">—</option>' + [num, num + 1, num + 2].map(function (n) { return '<option' + (e.ed === 'ED' + n ? ' selected' : '') + '>ED' + n + '</option>'; }).join('') + '</select></label>' +
+          '<div class="bots"><button type="button" data-e="tomada">✓ Tomar</button><button type="button" data-e="hecha">Responder y cerrar</button><button type="button" data-e="no" class="rech">No se hace</button></div><span class="a-msg meta"></span>';
+        adm.addEventListener('click', function (ev) {
+          var b = ev.target.closest('button'); if (!b) return;
+          var clave = $('clave').value.trim(), msg = adm.querySelector('.a-msg'), resp = adm.querySelector('.a-resp').value.trim();
+          if (!clave) { msg.innerHTML = '<span class="err">Falta la clave (arriba).</span>'; return; }
+          if (b.dataset.e === 'no' && !resp) { msg.innerHTML = '<span class="err">Poné el motivo en la respuesta.</span>'; return; }
+          var val = { est: b.dataset.e, r: resp, ed: adm.querySelector('.a-ed').value, ts: Date.now() };
+          msg.textContent = '⏳ Guardando…';
+          var fin = function () { estados[a.id] = val; document.activeElement && document.activeElement.blur(); pintar(); };
+          mandar('aviso_est|' + a.id, val, clave).then(fin, fin);
+        });
+        d.appendChild(adm);
+      }
+      cont.appendChild(d);
+    });
+  }
+
+  $('quien').addEventListener('change', function () { try { localStorage.setItem(LS_NOMBRE, $('quien').value); } catch (e) {} pintar(); });
+  $('enviar').addEventListener('click', function () {
+    var msg = $('msg'), texto = $('texto').value.replace(/\s+/g, ' ').trim(), quien = $('quien').value, clave = $('clave').value.trim();
+    var falta = !texto ? 'Contá qué pasó.' : texto.length < 8 ? 'Contalo con un poco más de detalle.' : !quien ? 'Elegí tu nombre.' : !clave ? 'Falta la clave de equipo.' : '';
+    if (falta) { msg.innerHTML = '<span class="err">' + falta + '</span>'; return; }
+    var id = 'AV' + Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36);
+    var a = { t: tipo, x: texto, u: urgente ? 1 : 0, q: quien, p: pantalla, e: edicion, ts: Date.now() };
+    $('enviar').disabled = true; msg.textContent = '⏳ Enviando…';
+    var fin = function () {
+      a.id = id; pend.push(a);
+      try { localStorage.setItem(LS_PEND, JSON.stringify(pend)); } catch (e) {}
+      $('texto').value = ''; $('enviar').disabled = false;
+      msg.innerHTML = '<span class="ok">✓ Enviado. Abajo vas a ver cuando se tome o se responda.</span>' +
+        (urgente ? ' <span class="err">Como es urgente, escribile también a Juan por WhatsApp.</span>' : '');
+      filtro = 'abiertos'; pintar(); setTimeout(cargar, 6000);
+    };
+    mandar('aviso|' + id, a, clave).then(fin, fin);
+  });
+
+  if (ADMIN) $('card-form').querySelector('h2').textContent = '💬 Cargar un aviso';
+  cargar();
+  setInterval(function () { if (!document.hidden) cargar(); }, 30000);
+})();
+</script>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 13/11 avisos de la equipa</p>
+</body>
+</html>

@@ -939,6 +939,7 @@
       </span>
     </div>
 
+    <p style="text-align:right;margin:0 0 6px;"><a id="link-aviso" href="avisos.html?p=Galp%C3%B3n" target="_blank" rel="noopener" class="btn-orden" style="text-decoration:none;display:inline-block;">💬 Avisar algo</a></p>
     <div class="tabs">
       <button type="button" id="tab-recepcion" class="activa">📥 Recepción</button>
       <button type="button" id="tab-fracc">🔪 Fraccionamiento</button>
@@ -1253,6 +1254,13 @@
       var SPREADSHEET_ID = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
 
       var $ = function (id) { return document.getElementById(id); };
+      // 💬 Avisar algo: abre la página de avisos sabiendo en qué solapa estaba
+      document.addEventListener('click', function (e) {
+        var l = e.target.closest ? e.target.closest('#link-aviso') : null; if (!l) return;
+        var act = document.querySelector('.tabs button.activa');
+        var nom = act ? act.textContent.replace(/[^A-Za-zÁÉÍÓÚáéíóúñÑ ]/g, '').trim() : 'Galpón';
+        l.href = 'avisos.html?p=' + encodeURIComponent(nom || 'Galpón');
+      }, true);
 
       // Devuelve true si el webhook está configurado; si no, avisa en pantalla.
       function webhookListo(url, nombre, contenedorId) {
@@ -5874,6 +5882,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 13/11 b · recepción de carnes sin peso</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 13/11 c · avisos</p>
 </body>
 </html>
