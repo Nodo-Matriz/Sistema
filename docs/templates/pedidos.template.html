@@ -1759,6 +1759,13 @@
       // (lo carga el equipo desde la guía). Sin esa fila, Carnes cierra con
       // el formulario, como cualquier otra categoría.
       var carnesCerrado = false, carnesCierre = null;
+      // (14/11) Gracia: quien abrió el formulario ANTES del cierre de carnes y
+      // ya tenía cortes elegidos puede enviarlos hasta 10 minutos después.
+      // No puede sumar ni cambiar cortes; pasado ese tiempo, no entran.
+      var GRACIA_CARNES_MIN = 10;
+      function finGraciaCarnes() { return carnesCierre ? new Date(carnesCierre.getTime() + GRACIA_CARNES_MIN * 60000) : null; }
+      function carnesEnGracia() { return carnesCerrado && carnesCierre && ABIERTO_EN < carnesCierre && new Date() < finGraciaCarnes(); }
+      function carnesFuera() { return carnesCerrado && !carnesEnGracia(); }
       function esCatCarnes(cat) {
         return String(cat && cat.nombre || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim() === 'carnes';
       }
@@ -1783,18 +1790,31 @@
         function pintar() {
           var base = '🥩 <strong>Se cobra el peso real.</strong> Elegís el corte y un peso aproximado; el productor lo prepara y pagás lo que pesó (te avisamos el total final por correo).';
           if (carnesCierre && !carnesCerrado) base += '<br>⏰ <strong>Carnes cierra antes:</strong> se puede pedir hasta el ' + humano(carnesCierre) + '.';
-          if (carnesCerrado) base = '🥩 <strong>El pedido de carnes ya cerró</strong>' + (carnesCierre ? ' (el ' + humano(carnesCierre) + ')' : '') +
-            '. El resto del formulario sigue abierto. Si habías elegido algún corte y todavía no enviaste el pedido, no entra.';
-          nota.innerHTML = base;
+          var elegidos = cat.productos.filter(function (p) { var e = stateProductos[p.id_producto]; return e && e.cantidad > 0; }).length;
+          if (carnesCerrado && carnesEnGracia() && elegidos) {
+            var fg = finGraciaCarnes();
+            base = '🥩 <strong>El pedido de carnes ya cerró</strong>, pero lo que ya elegiste (' + elegidos + (elegidos === 1 ? ' corte' : ' cortes') +
+              ') <strong>entra si enviás el pedido antes de las ' + ('0' + fg.getHours()).slice(-2) + ':' + ('0' + fg.getMinutes()).slice(-2) + ' hs</strong>. ' +
+              'Ya no se pueden sumar ni cambiar cortes. El resto del formulario sigue abierto.';
+          } else if (carnesCerrado) {
+            base = '🥩 <strong>El pedido de carnes ya cerró</strong>' + (carnesCierre ? ' (el ' + humano(carnesCierre) + ')' : '') +
+              '. El resto del formulario sigue abierto.' + (elegidos ? ' Los cortes que habías elegido ya no entran en el pedido.' : '');
+          }
+          if (nota.dataset.txt !== base) { nota.dataset.txt = base; nota.innerHTML = base; }
         }
+        var estabaEnGracia = null;
         function revisar() {
-          if (!carnesCierre || carnesCerrado || new Date() < carnesCierre) return;
-          carnesCerrado = true;
-          paso.classList.add('carnes-cerrada');
-          Array.prototype.forEach.call(paso.querySelectorAll('.product-list input, .product-list select, .product-list button'), function (el) { el.disabled = true; });
-          var pl = paso.querySelector('.product-list'); if (pl) { pl.style.opacity = '0.45'; pl.style.pointerEvents = 'none'; }
+          if (!carnesCierre) return;
+          if (!carnesCerrado && new Date() >= carnesCierre) {
+            carnesCerrado = true;
+            paso.classList.add('carnes-cerrada');
+            Array.prototype.forEach.call(paso.querySelectorAll('.product-list input, .product-list select, .product-list button'), function (el) { el.disabled = true; });
+            var pl = paso.querySelector('.product-list'); if (pl) { pl.style.opacity = '0.55'; pl.style.pointerEvents = 'none'; }
+          }
+          if (!carnesCerrado) return;
           pintar();
-          try { actualizarResumen(); } catch (e) {}
+          var g = !!carnesEnGracia();
+          if (g !== estabaEnGracia) { estabaEnGracia = g; try { actualizarResumen(); } catch (e) {} }
         }
         pintar();
         var url = 'https://docs.google.com/spreadsheets/d/1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg' +
@@ -1816,7 +1836,7 @@
           else if ((x = val.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/))) carnesCierre = new Date(+x[3], +x[2] - 1, +x[1], +x[4], +x[5]);
           else return;
           pintar(); revisar();
-          setInterval(revisar, 30000);
+          setInterval(revisar, 10000);
         }).catch(function () {});
       })();
 
@@ -1827,7 +1847,7 @@
         var hayCarnes = false;
         categorias.forEach(function (cat) {
           // (12/11) Carnes cierra antes que el resto: pasado ese cierre no entra al pedido
-          if (carnesCerrado && esCatCarnes(cat)) return;
+          if (carnesFuera() && esCatCarnes(cat)) return;
           cat.productos.forEach(function (p) {
             var s = stateProductos[p.id_producto];
             if (!s || s.cantidad <= 0) return;
@@ -1898,7 +1918,7 @@
         var filasActual = [], catActual = null;
         categorias.forEach(function (cat) {
           var st = pasos[cat.nombre]; if (!st) return;
-          var cerrada = carnesCerrado && esCatCarnes(cat);
+          var cerrada = carnesFuera() && esCatCarnes(cat);
           cat.productos.forEach(function (p) {
             var sel = st.querySelector('[data-product="' + p.id_producto + '"]');
             var card = sel && sel.closest ? sel.closest('.product') : null;
@@ -2849,6 +2869,6 @@
 
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 14/11 canasta en la barra (plegada)</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 14/11 carnes con 10 min de gracia</p>
 </body>
 </html>
