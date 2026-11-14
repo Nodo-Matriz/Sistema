@@ -396,6 +396,7 @@
             <button type="button" class="btn btn--ghost btn--small" id="btn-carnes-pedido">📋 Copiar pedido de carnes para el productor</button>
             <span class="porque" id="porque-carnes"></span>
           </p>
+          <p class="nota" id="nota-espera-carnes" style="margin:6px 0 0;"></p>
           <div id="carnes-textos"></div>
         </div>
 
@@ -650,11 +651,34 @@
           return val ? parseFecha(String(val).replace(/^'/, '')) : null;
         }).catch(function () { return undefined; });
       }
+      // El pedido de carnes para el productor se habilita 15 minutos después
+      // del cierre de carnes: quien ya tenía cortes elegidos tiene 10 minutos
+      // de tolerancia para enviar su pedido (más 5 de margen).
+      var ESPERA_COMANDA_CARNES_MIN = 15;
+      var cierreCarnesGuia = null;   // Date | null (sin cierre anticipado)
+      function estadoBotonCarnes() {
+        var b = $('btn-carnes-pedido'), nota = $('nota-espera-carnes'); if (!b || !nota) return true;
+        var p = function (n) { return ('0' + n).slice(-2); };
+        if (!cierreCarnesGuia) { b.disabled = false; nota.textContent = ''; return true; }
+        var desde = new Date(cierreCarnesGuia.getTime() + ESPERA_COMANDA_CARNES_MIN * 60000);
+        var hora = p(desde.getHours()) + ':' + p(desde.getMinutes()) + ' hs';
+        if (Date.now() >= desde.getTime()) {
+          b.disabled = false;
+          nota.innerHTML = '✅ Ya se puede copiar: pasaron los ' + ESPERA_COMANDA_CARNES_MIN + ' minutos desde el cierre de carnes.';
+          return true;
+        }
+        b.disabled = true;
+        nota.innerHTML = '⏳ Se habilita ' + (Date.now() >= cierreCarnesGuia.getTime() ? 'a las' : 'el ' + fechaHuman(desde).replace(/,?\s*\d{1,2}:\d{2}.*$/, '') + ' a las') + ' <strong>' + hora + '</strong>, ' +
+          ESPERA_COMANDA_CARNES_MIN + ' minutos después del cierre de carnes. Es por los <strong>10 minutos de tolerancia</strong> que tienen quienes están haciendo su compra en ese momento: sus cortes todavía pueden entrar.';
+        return false;
+      }
+      setInterval(function () { try { estadoBotonCarnes(); } catch (e) {} }, 20000);
       function pintarCarnes() {
         var est = $('carnes-estado');
         if (!est) return;
         if (!edicionVigente) { est.textContent = 'Todavía no hay edición.'; return; }
         leerCierreCarnes().then(function (f) {
+          cierreCarnesGuia = f || null; estadoBotonCarnes();
           if (f === undefined) { est.innerHTML = '⚠ Falta crear la hoja <strong>Config_App</strong> en la planilla (encabezados: clave, valor, fecha, quien).'; return; }
           if (!f) { est.textContent = 'Sin cierre anticipado: en ' + edicionVigente + ' Carnes cierra junto con el formulario.'; return; }
           est.innerHTML = (f.getTime() <= Date.now() ? '🔒 Carnes <strong>ya cerró</strong> el ' : '⏰ Carnes cierra el ') + '<strong>' + fechaHuman(f) + '</strong> (' + edicionVigente + ').';
@@ -691,7 +715,9 @@
         });
         // Pedido de carnes por productor, listo para WhatsApp: una bolsa por persona.
         $('btn-carnes-pedido').addEventListener('click', function () {
-          var pq = $('porque-carnes'), caja = $('carnes-textos'); pq.textContent = 'Armando…'; caja.innerHTML = '';
+          var pq = $('porque-carnes'), caja = $('carnes-textos');
+          if (!estadoBotonCarnes()) return;
+          pq.textContent = 'Armando…'; caja.innerHTML = '';
           Promise.all([gviz('sheet=Items&range=A1:N50000&headers=1'), gviz('sheet=Pedidos&range=A1:F20000&headers=1'),
             gviz('sheet=Consumidores&range=A1:B20000&headers=1'), gviz('sheet=Productos&range=A1:I5000&headers=1'),
             gviz('sheet=Productores&range=A1:B2000&headers=1')]).then(function (t) {
@@ -1631,6 +1657,6 @@
       });
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 13/11 avisos</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 14/11 comanda de carnes a los 15 min</p>
 </body>
 </html>
