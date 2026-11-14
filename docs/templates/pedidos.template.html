@@ -88,6 +88,14 @@
     }
     .step-btn:active { background: var(--c-salvia, #b7c4a8); }
 
+    /* Producto ya elegido (verde) y listado de lo elegido en la categoría (arena) */
+    .product.product--elegido { background: #e3efd9; border-color: #4A6B3A; box-shadow: inset 5px 0 0 #4A6B3A; }
+    .product.product--elegido .product__head .product__name:first-child::before { content: '✓ '; color: #34502A; font-weight: 800; }
+    .nm-elegidos { background: #fbf2dc; border: 1.5px solid #c9a55a; border-radius: 14px; padding: 10px 14px; margin: 10px 0 14px; font-size: 0.92rem; color: #4a3b1c; }
+    .nm-elegidos strong { color: #6b4e12; }
+    .nm-elegidos ul { margin: 6px 0 0; padding: 0; list-style: none; }
+    .nm-elegidos li { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; border-top: 1px dotted rgba(140, 105, 30, 0.35); }
+    .nm-elegidos li span:last-child { white-space: nowrap; font-weight: 600; }
     /* Aporte consciente: opciones compactas en grilla */
     .aporte-grid {
       display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px;
@@ -1444,6 +1452,11 @@
       }
       stepsContainer.addEventListener('input', onControlChange);
       stepsContainer.addEventListener('change', onControlChange);
+      // después de cada cambio se repinta lo elegido (tarjeta verde + listado)
+      ['input', 'change'].forEach(function (ev) {
+        stepsContainer.addEventListener(ev, function () { setTimeout(function () { try { pintarElegidos(); } catch (e) {} }, 0); });
+      });
+      setInterval(function () { try { pintarElegidos(); } catch (e) {} }, 4000);   // topes de stock, cierre de carnes
 
       // Botones − / + del panel "Otra cantidad"
       stepsContainer.addEventListener('click', function (e) {
@@ -1866,7 +1879,36 @@
         return partes.join(' · ');
       }
 
+      // (13/11) Lo ya elegido se ve en cada categoría: la tarjeta del producto
+      // queda en verde y arriba aparece un listado corto de lo elegido ahí.
+      function pintarElegidos() {
+        var pasos = {};
+        Array.prototype.forEach.call(stepsContainer.querySelectorAll('.wizard__step'), function (st) { pasos[st.dataset.stepName] = st; });
+        categorias.forEach(function (cat) {
+          var st = pasos[cat.nombre]; if (!st) return;
+          var cerrada = carnesCerrado && esCatCarnes(cat), filas = [];
+          cat.productos.forEach(function (p) {
+            var sel = st.querySelector('[data-product="' + p.id_producto + '"]');
+            var card = sel && sel.closest ? sel.closest('.product') : null;
+            var e = stateProductos[p.id_producto], on = !cerrada && e && e.cantidad > 0;
+            if (card) card.classList.toggle('product--elegido', !!on);
+            if (!on) return;
+            var mult = 1;
+            if (p.fraccionable && e.fraccion) { var esp = parseFraccionEspecial(e.fraccion, p.unidad); mult = esp ? esp.valor : parseFraction(e.fraccion); }
+            filas.push('<li><span>' + escapeHtml(p.nombre) + ' · ' + escapeHtml(detalleItem(p, e).split(' · ')[0]) + '</span><span>' +
+              formatMoney(Math.round((p.precio || 0) * e.cantidad * mult)) + '</span></li>');
+          });
+          var caja = st.querySelector('.nm-elegidos');
+          if (!filas.length) { if (caja) caja.remove(); return; }
+          if (!caja) {
+            caja = document.createElement('div'); caja.className = 'nm-elegidos';
+            var pl = st.querySelector('.product-list'); pl.parentNode.insertBefore(caja, pl);
+          }
+          caja.innerHTML = '<strong>🧺 Canasta de ' + escapeHtml(String(cat.nombre).toLowerCase()) + ' (' + filas.length + ')</strong><ul>' + filas.join('') + '</ul>';
+        });
+      }
       function actualizarResumen() {
+        try { pintarElegidos(); } catch (e) {}
         var calc = calcularItems();
         var listaEl = document.getElementById('summary-items');
         listaEl.innerHTML = '';
@@ -2783,6 +2825,6 @@
 
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 12/11 carnes</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 13/11 canasta por categoría</p>
 </body>
 </html>
