@@ -248,7 +248,7 @@
         var num = parseInt((edicion.match(/-(\d+)$/) || [])[1], 10) || 0;
         var adm = document.createElement('div'); adm.className = 'adm';
         adm.innerHTML = '<input type="text" class="a-resp" maxlength="300" placeholder="Respuesta (la ve la equipa)" value="' + esc(e.r || '') + '">' +
-          '<label class="meta">Sale en: <select class="a-ed"><option value="">—</option>' + [num, num + 1, num + 2].map(function (n) { return '<option' + (e.ed === 'ED' + n ? ' selected' : '') + '>ED' + n + '</option>'; }).join('') + '</select></label>' +
+          '<label class="meta">Listo para: <select class="a-ed"><option value="">—</option>' + [num, num + 1, num + 2].map(function (n) { return '<option' + (e.ed === 'ED' + n ? ' selected' : '') + '>ED' + n + '</option>'; }).join('') + '</select></label>' +
           '<div class="fila-preg"><input type="text" class="a-preg" maxlength="300" placeholder="Pregunta para ' + esc(a.q || 'quien avisó') + '"><button type="button" data-e="pregunta">❓ Preguntar</button></div>' +
           '<div class="bots"><button type="button" data-e="tomada">✓ Tomar</button><button type="button" data-e="hecha">Responder y cerrar</button><button type="button" data-e="no" class="rech">No se hace</button></div><span class="a-msg meta"></span>';
         adm.addEventListener('click', function (ev) {
@@ -296,6 +296,6 @@
   setInterval(function () { if (!document.hidden) cargar(); }, 30000);
 })();
 </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 17/11 avisos con pregunta y respuesta</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 17/11 b · avisos con pregunta y respuesta</p>
 </body>
 </html>
