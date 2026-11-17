@@ -581,6 +581,7 @@
       border-radius: 999px; vertical-align: middle; white-space: nowrap;
     }
     .item-ped.no-va .tag-productor { opacity: 0.5; }
+    .ped-card.ped-anulado .item-ped, .ped-card.ped-anulado .cat-sub { display: none; }
 
     /* Etiquetas del pedido (primera vez / grupo de WhatsApp): visibles con la tarjeta cerrada */
     .ped-tags { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 var(--s-4) var(--s-3); margin-top: -4px; }
@@ -4083,7 +4084,8 @@
         timerTicks = setTimeout(enviarTicks, 6000);   // se juntan los toques seguidos en un solo envío
       }
 
-      function chipEstado(est) {
+      function chipEstado(est, sinMercaderia) {
+        if (est === 'Cancelado' && sinMercaderia) return '✕ pedido cancelado';
         if (est === 'Pendiente') return 'pendiente';
         if (est === 'Armado') return '✓ cajón armado';
         if (est === 'Frío entregado') return '❄ frío entregado · falta el cajón';
@@ -4197,10 +4199,12 @@
           var ticks = leerTicks(p.id_pedido);
           var frioListo = est === 'Frío entregado' || est === 'Entregado';
           var cajonListo = est === 'Cajón entregado' || est === 'Entregado';
+          // cancelado antes de pedir a los productores: no hay mercadería ni stock
+          var anulado = est === 'Cancelado' && !partes.ambiente.length && !partes.frio.length;
 
           var card = document.createElement('div');
           card.className = 'ped-card ' + claseEstado(est) +
-            (pedAbiertos[p.id_pedido] ? ' abierto' : '');
+            (pedAbiertos[p.id_pedido] ? ' abierto' : '') + (anulado ? ' ped-anulado' : '');
           card.dataset.idx = String(i);
           card.dataset.ped = p.id_pedido;
           // cajón empezado y sin terminar: "en armado · 5 de 12"
@@ -4214,7 +4218,7 @@
               '<span class="ped-nombre"></span>' +
               (enArmado
                 ? '<span class="chip-ped en-armado">' + textoEnArmado(tildadosAmb, ksAmb.length) + '</span>'
-                : '<span class="chip-ped ' + claseEstado(est) + '">' + chipEstado(est) + '</span>') +
+                : '<span class="chip-ped ' + claseEstado(est) + '">' + chipEstado(est, anulado) + '</span>') +
             '</div>' +
             '<div class="ped-cuerpo"></div>';
           var tagsPed = tagsDePedido(p);
@@ -4232,11 +4236,11 @@
           }
 
           // ── Cajón (ambiente): se tacha al armar ──
-          if (its.length) {
+          if (its.length && !anulado) {
             cuerpo.insertAdjacentHTML('beforeend', '<div class="bloque-tit">📦 Cajón' +
               (cajonListo ? ' · entregado' : (est !== 'Pendiente' ? ' · armado' : '')) + '</div>');
           }
-          if (its.length && !partes.ambiente.length) {
+          if (its.length && !partes.ambiente.length && !anulado) {
             cuerpo.insertAdjacentHTML('beforeend', '<p class="muted" style="font-size:0.9rem;">Este pedido es todo refrigerado: no hay cajón que armar.</p>');
           }
           var conCats = Object.keys(categoriaProd).length > 0, catPrev = null;
@@ -4357,10 +4361,10 @@
           // ── Botones según estado ──
           if (estadoCerrado(est)) {
             cuerpo.insertAdjacentHTML('beforeend', '<p class="muted" style="font-size:.9rem;margin:8px 0;">' +
-              (est === 'Cancelado'
+              (anulado ? 'Pedido cancelado: no hay nada para armar ni entregar.</p>' : est === 'Cancelado'
                 ? 'No se retiró: la mercadería pasó al stock del Nodo y el cobro quedó anulado.'
                 : 'No se retiró: la mercadería pasó al stock del Nodo. El pedido se cobra igual.') +
-              ' Ya no se puede entregar desde acá.</p>');
+              (anulado ? '' : ' Ya no se puede entregar desde acá.</p>'));
           } else if (est === 'Pendiente') {
             var b = document.createElement('button');
             b.type = 'button';
@@ -5887,6 +5891,6 @@
   .globo-aviso::after { content: ""; position: absolute; right: 24px; bottom: -7px; width: 11px; height: 11px; background: #F8E9C4; border-right: 1.5px solid var(--c-mostaza, #C49543); border-bottom: 1.5px solid var(--c-mostaza, #C49543); transform: rotate(45deg); border-bottom-right-radius: 2px; }
 </style>
 <p style="text-align:right;margin:34px 16px 22px;max-width:720px;margin-left:auto;margin-right:auto;padding:0 16px;"><a id="link-aviso" class="globo-aviso" href="avisos.html?p=Galp%C3%B3n" target="_blank" rel="noopener">💬 Avisar algo de la App</a></p>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:0 0 14px;">versión 17/11 · globito de avisos</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:0 0 14px;">versión 17/11 b · pedido cancelado</p>
 </body>
 </html>
