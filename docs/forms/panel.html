@@ -94,6 +94,9 @@
     .cs-hist details { border: 1px solid rgba(74,107,58,.25); border-radius: 10px; margin-top: 6px; }
     .cs-hist summary { cursor: pointer; padding: 8px 12px; display: flex; justify-content: space-between; gap: 10px; font-weight: 600; }
     .cs-hist .det { padding: 0 12px 10px; }
+      .solo-planilla { display: none; }
+    .ver-planilla p.solo-planilla { display: block; }
+    .ver-planilla th.solo-planilla, .ver-planilla td.solo-planilla { display: table-cell; color: var(--c-tierra, #6B5D4F); }
   </style>
 </head>
 <body>
@@ -1147,9 +1150,10 @@
         var iPed = col(ri, /^id_pedido$/i), iNom = col(ri, /aux_nombre/i), iProd = col(ri, /^id_producto$/i), iDet = col(ri, /aux_detalle_nuevo/i),
             iCant = col(ri, /^cantidad$/i), iSub = col(ri, /^subtotal$/i), iEst = col(ri, /estado_item/i);
         var items = {};
-        ri.table.rows.forEach(function (r) {
+        ri.table.rows.forEach(function (r, nFila) {
           var idp = String(v(r, iPed)).trim(); if (!idp) return;
           (items[idp] = items[idp] || []).push({
+            fila: nFila + 2, idItem: String(v(r, 0)).trim(),   // fila en la hoja Items (la 1 es el encabezado)
             nombre: String(v(r, iNom)).trim() || String(v(r, iProd)).trim(),
             det: String(v(r, iDet)).trim() || String(v(r, iCant)),
             sub: n(v(r, iSub)), est: String(v(r, iEst)).trim()
@@ -1202,11 +1206,11 @@
       function tablaItems(p) {
         var its = D.items[p.id] || [];
         if (!its.length) return '<p class="meta">Sin productos registrados.</p>';
-        return '<div style="overflow-x:auto;"><table class="lista"><thead><tr><th>Producto</th><th>Cantidad</th><th class="num">$</th></tr></thead><tbody>' +
+        return '<div style="overflow-x:auto;"><table class="lista"><thead><tr><th>Producto</th><th>Cantidad</th><th class="num">$</th><th class="num solo-planilla">Fila en Items</th></tr></thead><tbody>' +
           its.map(function (x) {
             var falt = x.est.toLowerCase() === 'faltante';
             return '<tr' + (falt ? ' style="color:#9A9488;"' : '') + '><td>' + esc(x.nombre) + (falt ? ' · <em>no llegó</em>' : '') + '</td><td>' + esc(x.det) +
-              '</td><td class="num">' + money(x.sub) + '</td></tr>';
+              '</td><td class="num">' + money(x.sub) + '</td><td class="num solo-planilla" title="' + esc(x.idItem) + '">' + x.fila + '</td></tr>';
           }).join('') + '</tbody></table></div>';
       }
       function pintarFicha(c) {
@@ -1229,6 +1233,8 @@
           h += '<div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px; flex-wrap:wrap;">' +
             '<strong>Esta edición · pedido N.º ' + act.corr + '</strong><span class="cs-estado">' + esc(act.estado || '—') + '</span></div>' +
             '<p class="meta" style="margin:0;">' + esc([act.entrega, act.dia, act.pago].filter(Boolean).join(' · ')) + '</p>' +
+            '<p class="meta" style="margin:0;"><button type="button" class="cs-mini" style="margin-left:0;" data-ver-planilla>🔎 Ubicar en la planilla</button></p>' +
+            '<p class="meta solo-planilla" style="margin:0;">ID del pedido: <strong style="overflow-wrap:anywhere;">' + esc(act.id) + '</strong> <button type="button" class="cs-mini" data-copiar="' + esc(act.id) + '">Copiar</button></p>' +
             tablaItems(act) +
             '<p style="margin:0; display:flex; justify-content:space-between; gap:8px;"><span>Aporte ' + act.porc + ' %: ' + money(act.aporte) +
             '</span><strong>Total ' + money(act.total) + '</strong></p>' +
@@ -1243,6 +1249,9 @@
           }).join('') + '</div>';
         }
         f.innerHTML = h + '</div>';
+        var bp = f.querySelector('[data-ver-planilla]');
+        if (bp && f.classList.contains('ver-planilla')) bp.textContent = '✕ Ocultar datos de la planilla';
+        if (bp) bp.addEventListener('click', function () { var on = f.classList.toggle('ver-planilla'); bp.textContent = on ? '✕ Ocultar datos de la planilla' : '🔎 Ubicar en la planilla'; });
         Array.prototype.forEach.call(f.querySelectorAll('[data-copiar],[data-copiar-pedido]'), function (b) {
           b.addEventListener('click', function () {
             var t = b.dataset.copiar || textoPedido(c, c.pedidos.filter(function (p) { return p.id === b.dataset.copiarPedido; })[0]);
@@ -1261,6 +1270,12 @@
       buscar();
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 12/11 peso real</p>
+<style>
+  .globo-aviso { position: relative; display: inline-block; text-decoration: none; background: #F8E9C4; color: var(--c-suelo, #2C2418); border: 1.5px solid var(--c-mostaza, #C49543); border-radius: 18px; padding: 8px 16px; font-weight: 700; font-size: .92rem; font-family: var(--f-body, system-ui, sans-serif); }
+  .globo-aviso::after { content: ""; position: absolute; right: 24px; bottom: -7px; width: 11px; height: 11px; background: #F8E9C4; border-right: 1.5px solid var(--c-mostaza, #C49543); border-bottom: 1.5px solid var(--c-mostaza, #C49543); transform: rotate(45deg); border-bottom-right-radius: 2px; }
+  @media print { .globo-aviso-p { display: none !important; } }
+</style>
+<p class="globo-aviso-p" style="text-align:right;margin:34px auto 22px;max-width:720px;padding:0 16px;"><a id="link-aviso" class="globo-aviso" href="avisos.html?p=Panel%20de%20pedidos" target="_blank" rel="noopener">💬 Avisar algo de la App</a></p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 17/11 · fila en planilla y avisos</p>
 </body>
 </html>
