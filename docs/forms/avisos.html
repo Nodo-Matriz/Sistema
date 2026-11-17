@@ -14,7 +14,9 @@
      * qué pasó con cada aviso. No usa ninguna herramienta nueva: cada aviso
      * es una fila en la hoja Config_App (por el escenario H1 de Make).
      *   aviso|<id>      → {t tipo, x texto, u urgente, q quién, p pantalla, e edición, ts}
-     *   aviso_est|<id>  → {est tomada|hecha|no, r respuesta, ed edición en que sale, ts}
+     *   aviso_est|<id>  → {est tomada|pregunta|hecha|no, r respuesta, ed edición en que sale,
+     *                      pq pregunta a quien avisó, pts cuándo se preguntó, ts}
+     *   aviso_resp|<id> → {x respuesta de quien avisó, q quién, pts de la pregunta que responde, ts}
      * Vale la última fila de cada clave. Con ?admin=1 aparecen los botones
      * para tomar, responder o rechazar (piden la clave de equipo).
      */
@@ -40,6 +42,16 @@
     .est.no { background: #f3dcd6; color: #A6402B; }
     .est.urg { background: #A6402B; color: #fff; }
     .est.env { background: #eee; color: #666; }
+    .est.pregunta { background: #F8E9C4; color: #7a5a12; }
+    .est.respondida { background: #e6dcf2; color: #5b3d8a; }
+    .preg { background: #FBF3DC; border: 1.5px solid var(--c-mostaza, #C49543); border-radius: 12px; padding: 9px 11px; margin-top: 7px; font-size: .92rem; }
+    .preg textarea { font: inherit; width: 100%; box-sizing: border-box; margin-top: 7px; padding: 8px 10px; border-radius: 10px; border: 1.5px solid rgba(74,107,58,.3); background: #fff; }
+    .preg button { font: inherit; font-weight: 700; font-size: .9rem; border: 0; border-radius: 999px; background: var(--c-musgo, #34502A); color: #fff; padding: 8px 16px; margin-top: 7px; cursor: pointer; }
+    .resp-eq { background: #f0eaf7; border-radius: 10px; padding: 7px 10px; margin-top: 6px; font-size: .9rem; }
+    .adm .fila-preg { display: flex; gap: 8px; flex-wrap: wrap; }
+    .adm .fila-preg input { flex: 1 1 200px; min-width: 0; }
+    .adm .fila-preg button { font: inherit; font-size: .88rem; font-weight: 600; border-radius: 999px; padding: 7px 14px; cursor: pointer; background: #F8E9C4; border: 1.5px solid var(--c-mostaza, #C49543); color: #2C2418; }
+    #banner-preg { background: #FBF3DC; border: 1.5px solid var(--c-mostaza, #C49543); border-radius: 12px; padding: 10px 12px; margin-top: 14px; font-weight: 600; }
     .resp { background: rgba(74,107,58,.08); border-radius: 10px; padding: 7px 10px; margin-top: 6px; font-size: .9rem; }
     .adm { margin-top: 8px; display: grid; gap: 8px; }
     .adm input, .adm select { font: inherit; padding: 8px 10px; border-radius: 10px; border: 1.5px solid rgba(74,107,58,.3); }
@@ -55,6 +67,7 @@
   <h1 id="titulo">Avisos de la equipa</h1>
   <p class="lead">Para contar algo que falló, una idea o una duda sobre el sistema. Lo ve quien lo administra y acá mismo queda la respuesta. Así no se pierde entre los mensajes de WhatsApp.</p>
 
+  <p id="banner-preg" hidden></p>
   <div class="card-eq" id="card-form">
     <h2>💬 Avisar algo</h2>
     <div class="campo"><span class="lab">¿Qué es?</span>
@@ -110,7 +123,7 @@
   var qs = new URLSearchParams(location.search);
   var ADMIN = qs.get('admin') === '1';
   var pantalla = (qs.get('p') || '').slice(0, 40);
-  var edicion = '', avisos = [], estados = {}, pend = [], filtro = 'abiertos';
+  var edicion = '', avisos = [], estados = {}, resps = {}, pend = [], filtro = 'abiertos';
   var tipo = 'idea', urgente = false;
   var TIPOS = { fallo: '🐞', idea: '💡', duda: '❓' };
 
@@ -151,15 +164,20 @@
         try { var g = localStorage.getItem(LS_NOMBRE); if (g) $('quien').value = g; } catch (e) {}
       }
       if (!/clave/i.test(String((t[0].cols[0] || {}).label || ''))) { $('lista').innerHTML = '<p class="err">No encuentro la hoja Config_App en la planilla.</p>'; return; }
-      var m = {}, orden = []; estados = {};
+      var m = {}, orden = [], est2 = {}, resp2 = {};
       t[0].rows.forEach(function (r) {
         var k = String(v(r, 0)).trim(), val;
-        if (k.indexOf('aviso|') !== 0 && k.indexOf('aviso_est|') !== 0) return;
+        if (k.indexOf('aviso|') !== 0 && k.indexOf('aviso_est|') !== 0 && k.indexOf('aviso_resp|') !== 0) return;
         try { val = JSON.parse(String(v(r, 1))); } catch (e) { return; }
         if (!val || typeof val !== 'object') return;
         if (k.indexOf('aviso|') === 0) { var id = k.slice(6); if (!m[id]) orden.push(id); val.id = id; m[id] = val; }
-        else estados[k.slice(10)] = val;
+        else if (k.indexOf('aviso_est|') === 0) est2[k.slice(10)] = val;
+        else resp2[k.slice(11)] = val;
       });
+      // lo recién guardado en este teléfono vale hasta que la planilla lo muestre
+      Object.keys(estados).forEach(function (id) { if (estados[id]._loc && (!est2[id] || est2[id].ts < estados[id].ts) && Date.now() - estados[id].ts < 120000) est2[id] = estados[id]; });
+      Object.keys(resps).forEach(function (id) { if (resps[id]._loc && (!resp2[id] || resp2[id].ts < resps[id].ts) && Date.now() - resps[id].ts < 120000) resp2[id] = resps[id]; });
+      estados = est2; resps = resp2;
       avisos = orden.map(function (id) { return m[id]; });
       pend = pend.filter(function (a) { return !m[a.id]; });
       try { localStorage.setItem(LS_PEND, JSON.stringify(pend)); } catch (e) {}
@@ -168,13 +186,19 @@
   }
 
   function fecha(ts) { var d = new Date(ts); return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2); }
+  // pregunta abierta: hay pregunta y la respuesta guardada no es de esa pregunta
+  function pregAbierta(id) { var e = estados[id] || {}, r = resps[id]; return !!(e.pq && e.est === 'pregunta' && !(r && r.pts === e.pts)); }
+  function respDe(id) { var e = estados[id] || {}, r = resps[id]; return e.pq && r && r.pts === e.pts ? r : null; }
   function pintar() {
     var yo = $('quien').value;
+    var mias = avisos.filter(function (a) { return yo && a.q === yo && pregAbierta(a.id); }).length;
+    $('banner-preg').hidden = ADMIN || !mias;
+    if (mias) $('banner-preg').textContent = '❓ Tenés ' + (mias === 1 ? 'una pregunta' : mias + ' preguntas') + ' para responder sobre ' + (mias === 1 ? 'un aviso tuyo' : 'avisos tuyos') + ' (abajo).';
     var l = pend.map(function (a) { a._pend = true; return a; }).concat(avisos).slice();
     l.sort(function (a, b) { return b.ts - a.ts; });
     l = l.filter(function (a) {
       var e = (estados[a.id] || {}).est || 'nueva';
-      if (filtro === 'abiertos') return e === 'nueva' || e === 'tomada';
+      if (filtro === 'abiertos') return e === 'nueva' || e === 'tomada' || e === 'pregunta';
       if (filtro === 'mios') return yo && a.q === yo;
       return true;
     });
@@ -183,24 +207,49 @@
       var ua = a.u && !/hecha|no/.test((estados[a.id] || {}).est || '') ? 1 : 0, ub = b.u && !/hecha|no/.test((estados[b.id] || {}).est || '') ? 1 : 0;
       return ub - ua;
     });
+    // las preguntas que me toca responder, arriba de todo
+    if (!ADMIN) l.sort(function (a, b) { return (yo && b.q === yo && pregAbierta(b.id) ? 1 : 0) - (yo && a.q === yo && pregAbierta(a.id) ? 1 : 0); });
     var cont = $('lista');
     if (!l.length) { cont.innerHTML = '<p class="meta">' + (filtro === 'abiertos' ? '🎉 No hay avisos sin resolver.' : filtro === 'mios' ? (yo ? 'Todavía no mandaste avisos.' : 'Elegí tu nombre arriba para ver los tuyos.') : 'Todavía no hay avisos.') + '</p>'; return; }
-    if (cont.contains(document.activeElement) && /INPUT|SELECT/.test(document.activeElement.tagName)) return;   // alguien está escribiendo una respuesta
+    if (cont.contains(document.activeElement) && /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;   // alguien está escribiendo una respuesta
     cont.innerHTML = '';
     l.forEach(function (a) {
       var e = estados[a.id] || {}, est = e.est || 'nueva';
-      var nombres = { nueva: 'Nueva', tomada: 'Tomada' + (e.ed ? ' · ' + e.ed : ''), hecha: 'Hecha', no: 'No se hace' };
+      var rq = respDe(a.id);
+      if (est === 'pregunta' && rq) est = 'respondida';
+      var nombres = { nueva: 'Nueva', tomada: 'Tomada' + (e.ed ? ' · ' + e.ed : ''), hecha: 'Hecha', no: 'No se hace', pregunta: 'Esperando respuesta', respondida: 'Respondida' };
       var d = document.createElement('div'); d.className = 'it';
       d.innerHTML = (a.u && est !== 'hecha' && est !== 'no' ? '<span class="est urg">Urgente</span>' : '') +
         (a._pend ? '<span class="est env">Enviando…</span>' : '<span class="est ' + est + '">' + esc(nombres[est] || est) + '</span>') +
         '<span class="meta">' + esc(a.q || '') + ' · ' + fecha(a.ts) + (a.p ? ' · ' + esc(a.p) : '') + (ADMIN && a.e ? ' · ' + esc(a.e) : '') + '</span>' +
         '<div class="txt-aviso">' + (TIPOS[a.t] || '') + ' ' + esc(a.x) + '</div>' +
-        (e.r ? '<div class="resp">↳ ' + esc(e.r) + '</div>' : '');
+        (e.r ? '<div class="resp">↳ ' + esc(e.r) + '</div>' : '') +
+        (e.pq ? '<div class="preg" data-preg><strong>❓ Pregunta para ' + esc(a.q || 'quien avisó') + ':</strong> ' + esc(e.pq) + '</div>' : '') +
+        (rq ? '<div class="resp-eq">↳ <strong>' + esc(rq.q || a.q || '') + ' respondió:</strong> ' + esc(rq.x) + '</div>' : '');
+      // quien cargó el aviso contesta acá, una sola vez por pregunta
+      if (!ADMIN && !a._pend && pregAbierta(a.id)) {
+        var caja = d.querySelector('[data-preg]');
+        if (yo && yo === a.q) {
+          caja.insertAdjacentHTML('beforeend', '<textarea class="r-txt" rows="2" maxlength="400" placeholder="Tu respuesta"></textarea><button type="button" class="r-env">Enviar respuesta</button> <span class="r-msg meta"></span>');
+          caja.querySelector('.r-env').addEventListener('click', function () {
+            var clave = $('clave').value.trim(), msg = caja.querySelector('.r-msg'), x = caja.querySelector('.r-txt').value.replace(/\s+/g, ' ').trim();
+            if (!x) { msg.innerHTML = '<span class="err">Escribí tu respuesta.</span>'; return; }
+            if (!clave) { msg.innerHTML = '<span class="err">Falta la clave de equipo (arriba).</span>'; return; }
+            var val = { x: x, q: yo, pts: e.pts, ts: Date.now() };
+            msg.textContent = '⏳ Enviando…';
+            var fin = function () { val._loc = 1; resps[a.id] = val; document.activeElement && document.activeElement.blur(); pintar(); };
+            mandar('aviso_resp|' + a.id, val, clave).then(fin, fin);
+          });
+        } else {
+          caja.insertAdjacentHTML('beforeend', '<div class="meta" style="margin-top:5px;">' + (yo ? 'La responde ' + esc(a.q || 'quien avisó') + '.' : 'Si el aviso es tuyo, elegí tu nombre arriba para responder.') + '</div>');
+        }
+      }
       if (ADMIN && !a._pend) {
         var num = parseInt((edicion.match(/-(\d+)$/) || [])[1], 10) || 0;
         var adm = document.createElement('div'); adm.className = 'adm';
         adm.innerHTML = '<input type="text" class="a-resp" maxlength="300" placeholder="Respuesta (la ve la equipa)" value="' + esc(e.r || '') + '">' +
           '<label class="meta">Sale en: <select class="a-ed"><option value="">—</option>' + [num, num + 1, num + 2].map(function (n) { return '<option' + (e.ed === 'ED' + n ? ' selected' : '') + '>ED' + n + '</option>'; }).join('') + '</select></label>' +
+          '<div class="fila-preg"><input type="text" class="a-preg" maxlength="300" placeholder="Pregunta para ' + esc(a.q || 'quien avisó') + '"><button type="button" data-e="pregunta">❓ Preguntar</button></div>' +
           '<div class="bots"><button type="button" data-e="tomada">✓ Tomar</button><button type="button" data-e="hecha">Responder y cerrar</button><button type="button" data-e="no" class="rech">No se hace</button></div><span class="a-msg meta"></span>';
         adm.addEventListener('click', function (ev) {
           var b = ev.target.closest('button'); if (!b) return;
@@ -208,8 +257,13 @@
           if (!clave) { msg.innerHTML = '<span class="err">Falta la clave (arriba).</span>'; return; }
           if (b.dataset.e === 'no' && !resp) { msg.innerHTML = '<span class="err">Poné el motivo en la respuesta.</span>'; return; }
           var val = { est: b.dataset.e, r: resp, ed: adm.querySelector('.a-ed').value, ts: Date.now() };
+          if (b.dataset.e === 'pregunta') {
+            var pq = adm.querySelector('.a-preg').value.replace(/\s+/g, ' ').trim();
+            if (!pq) { msg.innerHTML = '<span class="err">Escribí la pregunta.</span>'; return; }
+            val.pq = pq; val.pts = val.ts;
+          } else if (e.pq) { val.pq = e.pq; val.pts = e.pts; }   // la pregunta y su respuesta quedan a la vista
           msg.textContent = '⏳ Guardando…';
-          var fin = function () { estados[a.id] = val; document.activeElement && document.activeElement.blur(); pintar(); };
+          var fin = function () { val._loc = 1; estados[a.id] = val; document.activeElement && document.activeElement.blur(); pintar(); };
           mandar('aviso_est|' + a.id, val, clave).then(fin, fin);
         });
         d.appendChild(adm);
@@ -242,6 +296,6 @@
   setInterval(function () { if (!document.hidden) cargar(); }, 30000);
 })();
 </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 13/11 avisos de la equipa</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 17/11 avisos con pregunta y respuesta</p>
 </body>
 </html>

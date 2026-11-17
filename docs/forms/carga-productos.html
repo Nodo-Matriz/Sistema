@@ -639,5 +639,12 @@
             font-weight:700; font-size:0.9rem; padding:10px 18px;
             border-radius:999px; text-decoration:none;
             box-shadow:0 4px 14px rgba(0,0,0,0.25);">🏠 Guía</a>
+<style>
+  .globo-aviso { position: relative; display: inline-block; text-decoration: none; background: #F8E9C4; color: var(--c-suelo, #2C2418); border: 1.5px solid var(--c-mostaza, #C49543); border-radius: 18px; padding: 8px 16px; font-weight: 700; font-size: .92rem; font-family: var(--f-body, system-ui, sans-serif); }
+  .globo-aviso::after { content: ""; position: absolute; right: 24px; bottom: -7px; width: 11px; height: 11px; background: #F8E9C4; border-right: 1.5px solid var(--c-mostaza, #C49543); border-bottom: 1.5px solid var(--c-mostaza, #C49543); transform: rotate(45deg); border-bottom-right-radius: 2px; }
+  @media print { .globo-aviso-p { display: none !important; } }
+</style>
+<p class="globo-aviso-p" style="text-align:right;margin:34px auto 22px;max-width:720px;padding:0 16px;"><a id="link-aviso" class="globo-aviso" href="avisos.html?p=Carga%20de%20productos" target="_blank" rel="noopener">💬 Avisar algo de la App</a></p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:0 0 14px;">versión 17/11 · globito de avisos</p>
 </body>
 </html>
