@@ -3985,6 +3985,8 @@
 
       var ESTADOS_ENTREGA = ['Armado', 'Frío entregado', 'Cajón entregado', 'Entregado', 'No retirado', 'Pasado a stock', 'Cancelado'];
       function estadoCerrado(e) { return e === 'Pasado a stock' || e === 'Cancelado'; }
+      // terminado para la entrega: entregado, cancelado, pasado a stock o no retirado
+      function entregaTerminada(e) { return e === 'Entregado' || e === 'No retirado' || estadoCerrado(e); }
       function rango(e) { return e === 'Entregado' ? 2 : (e === 'Pendiente' ? 0 : 1); }
 
       function estadoDe(p) {
@@ -4595,10 +4597,12 @@
         if (!pedidos.length) { txt.textContent = 'Todavía no hay pedidos en esta edición.'; btn.style.display = 'none'; return; }
         var pend = pendientesDeRetiro();
         if (!pend.length) {
-          txt.textContent = cierreEnviado
+          txt.textContent = cierreEnviado || liqAvisada
             ? 'Listo: la entrega quedó cerrada.'
             : 'No queda ningún pedido por entregar.';
-          btn.style.display = 'none';
+          btn.style.display = cierreEnviado || liqAvisada ? 'none' : '';
+          btn.disabled = false;
+          btn.textContent = 'Pasar a liquidación';
           return;
         }
         var nros = pend.map(function (p) { return 'N° ' + p.correlativo; }).join(', ');
@@ -4629,7 +4633,17 @@
         if (!quien) { avisoCierre('Antes de cerrar, elegí tu nombre arriba de todo.'); return; }
         if (!clave) { avisoCierre('Falta la clave de equipo (arriba de todo).'); return; }
         var pend = pendientesDeRetiro();
-        if (!pend.length) { renderCierre(); return; }
+        if (!pend.length) {
+          if (liqAvisada || WEBHOOK_A5.indexOf('https://hook.') !== 0) { renderCierre(); return; }
+          liqAvisada = true;
+          fetch(WEBHOOK_A5, {
+            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({ tipo: 'iniciar_liquidacion', clave: clave })
+          }).catch(function () {});
+          avisoCierre('✓ La edición pasa a Liquidación. En un minuto la guía lo muestra.', true);
+          renderCierre();
+          return;
+        }
         if (!cierreConfirmar) { cierreConfirmar = true; renderCierre(); return; }
         var btn = this;
         btn.disabled = true;
@@ -5160,7 +5174,7 @@
             delete pedAbiertos[p.id_pedido];
             // ¿era el último? -> la edición pasa a Liquidación (paso 7)
             var todos = pedidos.length > 0 && pedidos.every(function (p2) {
-              return estadoDe(p2) === 'Entregado';
+              return entregaTerminada(estadoDe(p2));
             });
             if (todos && WEBHOOK_A5.indexOf('https://hook.') === 0) {
               fetch(WEBHOOK_A5, {
@@ -5198,7 +5212,7 @@
       var vistoPendiente = null, liqAvisada = false;
       function chequearTodoEntregado() {
         if (!pedidos.length) return;
-        var todos = pedidos.every(function (p2) { return estadoDe(p2) === 'Entregado'; });
+        var todos = pedidos.every(function (p2) { return entregaTerminada(estadoDe(p2)); });
         if (vistoPendiente === null) { vistoPendiente = !todos; return; }
         if (todos && vistoPendiente && !liqAvisada && WEBHOOK_A5.indexOf('https://hook.') === 0) {
           liqAvisada = true;
@@ -5891,6 +5905,6 @@
   .globo-aviso::after { content: ""; position: absolute; right: 24px; bottom: -7px; width: 11px; height: 11px; background: #F8E9C4; border-right: 1.5px solid var(--c-mostaza, #C49543); border-bottom: 1.5px solid var(--c-mostaza, #C49543); transform: rotate(45deg); border-bottom-right-radius: 2px; }
 </style>
 <p style="text-align:right;margin:34px 16px 22px;max-width:720px;margin-left:auto;margin-right:auto;padding:0 16px;"><a id="link-aviso" class="globo-aviso" href="avisos.html?p=Galp%C3%B3n" target="_blank" rel="noopener">💬 Avisar algo de la App</a></p>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:0 0 14px;">versión 17/11 b · pedido cancelado</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:0 0 14px;">versión 23/11 · cancelados no frenan la liquidación</p>
 </body>
 </html>
