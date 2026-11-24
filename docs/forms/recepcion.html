@@ -186,7 +186,7 @@
     .fr-chip .ant { font-size: .78rem; color: #9A5B0E; }
     .fr-chip.marcado, .fr-chip.hecho { background: #3E7A3A; border-color: #3E7A3A; color: #fff; }
     .fr-chip.marcado .x, .fr-chip.hecho .x, .fr-chip.marcado .ant, .fr-chip.hecho .ant { color: #fff; }
-    .fr-chip.hecho { opacity: .85; cursor: default; }
+    .fr-chip.hecho { opacity: .9; }
     .fr-chip.cambio { border-color: #9A5B0E; }
     .fr-chip.nope, .fr-chip.espera { border-color: #c9c3b6; color: #8a8273; background: #f4f1ea; cursor: default; }
     .fr-chip.espera .x, .fr-chip.nope .x { color: #8a8273; }
@@ -1005,8 +1005,7 @@
       <div class="card-eq">
         <h2>Plan de fraccionamiento</h2>
         <p class="muted">
-          Un renglón por producto. Cada botón es un tamaño con la cantidad de bolsas a armar:
-          tocalo cuando estén <strong>empaquetadas</strong> y al final tocá <strong>Registrar</strong>.
+          Tocá cada tamaño cuando esté <strong>empaquetado</strong>. Si te equivocaste, tocalo de nuevo.
         </p>
 
         <div class="campo">
@@ -1018,6 +1017,12 @@
                  autocomplete="name" style="display:none; margin-top:8px;">
         </div>
 
+        <div class="campo">
+          <label for="clave-fracc">Clave de equipo *</label>
+          <input type="password" id="clave-fracc" placeholder="La clave compartida del equipo">
+        </div>
+        <p id="msg-fracc" style="display:none; color:#A6402B; font-weight:600; margin:0 0 8px;"></p>
+
         <input type="search" id="buscar-fracc" placeholder="🔍 Buscar producto (ej.: arroz, lentejas)"
                autocomplete="off" style="width:100%; margin:6px 0 10px; padding:10px 12px; font-size:1rem;
                border:1px solid rgba(0,0,0,0.2); border-radius:10px;">
@@ -1028,16 +1033,7 @@
         <div id="lista-fracc"></div>
         <p class="progreso" id="progreso-fracc"></p>
 
-        <div class="campo">
-          <label for="clave-fracc">Clave de equipo *</label>
-          <input type="password" id="clave-fracc" placeholder="La clave compartida del equipo">
-        </div>
 
-        <div class="fr-pie"><button type="button" class="btn-conf" id="btn-fracc" disabled>Registrar fracciones preparadas</button></div>
-
-        <div class="ok-box" id="ok-fracc">
-          ✅ Fracciones registradas como preparadas.
-        </div>
       </div>
     </div>
 
@@ -2374,6 +2370,7 @@
           var rowsK = res[0].table.rows;
           idEdicion = rowsK.length ? String(celda(rowsK[0], 0)).trim() : '';
           parseTicksRemotos(res[15]);
+          parseFraccRemoto(res[15]);
 
           res[2].table.rows.forEach(function (r) {
             var id = String(celda(r, 0)).trim();
@@ -3621,6 +3618,10 @@
             bolsas: ahora.bolsas || {},
             estado: 'ok', msg: '', alerta: ''
           };
+          var cfg = estadoFraccCfg(p);
+          if (cfg) { r.preparado = !!cfg.on; r.por = cfg.q || ''; }
+          // con cuánto se marcó como preparado (para avisar si después cambió)
+          var base = (cfg && cfg.on && typeof cfg.n === 'number') ? cfg.n : plan;
           if (recepCorruptas[p.id_producto]) {
             r.estado = 'bloq';
             r.msg = 'La recepción de este producto tiene un número ilegible en la planilla: revisala antes de armar.';
@@ -3648,17 +3649,17 @@
             r.msg = (r.ahora < plan ? 'Se recortó: ' : 'Cambió el pedido: ') +
               'eran ' + porc(plan) + ', ahora van ' + numeroAmable(r.ahora) + '.';
           }
-          if (r.preparado && r.estado !== 'bloq' && r.ahora < plan - EPS) {
-            var sobran = redondear3(plan - r.ahora);
-            r.alerta = '⚠ Figura preparado con ' + porc(plan) + ' y van ' +
+          if (r.preparado && r.estado !== 'bloq' && r.ahora < base - EPS) {
+            var sobran = redondear3(base - r.ahora);
+            r.alerta = '⚠ Figura preparado con ' + porc(base) + ' y van ' +
               numeroAmable(r.ahora) + ': separá ' + porc(sobran) + ' aparte: no se entregan, quedan como sobrante.';
           }
           if (r.preparado && r.estado === 'bloq') {
             r.alerta = '⚠ Figura preparado, pero ' + r.msg.charAt(0).toLowerCase() + r.msg.slice(1);
           }
-          if (r.preparado && r.ahora > plan + EPS) {
-            r.alerta = '⚠ Figura preparado con ' + porc(plan) + ', pero ahora van ' +
-              numeroAmable(r.ahora) + ': armá ' + numeroAmable(redondear3(r.ahora - plan)) + ' más.';
+          if (r.preparado && r.ahora > base + EPS) {
+            r.alerta = '⚠ Figura preparado con ' + porc(base) + ', pero ahora van ' +
+              numeroAmable(r.ahora) + ': armá ' + numeroAmable(redondear3(r.ahora - base)) + ' más.';
           }
           return r;
         });
@@ -3667,14 +3668,15 @@
         Object.keys(dem).forEach(function (k) {
           if (vistos[k] || dem[k].porciones <= EPS) return;
           var partes = k.split('|');
+          var cfgN = estadoFraccCfg({ id_producto: partes[0], fraccion: partes[1] });
           out.push({
             p: { id_plan: '', id_producto: partes[0], nombre: nombreProducto(partes[0]), fraccion: partes[1] },
             pedidos: dem[k].pedidos,
             bolsas: dem[k].bolsas || {},
             plan: 0, ahora: redondear3(dem[k].porciones), unidades: redondear3(dem[k].unidades),
-            preparado: false, estado: dem[k].entero ? 'entero' : 'bloq',
+            preparado: !!(cfgN && cfgN.on), por: cfgN ? (cfgN.q || '') : '', estado: dem[k].entero ? 'entero' : 'bloq',
             msg: dem[k].entero
-              ? 'Pedido entero (por kilo): pesalo y embolsalo igual que las fracciones. Para poder tildarlo, tiene que estar en el plan de fraccionamiento (lo agrega la equipa en la planilla).'
+              ? 'Pedido entero (por kilo): pesalo y embolsalo igual que las fracciones.'
               : 'No está en el plan de fraccionamiento: armalo igual y avisá para que se agregue.',
             alerta: ''
           });
@@ -3701,7 +3703,51 @@
         }).join(' · ');
       }
 
-      var fraccSel = {};          // índice de fraccVista → marcado para registrar
+      // (24/11) Lo preparado se guarda al tocar (sin "Registrar"), se comparte
+      // entre teléfonos y se puede desmarcar. Una fila por tamaño en
+      // Config_App: "fracc|<edición>|<producto>|<fracción>" → {on, q, n, ts}.
+      var fraccRemoto = {}, fraccLocal = {}, fraccLocalDe = '', fraccPorEnviar = {}, timerFracc = null, fraccFallo = false;
+      function claveFracc(p) { return idEdicion + '|' + p.id_producto + '|' + (p.fraccion || '1'); }
+      function cargarFraccLocal() {
+        if (fraccLocalDe === idEdicion) return;
+        fraccLocalDe = idEdicion; fraccLocal = {};
+        try { fraccLocal = JSON.parse(localStorage.getItem('nm_fracc_local_' + idEdicion) || '{}') || {}; } catch (e) {}
+      }
+      function guardarFraccLocal() {
+        try { localStorage.setItem('nm_fracc_local_' + idEdicion, JSON.stringify(fraccLocal)); } catch (e) {}
+      }
+      function estadoFraccCfg(p) {
+        cargarFraccLocal();
+        var k = claveFracc(p), a = fraccRemoto[k], b = fraccLocal[k];
+        if (b && (!a || b.ts > a.ts)) {
+          if (Date.now() - b.ts < 180000) return b;
+          // pasaron 3 minutos y la planilla no lo muestra: no se guardó
+          delete fraccLocal[k]; guardarFraccLocal(); fraccFallo = true;
+        } else if (b) { delete fraccLocal[k]; guardarFraccLocal(); }
+        return a || null;
+      }
+      function parseFraccRemoto(res) {
+        if (!res || !res.table || !res.table.cols || !res.table.cols.length) return;
+        if (!/clave/i.test(String(res.table.cols[0].label || ''))) return;
+        var pref = 'fracc|' + idEdicion + '|', m = {};
+        res.table.rows.forEach(function (r) {
+          var k0 = String(celda(r, 0)).trim();
+          if (k0.indexOf(pref) !== 0) return;
+          try { var v = JSON.parse(String(celda(r, 1))); if (v && (!m[k0.slice(6)] || v.ts >= m[k0.slice(6)].ts)) m[k0.slice(6)] = v; } catch (e) {}
+        });
+        fraccRemoto = m;
+      }
+      function enviarFracc() {
+        timerFracc = null;
+        var clave = $('clave-fracc').value.trim();
+        if (!clave || WEBHOOK_H1.indexOf('https://hook.') !== 0) return;
+        Object.keys(fraccPorEnviar).forEach(function (k) {
+          var v = fraccPorEnviar[k]; delete fraccPorEnviar[k];
+          fetch(WEBHOOK_H1, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, keepalive: true,
+            body: JSON.stringify({ tipo: 'config', clave: clave, clave_config: 'fracc|' + k, valor: JSON.stringify(v), quien: v.q || 'galpón' }) }).catch(function () {});
+        });
+      }
+      document.addEventListener('visibilitychange', function () { if (document.hidden && Object.keys(fraccPorEnviar).length) enviarFracc(); });
       var fraccFiltro = 'pend';
       try { fraccFiltro = localStorage.getItem('nm_fracc_filtro') || 'pend'; } catch (e) {}
 
@@ -3724,7 +3770,6 @@
         var cont = $('lista-fracc');
         cont.innerHTML = '';
         fraccVista = calcularFraccVista();
-        fraccSel = {};
 
         if (!fraccVista.length) {
           cont.innerHTML = '<p class="muted">No hay fracciones pendientes para esta edición 🎉</p>';
@@ -3745,8 +3790,7 @@
           var rp = recepPorProducto[g.id];
           g.sinRecepcion = !rp && !recepCorruptas[g.id];
           g.bloq = g.sinRecepcion || g.filas.every(function (f) { return f.r.estado === 'bloq'; });
-          g.listo = g.filas.every(function (f) { return f.r.preparado ||
-            (f.r.estado === 'entero' && !f.r.p.id_plan && enterosHechos()[idEdicion + '|' + f.r.p.id_producto]) || f.r.estado === 'cero' || (f.r.ahora <= EPS && f.r.estado !== 'entero'); });
+          g.listo = g.filas.every(function (f) { return f.r.preparado || f.r.estado === 'cero' || (f.r.ahora <= EPS && f.r.estado !== 'entero'); });
         });
         grupos.sort(function (a, b) { return (a.bloq ? 1 : 0) - (b.bloq ? 1 : 0); });
 
@@ -3765,7 +3809,7 @@
           var chips = div.querySelector('.fr-chips'), avisos = [];
           g.filas.forEach(function (f) {
             var r = f.r, p = r.p;
-            var habilitado = !r.preparado && (r.estado === 'ok' || r.estado === 'cambio') && !!p.id_plan && r.ahora > EPS;
+            var habilitado = (r.estado === 'ok' || r.estado === 'cambio' || r.estado === 'entero') && r.ahora > EPS;
             var b = document.createElement('button');
             b.type = 'button';
             b.className = 'fr-chip';
@@ -3785,18 +3829,14 @@
             b.querySelector('.t').textContent = texto;
             if (cant) b.querySelector('.x').textContent = cant;
             if (r.preparado) {
-              b.classList.add('hecho'); b.disabled = true;
-              b.title = 'Preparado' + (p.preparado_por ? ' por ' + p.preparado_por : '');
+              b.classList.add('hecho'); b.setAttribute('aria-pressed', 'true');   // se puede volver a tocar para desmarcar
+              b.title = 'Preparado' + ((r.por || p.preparado_por) ? ' por ' + (r.por || p.preparado_por) : '');
             } else if (r.estado === 'cero' || r.ahora <= EPS && r.estado !== 'entero') {
               b.classList.add('cero'); b.disabled = true;
               b.querySelector('.t').textContent = texto + ' · no se arma';
               if (b.querySelector('.x')) b.querySelector('.x').remove();
             } else if (g.sinRecepcion) {
               b.classList.add('espera'); b.disabled = true;      // todavía no llegó: nada se arma
-            } else if (r.estado === 'entero' && !p.id_plan) {
-              // enteros que no están en el plan: se marcan solo en este celular
-              b.dataset.local = idEdicion + '|' + p.id_producto;
-              if (enterosHechos()[b.dataset.local]) b.classList.add('marcado');
             } else if (!habilitado) {
               b.classList.add('nope'); b.disabled = true;
             }
@@ -3849,100 +3889,50 @@
       $('lista-fracc').addEventListener('click', function (e) {
         var b = e.target.closest('.fr-chip');
         if (!b || b.disabled) return;
-        if (b.dataset.local) {
-          var h = enterosHechos();
-          if (h[b.dataset.local]) delete h[b.dataset.local]; else h[b.dataset.local] = 1;
-          try { localStorage.setItem('nm_fracc_enteros', JSON.stringify(h)); } catch (err) {}
-          b.classList.toggle('marcado', !!h[b.dataset.local]);
+        var r = fraccVista[parseInt(b.dataset.idx, 10)];
+        if (!r) return;
+        var quien = valorQuien('preparado-por'), clave = $('clave-fracc').value.trim(), msg = $('msg-fracc');
+        if (!quien || !clave) {
+          msg.textContent = !quien ? 'Elegí tu nombre.' : 'Falta la clave de equipo.';
+          msg.style.display = 'block'; msg.scrollIntoView({ block: 'center' });
           return;
         }
-        var i = b.dataset.idx;
-        fraccSel[i] = !fraccSel[i];
-        b.classList.toggle('marcado', !!fraccSel[i]);
-        b.setAttribute('aria-pressed', !!fraccSel[i]);
+        msg.style.display = 'none';
+        var on = !r.preparado, k = claveFracc(r.p);
+        var v = { on: on ? 1 : 0, q: quien, n: r.ahora, ts: Date.now() };
+        r.preparado = on; r.por = quien;
+        cargarFraccLocal(); fraccLocal[k] = v; guardarFraccLocal();
+        b.classList.toggle('hecho', on);
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+        fraccPorEnviar[k] = v;
+        if (timerFracc) clearTimeout(timerFracc);
+        timerFracc = setTimeout(enviarFracc, 1500);
         actualizarProgresoFracc();
       });
-      function enterosHechos() {
-        try { return JSON.parse(localStorage.getItem('nm_fracc_enteros') || '{}') || {}; } catch (e) { return {}; }
-      }
-      function cuantasMarcadas() {
-        return Object.keys(fraccSel).filter(function (k) { return fraccSel[k]; }).length;
-      }
 
       function actualizarProgresoFracc() {
-        var aArmar = fraccVista.filter(function (r) { return r.ahora > EPS && r.estado !== 'entero'; });
+        var aArmar = fraccVista.filter(function (r) { return r.ahora > EPS; });
         var enteros = fraccVista.filter(function (r) { return r.estado === 'entero'; }).length;
         var hechas = aArmar.filter(function (r) { return r.preparado; }).length;
         var bloq = aArmar.filter(function (r) { return !r.preparado && r.estado === 'bloq'; }).length;
         var alertas = fraccVista.filter(function (r) { return !!r.alerta; }).length;
-        var nuevas = cuantasMarcadas();
-        $('progreso-fracc').textContent = hechas + ' de ' + aArmar.length + ' tamaños ya preparados · ' +
-          nuevas + ' marcados para registrar' +
+        $('progreso-fracc').textContent = hechas + ' de ' + aArmar.length + ' tamaños preparados' +
           (bloq ? ' · ' + bloq + ' esperando recepción o ajuste' : '') +
           (alertas ? ' · ⚠ ' + alertas + ' para revisar' : '');
         validarFracc();
       }
 
       function validarFracc() {
-        var nuevas = cuantasMarcadas();
-        $('btn-fracc').textContent = nuevas ? 'Registrar ' + nuevas + (nuevas === 1 ? ' tamaño preparado' : ' tamaños preparados') : 'Registrar fracciones preparadas';
-        var ok = valorQuien('preparado-por') !== '' &&
-                 $('clave-fracc').value.trim() !== '' && nuevas > 0;
-        $('btn-fracc').disabled = !ok;
+        if (fraccFallo) {
+          fraccFallo = false;
+          $('msg-fracc').textContent = '⚠ Algo que marcaste no se guardó: revisá la clave y volvé a tocarlo.';
+          $('msg-fracc').style.display = 'block';
+        }
       }
-      $('clave-fracc').addEventListener('input', validarFracc);
 
       // al entrar a la solapa, traer lo último (recepciones, ítems y plan)
       document.getElementById('tab-fracc').addEventListener('click', function () {
         refrescoVivo(false);
-      });
-
-      $('btn-fracc').addEventListener('click', function () {
-        var marcadas = [];
-        fraccVista.forEach(function (r, i) {
-          if (fraccSel[i] && !r.preparado && r.p.id_plan &&
-              (r.estado === 'ok' || r.estado === 'cambio')) marcadas.push(r);
-        });
-        if (!marcadas.length) return;
-        var items = marcadas.map(function (r) {
-          return {
-            id_plan: r.p.id_plan,
-            // lo que se armó de verdad (puede ser menos que el plan original)
-            porciones_armadas: numPlanilla(r.ahora),
-            unidades_armadas: numPlanilla(r.unidades)
-          };
-        });
-
-        var payload = {
-          tipo: 'fraccionamiento',
-          id_edicion: idEdicion,
-          preparado_por: valorQuien('preparado-por'),
-          clave: $('clave-fracc').value.trim(),
-          items: items
-        };
-
-        var btn = $('btn-fracc');
-        btn.disabled = true;
-        btn.textContent = 'Registrando…';
-
-        fetch(WEBHOOK_FRAC, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify(payload)
-        }).then(finF).catch(finF);
-
-        function finF() {
-          btn.textContent = 'Registrar fracciones preparadas';
-          $('ok-fracc').style.display = 'block';
-          // Marcar localmente como preparadas
-          marcadas.forEach(function (r) {
-            r.p.estado = 'Preparado';
-            r.p.preparado_por = valorQuien('preparado-por');
-            r.p.porciones = r.ahora;
-          });
-          renderFracc();
-        }
       });
 
       // ── Entrega ──────────────────────────────────────────────────
@@ -3968,7 +3958,9 @@
         if (it.efectiva <= 0) return info.nombre + (/^Recorte en armado/i.test(it.obs || '')
           ? ' — recortado en armado, no va' : ' — faltante, no va');
         var cant;
-        if (it.fraccion) {
+        if (esCarne(it)) {
+          cant = numeroAmable(it.efectiva) + ' kg';   // las carnes van por peso: "1,5 kg", no "3 × 1/2 kg"
+        } else if (it.fraccion) {
           cant = it.cantidad + ' × ' + it.fraccion + (info.unidad ? ' ' + info.unidad : '');
         } else {
           cant = it.efectiva + (info.unidad ? ' ' + info.unidad : '');
@@ -4025,6 +4017,7 @@
       // gana lo más nuevo: lo tildado en otro teléfono aparece solo y una
       // recarga o un teléfono que borra sus datos no destilda nada.
       var ticksRemotos = {};   // id_pedido -> {ts, ids}
+      var ticksRemotosFrio = {};   // id_pedido -> {ts, ids} (refrigerados, viajan en la misma fila)
       function ticksCrudos(idPed) {
         var loc = null;
         try { loc = JSON.parse(localStorage.getItem(LS_TICKS + idEdicion + '-' + idPed)); } catch (e) {}
@@ -4044,14 +4037,18 @@
       function parseTicksRemotos(res) {
         if (!res || !res.table || !res.table.cols || !res.table.cols.length) return;
         if (!/clave/i.test(String(res.table.cols[0].label || ''))) return;   // la hoja no existe
-        var pref = 'ticks|PED-' + idEdicion + '-', m = {};
+        var pref = 'ticks|PED-' + idEdicion + '-', m = {}, mf = {};
         res.table.rows.forEach(function (r) {
           var k0 = String(celda(r, 0)).trim();
           if (k0.indexOf(pref) !== 0) return;
           var idPed = k0.slice(6);
-          try { var v = JSON.parse(String(celda(r, 1))); if (v && v.ids && (!m[idPed] || v.ts >= m[idPed].ts)) m[idPed] = v; } catch (e) {}
+          try {
+            var v = JSON.parse(String(celda(r, 1)));
+            if (v && v.ids && (!m[idPed] || v.ts >= m[idPed].ts)) m[idPed] = { ts: v.ts, ids: v.ids };
+            if (v && v.fr && (!mf[idPed] || (v.tsf || 0) >= mf[idPed].ts)) mf[idPed] = { ts: v.tsf || 0, ids: v.fr };
+          } catch (e) {}
         });
-        ticksRemotos = m;
+        ticksRemotos = m; ticksRemotosFrio = mf;
       }
       var ticksPorEnviar = {}, timerTicks = null;
       function enviarTicks() {
@@ -4068,22 +4065,42 @@
 
       // tildes de los refrigerados (aparte de los del cajón)
       var LS_TICKS_FRIO = 'nm_ticksfrio_';
+      // (23/11) Se comparten entre teléfonos igual que las del cajón: viajan en
+      // la misma fila "ticks|<pedido>" de Config_App (campos fr y tsf), sin envíos extra.
+      function ticksFrioCrudos(idPed) {
+        var loc = null;
+        try { loc = JSON.parse(localStorage.getItem(LS_TICKS_FRIO + idEdicion + '-' + idPed)); } catch (e) {}
+        if (Array.isArray(loc)) {   // formato viejo: posiciones
+          var its0 = itemsDePedido(idPed);
+          loc = { ts: 0, ids: loc.map(function (k) { return its0[k] ? its0[k].id_item : null; }).filter(Boolean) };
+        }
+        var rem = ticksRemotosFrio[idPed];
+        if (rem && (!loc || rem.ts > loc.ts)) return rem;
+        return loc || { ts: 0, ids: [] };
+      }
       function leerTicksFrio(idPed) {
-        try { return JSON.parse(localStorage.getItem(LS_TICKS_FRIO + idEdicion + '-' + idPed)) || []; } catch (e) { return []; }
+        var ids = ticksFrioCrudos(idPed).ids || [], out = [];
+        itemsDePedido(idPed).forEach(function (it, k) { if (ids.indexOf(it.id_item) !== -1) out.push(k); });
+        return out;
       }
       function guardarTicksFrio(idPed, idxs) {
-        try {
-          if (idxs.length) localStorage.setItem(LS_TICKS_FRIO + idEdicion + '-' + idPed, JSON.stringify(idxs));
-          else localStorage.removeItem(LS_TICKS_FRIO + idEdicion + '-' + idPed);
-        } catch (e) {}
+        var its = itemsDePedido(idPed);
+        var v = { ts: Date.now(), ids: idxs.map(function (k) { return its[k] ? its[k].id_item : null; }).filter(Boolean) };
+        try { localStorage.setItem(LS_TICKS_FRIO + idEdicion + '-' + idPed, JSON.stringify(v)); } catch (e) {}
+        programarEnvioTicks(idPed);
+      }
+      // arma lo que se manda: cajón y refrigerados juntos, cada uno con su hora
+      function programarEnvioTicks(idPed) {
+        var c = ticksCrudos(idPed), fz = ticksFrioCrudos(idPed);
+        ticksPorEnviar[idPed] = { ts: c.ts || 0, ids: c.ids || [], tsf: fz.ts || 0, fr: fz.ids || [] };
+        if (timerTicks) clearTimeout(timerTicks);
+        timerTicks = setTimeout(enviarTicks, 6000);   // se juntan los toques seguidos en un solo envío
       }
       function guardarTicks(idPed, idxs) {
         var its = itemsDePedido(idPed);
         var v = { ts: Date.now(), ids: idxs.map(function (k) { return its[k] ? its[k].id_item : null; }).filter(Boolean) };
         try { localStorage.setItem(LS_TICKS + idEdicion + '-' + idPed, JSON.stringify(v)); } catch (e) {}
-        ticksPorEnviar[idPed] = v;
-        if (timerTicks) clearTimeout(timerTicks);
-        timerTicks = setTimeout(enviarTicks, 6000);   // se juntan los toques seguidos en un solo envío
+        programarEnvioTicks(idPed);
       }
 
       function chipEstado(est, sinMercaderia) {
@@ -4319,7 +4336,7 @@
             partes.frio.forEach(function (x) {
               var it = x.it, k = x.k;
               subCategoria(it, 'frio');
-              // se tilda al sacarlo de la heladera (queda guardado en este teléfono)
+              // se tilda al sacarlo de la heladera (se comparte con los otros teléfonos)
               var marcadoF = frioListo || ticksF.indexOf(k) !== -1;
               var fila = document.createElement('label');
               fila.className = 'item-frio' + (marcadoF ? ' ok' : '');
@@ -5283,6 +5300,7 @@
         ]).then(function (res) {
           var ocupado = hayTrabajoSinGuardar();
           parseTicksRemotos(res[6]);
+          parseFraccRemoto(res[6]);
 
           // sobrantes: ventas/merma (D7) y estado de la edición (habilita el cierre)
           parseMovimientos(res[4]);
@@ -5574,6 +5592,7 @@
             html += '<p class="muted">No encontramos pedidos con este producto.</p>';
           }
           if (af.length) {
+            html += '<p style="margin:6px 0 8px;"><button type="button" class="btn-orden btn-auto-prod" data-pi="' + pi + '">✂️ Por orden de llegada</button></p>';
             html += '<p class="titulo-manual">RECORTE MANUAL</p>';
           }
           af.forEach(function (a) {
@@ -5654,40 +5673,44 @@
       // ── Recorte automático por orden de llegada ─────────────────
       // El faltante lo absorben los pedidos más nuevos: quien pidió primero
       // se queda con lo suyo. Se recorta de a una unidad vendible por vez.
-      $('btn-auto').addEventListener('click', function () {
-        var cont = $('lista-ajustes');
-        var resumen = [];
-
-        propuestas.forEach(function (pr, pi) {
-          var inputs = Array.prototype.slice.call(
-            cont.querySelectorAll('.in-aj[data-pi="' + pi + '"]'));
-          if (!inputs.length) return;
-
-          // del más nuevo al más viejo (afectadosDe los ordena por correlativo)
-          inputs.reverse();
-          inputs.forEach(function (inp) { inp.value = 0; });
-
-          var falta = pr.faltante_actual;
-          inputs.forEach(function (inp) {
-            if (falta <= 0.0001) return;
-            var max = parseFloat(inp.max) || 0;
-            var paso = parseFloat(inp.dataset.paso) || 1;
-            // Se recorta en unidades enteras vendibles. Como no se puede
-            // entregar media unidad que no llegó, este pedido absorbe las
-            // unidades enteras necesarias para cubrir lo que falta
-            // (redondeando hacia arriba), hasta el tope de lo que pidió.
-            var pasosNec = Math.ceil((falta - 0.0001) / paso);   // enteras para cubrir el faltante
-            var pasosMax = Math.round(max / paso);               // lo máximo que tiene este pedido
-            var pasos = Math.min(pasosNec, pasosMax);
-            var recorte = Math.round(pasos * paso * 10000) / 10000;
-            if (recorte > 0) {
-              inp.value = recorte;
-              falta = Math.round((falta - recorte) * 10000) / 10000;
-              var it = itemsEd[parseInt(inp.getAttribute('data-idx'), 10)];
-              resumen.push({ idx: parseInt(inp.getAttribute('data-idx'), 10), recorte: recorte, it: it });
-            }
-          });
+      // Reparte el faltante de UN producto por orden de llegada (del pedido
+      // más nuevo al más viejo). Devuelve cuántos recortes cargó.
+      function autoProducto(pi) {
+        var cont = $('lista-ajustes'), pr = propuestas[pi], n = 0;
+        var inputs = Array.prototype.slice.call(cont.querySelectorAll('.in-aj[data-pi="' + pi + '"]'));
+        if (!pr || !inputs.length) return 0;
+        inputs.reverse();   // afectadosDe los ordena por correlativo
+        inputs.forEach(function (inp) { inp.value = 0; });
+        var falta = pr.faltante_actual;
+        inputs.forEach(function (inp) {
+          if (falta <= 0.0001) return;
+          var max = parseFloat(inp.max) || 0;
+          var paso = parseFloat(inp.dataset.paso) || 1;
+          // Se recorta en unidades enteras vendibles. Como no se puede
+          // entregar media unidad que no llegó, este pedido absorbe las
+          // unidades enteras necesarias para cubrir lo que falta
+          // (redondeando hacia arriba), hasta el tope de lo que pidió.
+          var pasosNec = Math.ceil((falta - 0.0001) / paso);   // enteras para cubrir el faltante
+          var pasosMax = Math.round(max / paso);               // lo máximo que tiene este pedido
+          var recorte = Math.round(Math.min(pasosNec, pasosMax) * paso * 10000) / 10000;
+          if (recorte > 0) {
+            inp.value = recorte;
+            falta = Math.round((falta - recorte) * 10000) / 10000;
+            n++;
+          }
         });
+        return n;
+      }
+      // (24/11) El mismo reparto, producto por producto
+      $('lista-ajustes').addEventListener('click', function (e) {
+        var b = e.target.closest ? e.target.closest('.btn-auto-prod') : null;
+        if (!b) return;
+        autoProducto(parseInt(b.dataset.pi, 10));
+        recalcAjustes();
+      });
+      $('btn-auto').addEventListener('click', function () {
+        var resumen = [];
+        propuestas.forEach(function (pr, pi) { if (autoProducto(pi)) resumen.push(pi); });
 
         recalcAjustes();
         var caja = $('ok-ajustes');
@@ -5905,6 +5928,6 @@
   .globo-aviso::after { content: ""; position: absolute; right: 24px; bottom: -7px; width: 11px; height: 11px; background: #F8E9C4; border-right: 1.5px solid var(--c-mostaza, #C49543); border-bottom: 1.5px solid var(--c-mostaza, #C49543); transform: rotate(45deg); border-bottom-right-radius: 2px; }
 </style>
 <p style="text-align:right;margin:34px 16px 22px;max-width:720px;margin-left:auto;margin-right:auto;padding:0 16px;"><a id="link-aviso" class="globo-aviso" href="avisos.html?p=Galp%C3%B3n" target="_blank" rel="noopener">💬 Avisar algo de la App</a></p>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:0 0 14px;">versión 23/11 · cancelados no frenan la liquidación</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:0 0 14px;">versión 24/11 · fraccionamiento al toque y recorte por producto</p>
 </body>
 </html>
