@@ -878,12 +878,17 @@
           .replace(/[^a-z0-9 ]+/g, ' ')
           .replace(/\s+/g, ' ').trim();
       }
+      var ORDEN_POR_PRECIO = ['carnes'];
       categorias.forEach(function (cat) {
         cat.productos.forEach(function (p) {
           p._base = nombreBase(p.nombre);
           p._tam = tamanoEnBase(String(p.nombre || ''));
         });
+        // (24/11) En estas categorías los productos van del más barato al más
+        // caro (pedido del Nodo para Carnes). El resto, por nombre.
+        var porPrecio = ORDEN_POR_PRECIO.indexOf(String(cat.nombre || '').trim().toLowerCase()) !== -1;
         cat.productos.sort(function (a, b) {
+          if (porPrecio && (a.precio || 0) !== (b.precio || 0)) return (a.precio || 0) - (b.precio || 0);
           if (a._base !== b._base) return a._base.localeCompare(b._base, 'es');
           if (a._tam !== b._tam) return a._tam - b._tam;
           return String(a.nombre).localeCompare(String(b.nombre), 'es');
@@ -1036,14 +1041,29 @@
           return !fraccionIncompatible(f, p.unidad);
         }).map(function (f) {
           var esp = parseFraccionEspecial(f, p.unidad);
+          var mx = valorMixta(f);
           return {
             fraccion: f,
-            valor: esp ? esp.valor : parseFraction(f),
-            etiquetaFija: esp ? esp.etiqueta : null
+            valor: esp ? esp.valor : (mx || parseFraction(f)),
+            etiquetaFija: esp ? esp.etiqueta : null,
+            mixta: !!mx
           };
         }).filter(function (o) { return o.valor > 0; })
           .sort(function (a, b) { return a.valor - b.valor; })
-          .map(function (o) {
+          .map(function (o, i, todas) {
+            if (o.mixta) {
+              // (24/11) "1 1/2" se pide como 3 × 1/2: usa la fracción declarada
+              // más grande que entra justo. Sin esa fracción, no se ofrece.
+              var base = null;
+              todas.forEach(function (b) {
+                if (b.mixta || b.etiquetaFija || b.valor >= 1) return;
+                var n = o.valor / b.valor;
+                if (Math.abs(n - Math.round(n)) < 0.000001 && (!base || b.valor > base.valor)) base = b;
+              });
+              if (!base) return null;
+              return { cantidad: Math.round(o.valor / base.valor), fraccion: base.fraccion, valor: o.valor,
+                       etiqueta: etiquetaTotal(o.valor), etiquetaFija: false, mixta: true };
+            }
             var entero = !o.etiquetaFija && Math.abs(o.valor - Math.round(o.valor)) < 0.000001;
             return {
               cantidad: entero ? Math.round(o.valor) : 1,
@@ -1052,7 +1072,18 @@
               etiqueta: o.etiquetaFija || etiquetaTotal(o.valor),
               etiquetaFija: !!o.etiquetaFija
             };
-          });
+          }).filter(Boolean);
+      }
+      // "1 1/2" -> 1,5 · cualquier otra cosa -> 0
+      function valorMixta(f) {
+        var m = String(f || '').trim().match(/^(\d+)\s+(\d+)\s*\/\s*(\d+)$/);
+        return m && +m[3] ? (+m[1] + (+m[2]) / (+m[3])) : 0;
+      }
+      // ¿lo elegido (n × fracción) coincide con una opción mixta del producto?
+      function esMixtaElegida(p, s) {
+        if (!s || !s.fraccion || !(s.cantidad > 1) || !p.fraccionable || !p.fracciones) return false;
+        var v = s.cantidad * parseFraction(s.fraccion);
+        return p.fracciones.some(function (f) { return Math.abs(valorMixta(f) - v) < 0.000001; });
       }
 
       // Las fracciones de la planilla (si las hay) + los enteros de 1 a 5,
@@ -1079,7 +1110,7 @@
       // + la unidad entera. Cada una se multiplica por la cantidad elegida.
       function presentaciones(p) {
         var ops = (p.fraccionable && p.fracciones && p.fracciones.length)
-          ? opcionesFraccion(p) : [];
+          ? opcionesFraccion(p).filter(function (o) { return !o.mixta; }) : [];
         var hayEntera = ops.some(function (o) { return Math.abs(o.valor - 1) < 0.000001; });
         if (!hayEntera) ops.push({ cantidad: 1, fraccion: '', valor: 1, etiqueta: '1', etiquetaFija: false });
         // La unidad entera va primera (y queda seleccionada por defecto);
@@ -1142,7 +1173,8 @@
         var abreviaturas = ['kg', 'g', 'gr', 'grs', 'lt', 'l', 'ml', 'cc', 'mt', 'm', 'cm'];
         var lower = u.toLowerCase();
         var yaPlural = lower.slice(-1) === 's';
-        if (valor !== 1 && !yaPlural && abreviaturas.indexOf(lower) === -1) {
+        // medio maple va en singular: se pluraliza desde más de 1 (y el 0)
+        if ((valor > 1 || valor === 0) && !yaPlural && abreviaturas.indexOf(lower) === -1) {
           // Pluralizar en castellano: vocal + s · "z" -> "ces" · l/r/n/d/j + es
           // · otras consonantes (pack, kit) + s
           if (/[aeiouáéíóú]$/.test(lower)) u = u + 's';
@@ -1895,13 +1927,23 @@
       // pidió más de una fracción, "3 × ½ kg".
       function detalleItem(p, s) {
         var partes = [];
+        // (24/11) El precio que se muestra es el de la presentación elegida
+        // (medio maple = la mitad del precio del maple), no el de la unidad entera.
         if (s.fraccion) {
           var esp = parseFraccionEspecial(s.fraccion, p.unidad);
-          var etq = esp ? esp.etiqueta : conUnidad(etiquetaTotal(parseFraction(s.fraccion)), parseFraction(s.fraccion), p.unidad);
+          var mult = esp ? esp.valor : parseFraction(s.fraccion);
+          if (esMixtaElegida(p, s)) {
+            var tot = s.cantidad * mult;
+            partes.push(conUnidad(etiquetaTotal(tot), tot, p.unidad));
+            partes.push(formatMoney(Math.round((p.precio || 0) * tot)));
+            return partes.join(' · ');
+          }
+          var etq = esp ? esp.etiqueta : conUnidad(etiquetaTotal(mult), mult, p.unidad);
           partes.push((s.cantidad > 1 ? s.cantidad + ' × ' : '') + etq);
-        } else {
-          partes.push(conUnidad(String(s.cantidad), s.cantidad, p.unidad));
+          partes.push(formatMoney(Math.round((p.precio || 0) * mult)) + (s.cantidad > 1 ? ' c/u' : ''));
+          return partes.join(' · ');
         }
+        partes.push(conUnidad(String(s.cantidad), s.cantidad, p.unidad));
         partes.push(formatMoney(p.precio) + ' c/u');
         return partes.join(' · ');
       }
@@ -2869,6 +2911,6 @@
 
     })();
   </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 14/11 carnes con 10 min de gracia</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 24/11 · precio de la fracción, carnes por precio y 1 ½ kg</p>
 </body>
 </html>
