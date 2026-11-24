@@ -95,18 +95,23 @@
     /* ── Tabla editable: una línea por producto ──────────────── */
     table.tabla { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: 0.8rem; }
     .tabla col.c-disp { width: 5.5%; }
-    .tabla col.c-nombre { width: 17%; }
-    .tabla col.c-productor { width: 7.5%; }
+    .tabla col.c-nombre { width: 15%; }
+    .tabla col.c-productor { width: 7%; }
     .tabla col.c-precio { width: 6%; }
     .tabla col.c-unidad { width: 7%; }
     .tabla col.c-origen { width: 8%; }
-    .tabla col.c-categoria { width: 8.5%; }
+    .tabla col.c-categoria { width: 7.5%; }
     .tabla col.c-frac { width: 4.5%; }
-    .tabla col.c-fracciones { width: 7%; }
-    .tabla col.c-quien { width: 6.5%; }
+    .tabla col.c-fracciones { width: 6%; }
+    .tabla col.c-quien { width: 6%; }
     .tabla col.c-oferta { width: 4.5%; }
     .tabla col.c-stock { width: 4.5%; }
-    .tabla col.c-desc { width: 8%; }
+    .tabla col.c-desc { width: 6.5%; }
+    .tabla col.c-cons { width: 6.5%; }
+    .tabla tr.fila.frio, .tabla tr.fila.frio > td { background: #eaf3f8; }
+    .km-panel { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 0.85rem; padding: 4px 0; }
+    .km-panel select, .km-panel input { font: inherit; padding: 4px 6px; border-radius: 8px; border: 1px solid rgba(74,107,58,.35); background: #fff; max-width: 100%; }
+    .km-panel input { width: 84px; }
     .tabla col.c-estado { width: 5.5%; }
     .tabla thead th {
       position: sticky; top: var(--barra-h, 50px); z-index: 5;
@@ -190,7 +195,8 @@
       .tabla td.c-fracciones { order: 11; grid-column: span 2; }
       .tabla td.c-quien { order: 12; grid-column: span 2; }
       .tabla td.c-stock { order: 13; grid-column: span 2; }
-      .tabla td.c-desc { order: 14; grid-column: span 4; }
+      .tabla td.c-cons { order: 13; grid-column: span 2; }
+      .tabla td.c-desc { order: 14; grid-column: span 6; }
       .tabla .input, .tabla .select { height: 30px; font-size: 0.85rem; }
       .tabla tr.sub { margin: 0; }
       .tabla tr.sub > td { padding: 2px 8px 0; }
@@ -435,11 +441,13 @@
               // lo que ya existe en Productos, así un origen nuevo aparece en el
               // desplegable apenas se agrega a Distancias.
               return Promise.all([
-                gviz('sheet=Distancias&range=A1:A200&headers=1&_=' + Date.now()).catch(function () { return null; }),
+                gviz('sheet=Distancias&range=A1:B400&headers=1&_=' + Date.now()).catch(function () { return null; }),
                 gviz('sheet=_Listas_Validacion&range=D2:E80&headers=1&_=' + Date.now()).catch(function () { return null; })
               ]).then(function (rs) {
                 if (rs[0] && rs[0].table) rs[0].table.rows.forEach(function (r) {
                   var v = String(celda(r, 0) || '').trim(); if (v) maestras.origen[v] = true;
+                  var km = celda(r, 1);
+                  if (v && km !== '' && km !== null && km !== undefined && isFinite(parseFloat(km))) kmDe[normalizar(v)] = parseFloat(km);
                 });
                 if (rs[1] && rs[1].table) rs[1].table.rows.forEach(function (r) {
                   var u = String(celda(r, 0) || '').trim(); if (u) maestras.unidad[u] = true;
@@ -452,7 +460,7 @@
 
         aux
           .then(function () {
-            return gviz('sheet=Productos&range=A1:T5000&headers=1&_=' + Date.now());
+            return gviz('sheet=Productos&range=A1:U5000&headers=1&_=' + Date.now());
           })
           .then(function (res) {
             if (miCarga !== cargaN) return;   // llegó una lectura más nueva
@@ -491,6 +499,7 @@
                 descripcion: String(celda(r, 15) || '').trim(),
                 productor: String(celda(r, 16)).trim() || nombresProductor[String(celda(r, 1)).trim()] || '',
                 quien_fracciona: String(celda(r, 18) || '').trim(),
+                conservacion: tipoConservacion(celda(r, 20)),
                 confirmado: String(celda(r, 19) || '').trim() === 'Sí'
               };
               nuevos[id] = p;
@@ -626,13 +635,76 @@
       // Cada render combina las tres cosas, así una relectura nunca borra
       // lo tocado ni muestra un valor viejo de algo recién guardado.
       var CAMPOS = ['disponible', 'nombre', 'precio', 'unidad', 'origen', 'categoria',
-        'fraccionable', 'fracciones', 'quien', 'oferta', 'stock', 'descripcion'];
+        'fraccionable', 'fracciones', 'quien', 'oferta', 'stock', 'descripcion', 'conservacion'];
       var NOMBRE_CAMPO = {
         disponible: 'disponible', nombre: 'nombre', precio: 'precio', unidad: 'unidad',
         origen: 'origen', categoria: 'categoría', fraccionable: 'fraccionable',
         fracciones: 'fracciones', quien: 'quién fracciona', oferta: 'oferta',
-        stock: 'stock', descripcion: 'descripción'
+        stock: 'stock', descripcion: 'descripción', conservacion: 'conservación'
       };
+      // (24/11) Conservación (Productos!U): Ambiente / Refrigerado / Congelado.
+      // El galpón manda al puesto de frío lo refrigerado y lo congelado.
+      // "Frío" es el valor que se usaba antes: equivale a Refrigerado.
+      function tipoConservacion(x) {
+        var c = normalizar(String(x || '').trim());
+        if (c.indexOf('cong') === 0) return 'Congelado';
+        if (c.indexOf('fr') === 0 || c.indexOf('refri') === 0) return 'Refrigerado';
+        return 'Ambiente';
+      }
+      // (24/11) Distancia de un origen nuevo: se busca la localidad en
+      // OpenStreetMap y se calcula en línea recta hasta Unquillo. Quien cura
+      // ve el lugar encontrado y puede corregir los km antes de guardar.
+      var UNQUILLO = { lat: -31.2314, lon: -64.3161 };
+      var kmDe = {};        // origen normalizado → km (hoja Distancias)
+      var kmPend = {};      // id_producto → { origen, estado, lugares, sel, km }
+      var kmEnviados = {};  // origen normalizado → km ya mandado en esta sesión
+      function kmRecta(lat, lon) {
+        var R = 6371, a1 = UNQUILLO.lat * Math.PI / 180, a2 = lat * Math.PI / 180;
+        var dLat = (lat - UNQUILLO.lat) * Math.PI / 180, dLon = (lon - UNQUILLO.lon) * Math.PI / 180;
+        var h = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(a1) * Math.cos(a2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        return Math.round(2 * R * Math.asin(Math.sqrt(h)));
+      }
+      function origenSinKm(o) {
+        var n = normalizar(String(o || '').trim());
+        return !!n && !tiene(kmDe, n) && !tiene(kmEnviados, n);
+      }
+      function revisarOrigen(id) {
+        var o = String(valor(id, 'origen') || '').trim();
+        if (!borradores[id] || !tiene(borradores[id], 'origen') || !origenSinKm(o)) {
+          if (kmPend[id]) { delete kmPend[id]; pintarFila(id); }
+          return;
+        }
+        if (kmPend[id] && kmPend[id].origen === o) return;
+        var st = kmPend[id] = { origen: o, estado: 'buscando', lugares: [], sel: 0, km: '' };
+        pintarFila(id);
+        fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&accept-language=es&q=' + encodeURIComponent(o))
+          .then(function (r) { return r.json(); })
+          .then(function (js) {
+            if (kmPend[id] !== st) return;
+            st.lugares = (js || []).map(function (x) {
+              return { nombre: String(x.display_name || ''), km: kmRecta(parseFloat(x.lat), parseFloat(x.lon)) };
+            }).filter(function (x) { return x.nombre && isFinite(x.km); });
+            // lo de Argentina primero
+            st.lugares.sort(function (a, b) { return (/Argentina\s*$/.test(b.nombre) ? 1 : 0) - (/Argentina\s*$/.test(a.nombre) ? 1 : 0); });
+            st.estado = st.lugares.length ? 'listo' : 'manual';
+            if (st.lugares.length) st.km = String(st.lugares[0].km);
+          }, function () { if (kmPend[id] === st) st.estado = 'manual'; })
+          .then(function () { if (kmPend[id] === st) pintarFila(id); });
+      }
+      function panelKm(id) {
+        var st = kmPend[id];
+        if (!st) return '';
+        if (st.estado === 'buscando') return '<div class="km-panel">📍 Buscando «' + escapeHtml(st.origen) + '»…</div>';
+        var h = '<div class="km-panel">📍 ';
+        if (st.estado === 'listo') {
+          h += '<select data-km-lugar="' + escapeHtml(id) + '">' + st.lugares.map(function (l, i) {
+            return '<option value="' + i + '"' + (i === st.sel ? ' selected' : '') + '>' + escapeHtml(l.nombre.slice(0, 70)) + '</option>';
+          }).join('') + '</select>';
+        } else {
+          h += 'No encontré «' + escapeHtml(st.origen) + '»:';
+        }
+        return h + ' <input type="number" min="0" step="1" data-km-id="' + escapeHtml(id) + '" value="' + escapeHtml(st.km) + '"> km a Unquillo</div>';
+      }
       var ESPERA_CONFIRMACION = 90000;   // ms para ver el cambio en la planilla
       var datos = {};
       var secciones = null;
@@ -663,6 +735,7 @@
           case 'oferta': return p.es_oferta ? 'Sí' : 'No';
           case 'stock': return p.stock;
           case 'descripcion': return p.descripcion;
+          case 'conservacion': return p.conservacion;
         }
         return '';
       }
@@ -735,7 +808,7 @@
         ['c-precio', 'Precio $'], ['c-unidad', 'Unidad'], ['c-origen', 'Origen'],
         ['c-categoria', 'Categoría'], ['c-frac', 'Fracc.'], ['c-fracciones', 'Fracciones'],
         ['c-quien', 'Quién fracc.'], ['c-oferta', 'Oferta'], ['c-stock', 'Stock'],
-        ['c-desc', 'Descripción'], ['c-estado', '']
+        ['c-desc', 'Descripción'], ['c-cons', 'Conserv.'], ['c-estado', '']
       ];
 
       function inicioTabla() {
@@ -767,6 +840,7 @@
         var c = 'fila fila-' + seccion;
         if (borradores[id]) c += ' sucia';
         if (envios[id]) c += ' ' + envios[id].estado;
+        if (valor(id, 'conservacion') !== 'Ambiente') c += ' frio';
         return c;
       }
 
@@ -774,6 +848,7 @@
         var p = datos[id];
         var sec = seccionDe[id];
         var partes = [];
+        if (kmPend[id]) partes.push(panelKm(id));
         if (avisos[id]) partes.push(escapeHtml(avisos[id]));
         if (sec === 'corregir' && p && p._problemas) {
           p._problemas.forEach(function (x) { partes.push('⚠ ' + escapeHtml(x)); });
@@ -806,6 +881,7 @@
         h += td('c-oferta', 'Oferta', selectCampo(id, 'oferta', opSiNo, false));
         h += td('c-stock', 'Stock', inputCampo(id, 'stock', true, ' placeholder="—"'));
         h += td('c-desc', 'Descripción', inputCampo(id, 'descripcion', false, ' placeholder="opcional" title="' + escapeHtml(valor(id, 'descripcion')) + '"'));
+        h += td('c-cons', 'Conserv.', selectCampo(id, 'conservacion', [['Ambiente', 'Ambiente'], ['Refrigerado', '❄ Refrig.'], ['Congelado', '🧊 Cong.']], false));
         h += td('c-estado', '', estadoFila(id));
         h += '</tr>';
         h += '<tr class="sub" id="aviso-' + escapeHtml(id) + '"' + (aviso ? '' : ' hidden') +
@@ -1155,6 +1231,26 @@
           return;
         }
         registrar(el);
+        if (el.getAttribute('data-campo') === 'origen') revisarOrigen(el.getAttribute('data-id'));
+        if (el.getAttribute('data-campo') === 'conservacion') {
+          var trc = $('fila-' + el.getAttribute('data-id'));
+          if (trc) trc.classList.toggle('frio', el.value !== 'Ambiente');
+        }
+      });
+      // panel de distancia: elegir el lugar o corregir los km
+      document.addEventListener('change', function (e) {
+        var el = e.target, id = el.getAttribute && el.getAttribute('data-km-lugar');
+        if (!id || !kmPend[id]) return;
+        ultimaInteraccion = Date.now();
+        kmPend[id].sel = parseInt(el.value, 10) || 0;
+        kmPend[id].km = String(kmPend[id].lugares[kmPend[id].sel].km);
+        pintarFila(id);
+      });
+      document.addEventListener('input', function (e) {
+        var el = e.target, id = el.getAttribute && el.getAttribute('data-km-id');
+        if (!id || !kmPend[id]) return;
+        ultimaInteraccion = Date.now();
+        kmPend[id].km = el.value;
       });
 
       ['focusin', 'mousedown', 'keydown', 'touchstart'].forEach(function (ev) {
@@ -1211,11 +1307,11 @@
         // haría que el consumidor vea un precio y la planilla cobre otro.
         if (v.fracciones) {
           var frMalas = v.fracciones.split(',').map(function (x) { return x.trim(); }).filter(function (x) {
-            return x && !/^\d+$/.test(x) && !/^\d+\/\d+$/.test(x) &&
+            return x && !/^\d+$/.test(x) && !/^\d+\/\d+$/.test(x) && !/^\d+\s+\d+\/\d+$/.test(x) &&
               !/^\d+\s*(g|gr|grs|gramos|ml|cc)$/i.test(x);
           });
           if (frMalas.length) {
-            return 'Fracción no válida: «' + frMalas.join('», «') + '». Usá 1/2, 1/4, 200g, 500ml o enteros, separados por coma.';
+            return 'Fracción no válida: «' + frMalas.join('», «') + '». Usá 1/2, 1/4, 1 1/2, 200g, 500ml o enteros, separados por coma.';
           }
         }
         return '';
@@ -1241,7 +1337,8 @@
           es_oferta: v.oferta,
           disponible: v.disponible,
           stock: String(v.stock).replace('.', ','),
-          descripcion: v.descripcion
+          descripcion: v.descripcion,
+          conservacion: v.conservacion
         };
       }
 
@@ -1275,6 +1372,12 @@
           if (!borradores[id] || !datos[id] || enCurso(id)) return;
           var v = valoresFila(id);
           var err = validar(v);
+          var st = kmPend[id], kmNuevo = null;
+          if (!err && st && st.origen === v.origen && origenSinKm(v.origen)) {
+            kmNuevo = parseFloat(String(st.km).replace(',', '.'));
+            if (st.estado === 'buscando') err = 'Esperá un momento: estoy buscando la distancia de «' + st.origen + '».';
+            else if (!(kmNuevo >= 0)) err = 'Falta la distancia de «' + st.origen + '» (km a Unquillo).';
+          }
           if (err) {
             avisos[id] = '⚠️ ' + err;
             conError++;
@@ -1283,6 +1386,13 @@
           }
           delete avisos[id];
           envios[id] = { valores: v, t: Date.now(), estado: 'enviando', payload: armarPayload(id, v, clave) };
+          if (kmNuevo !== null && kmNuevo >= 0) {
+            // la distancia del origen nuevo viaja una sola vez (A4 la agrega a la hoja Distancias)
+            envios[id].payload.distancia_origen = v.origen;
+            envios[id].payload.distancia_km = Math.round(kmNuevo);
+            kmEnviados[normalizar(v.origen)] = Math.round(kmNuevo);
+          }
+          delete kmPend[id];
           delete borradores[id];       // lo tocado pasa a "enviado": ya no se pierde
           pintarFila(id);
           cola.push(id);
@@ -1439,6 +1549,6 @@
   @media print { .globo-aviso-p { display: none !important; } }
 </style>
 <p class="globo-aviso-p" style="text-align:right;margin:34px auto 22px;max-width:720px;padding:0 16px;"><a id="link-aviso" class="globo-aviso" href="avisos.html?p=Revisi%C3%B3n%20del%20cat%C3%A1logo" target="_blank" rel="noopener">💬 Avisar algo de la App</a></p>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 17/10 · avisos 17/11</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 24/11 · conservación y distancia del origen</p>
 </body>
 </html>
