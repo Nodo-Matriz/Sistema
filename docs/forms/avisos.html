@@ -98,7 +98,8 @@
     <h2 id="tit-lista">📋 Qué pasó con cada aviso</h2>
     <p class="meta">Se actualiza solo cada medio minuto.</p>
     <div class="chips" id="ch-filtro" style="margin:8px 0;">
-      <button type="button" data-v="abiertos" class="on">Recientes</button>
+      <button type="button" data-v="abiertos" class="on">Nuevos</button>
+      <button type="button" data-v="resueltos">Resueltos</button>
       <button type="button" data-v="todos">Todos</button>
       <button type="button" data-v="mios">Míos</button>
     </div>
@@ -134,7 +135,7 @@
 
   try { if (sessionStorage.getItem(CLAVE_KEY)) $('clave').value = sessionStorage.getItem(CLAVE_KEY); } catch (e) {}
   try { pend = JSON.parse(localStorage.getItem(LS_PEND) || '[]').filter(function (a) { return Date.now() - a.ts < 600000; }); } catch (e) { pend = []; }
-  if (ADMIN) { $('titulo').textContent = '🛠 Tablero de mejoras'; $('tit-lista').textContent = '🛠 Avisos para resolver'; $('ch-filtro').querySelector('[data-v="abiertos"]').textContent = 'Sin resolver'; }
+  if (ADMIN) { $('titulo').textContent = '🛠 Tablero de mejoras'; $('tit-lista').textContent = '🛠 Avisos para resolver'; }
 
   function chips(id, alCambiar) {
     $(id).addEventListener('click', function (e) {
@@ -214,9 +215,9 @@
     l.sort(function (a, b) { return b.ts - a.ts; });
     l = l.filter(function (a) {
       var e = (estados[a.id] || {}).est || 'nueva';
-      // Recientes: lo abierto + lo cerrado en los últimos 15 días (así la equipa ve la respuesta).
-      // En el tablero (?admin=1) solo lo abierto.
-      if (filtro === 'abiertos') return abierto(e) || (!ADMIN && Date.now() - ((estados[a.id] || {}).ts || 0) < 15 * 86400000);
+      // Nuevos: lo que sigue abierto. Resueltos: lo resuelto y lo rechazado, con su respuesta.
+      if (filtro === 'abiertos') return abierto(e);
+      if (filtro === 'resueltos') return !abierto(e);
       if (filtro === 'mios') return yo && a.q === yo;
       return true;
     });
@@ -228,7 +229,7 @@
     // las preguntas que me toca responder, arriba de todo
     if (!ADMIN) l.sort(function (a, b) { return (yo && b.q === yo && pregAbierta(b.id) ? 1 : 0) - (yo && a.q === yo && pregAbierta(a.id) ? 1 : 0); });
     var cont = $('lista');
-    if (!l.length) { cont.innerHTML = '<p class="meta">' + (filtro === 'abiertos' ? '🎉 No hay avisos sin resolver.' : filtro === 'mios' ? (yo ? 'Todavía no mandaste avisos.' : 'Elegí tu nombre arriba para ver los tuyos.') : 'Todavía no hay avisos.') + '</p>'; return; }
+    if (!l.length) { cont.innerHTML = '<p class="meta">' + (filtro === 'abiertos' ? '🎉 No hay avisos sin resolver.' : filtro === 'resueltos' ? 'Todavía no hay avisos resueltos.' : filtro === 'mios' ? (yo ? 'Todavía no mandaste avisos.' : 'Elegí tu nombre arriba para ver los tuyos.') : 'Todavía no hay avisos.') + '</p>'; return; }
     if (cont.contains(document.activeElement) && /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;   // alguien está escribiendo una respuesta
     cont.innerHTML = '';
     l.forEach(function (a) {
@@ -316,6 +317,6 @@
   setInterval(function () { if (!document.hidden) cargar(); }, 30000);
 })();
 </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 26/11 b · avisos sin Make, resuelto y rechazado</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 26/11 c · pestañas Nuevos y Resueltos</p>
 </body>
 </html>
