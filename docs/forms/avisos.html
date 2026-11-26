@@ -42,6 +42,7 @@
     .est.no { background: #f3dcd6; color: #A6402B; }
     .est.urg { background: #A6402B; color: #fff; }
     .est.env { background: #eee; color: #666; }
+    .est.reabierta { background: #f1e7c9; color: #7a5a12; }
     .est.pregunta { background: #F8E9C4; color: #7a5a12; }
     .est.respondida { background: #e6dcf2; color: #5b3d8a; }
     .preg { background: #FBF3DC; border: 1.5px solid var(--c-mostaza, #C49543); border-radius: 12px; padding: 9px 11px; margin-top: 7px; font-size: .92rem; }
@@ -97,7 +98,7 @@
     <h2 id="tit-lista">📋 Qué pasó con cada aviso</h2>
     <p class="meta">Se actualiza solo cada medio minuto.</p>
     <div class="chips" id="ch-filtro" style="margin:8px 0;">
-      <button type="button" data-v="abiertos" class="on">Sin resolver</button>
+      <button type="button" data-v="abiertos" class="on">Recientes</button>
       <button type="button" data-v="todos">Todos</button>
       <button type="button" data-v="mios">Míos</button>
     </div>
@@ -109,6 +110,10 @@
   'use strict';
   var SS = '1nlSIDb7veJoO8-WpiTD_Z_oK-whwANFazLL4cTSMTUg';
   var WEBHOOK_H1 = 'https://hook.us2.make.com/w69ib4j3s2gqosu1zm7f1pp4ndqrepar';
+  // (24/11) Los avisos se guardan con un script de la propia planilla (Apps
+  // Script), sin Make: no gasta créditos y contesta si guardó o no. Mientras
+  // la dirección no esté pegada acá, se sigue usando Make como antes.
+  var URL_GUARDADO = 'https://script.google.com/macros/s/AKfycbzrsXFVNqXZ8y8snFU8Sleu763aAVAXJz9sXjciEZ5MT3vlfnfGpKbKPR3YaM1eP4OE/exec';
   var CLAVE_KEY = 'nm_clave_equipo', LS_NOMBRE = 'nm_avisos_nombre', LS_PEND = 'nm_avisos_pend';
   function $(id) { return document.getElementById(id); }
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -129,7 +134,7 @@
 
   try { if (sessionStorage.getItem(CLAVE_KEY)) $('clave').value = sessionStorage.getItem(CLAVE_KEY); } catch (e) {}
   try { pend = JSON.parse(localStorage.getItem(LS_PEND) || '[]').filter(function (a) { return Date.now() - a.ts < 600000; }); } catch (e) { pend = []; }
-  if (ADMIN) { $('titulo').textContent = '🛠 Tablero de mejoras'; $('tit-lista').textContent = '🛠 Avisos para resolver'; }
+  if (ADMIN) { $('titulo').textContent = '🛠 Tablero de mejoras'; $('tit-lista').textContent = '🛠 Avisos para resolver'; $('ch-filtro').querySelector('[data-v="abiertos"]').textContent = 'Sin resolver'; }
 
   function chips(id, alCambiar) {
     $(id).addEventListener('click', function (e) {
@@ -144,9 +149,19 @@
 
   function mandar(clave_config, valor, clave) {
     try { sessionStorage.setItem(CLAVE_KEY, clave); } catch (e) {}
-    return fetch(WEBHOOK_H1, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ tipo: 'config', clave: clave, clave_config: clave_config, valor: JSON.stringify(valor), quien: valor.q || 'avisos' }) });
+    var cuerpo = JSON.stringify({ tipo: 'config', clave: clave, clave_config: clave_config, valor: JSON.stringify(valor), quien: valor.q || 'avisos' });
+    if (URL_GUARDADO.indexOf('https://script.google.com/') !== 0) {
+      // sin respuesta útil: no se puede saber si Make lo guardó
+      return fetch(WEBHOOK_H1, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: cuerpo });
+    }
+    return fetch(URL_GUARDADO, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: cuerpo })
+      .then(function (r) { return r.json(); })
+      .then(function (js) {
+        if (js && js.ok) return js;
+        throw new Error(js && js.error === 'clave' ? 'La clave de equipo no es correcta.' : 'No se pudo guardar.');
+      }, function () { throw new Error('No se pudo guardar. Revisá la conexión y probá de nuevo.'); });
   }
+  function errorDe(e) { return '<span class="err">⚠ ' + esc(e && e.message ? e.message : 'No se pudo guardar.') + '</span>'; }
 
   function cargar() {
     return Promise.all([
@@ -189,6 +204,7 @@
   // pregunta abierta: hay pregunta y la respuesta guardada no es de esa pregunta
   function pregAbierta(id) { var e = estados[id] || {}, r = resps[id]; return !!(e.pq && e.est === 'pregunta' && !(r && r.pts === e.pts)); }
   function respDe(id) { var e = estados[id] || {}, r = resps[id]; return e.pq && r && r.pts === e.pts ? r : null; }
+  function abierto(e) { return e === 'nueva' || e === 'tomada' || e === 'pregunta' || e === 'reabierta'; }
   function pintar() {
     var yo = $('quien').value;
     var mias = avisos.filter(function (a) { return yo && a.q === yo && pregAbierta(a.id); }).length;
@@ -198,7 +214,9 @@
     l.sort(function (a, b) { return b.ts - a.ts; });
     l = l.filter(function (a) {
       var e = (estados[a.id] || {}).est || 'nueva';
-      if (filtro === 'abiertos') return e === 'nueva' || e === 'tomada' || e === 'pregunta';
+      // Recientes: lo abierto + lo cerrado en los últimos 15 días (así la equipa ve la respuesta).
+      // En el tablero (?admin=1) solo lo abierto.
+      if (filtro === 'abiertos') return abierto(e) || (!ADMIN && Date.now() - ((estados[a.id] || {}).ts || 0) < 15 * 86400000);
       if (filtro === 'mios') return yo && a.q === yo;
       return true;
     });
@@ -217,7 +235,7 @@
       var e = estados[a.id] || {}, est = e.est || 'nueva';
       var rq = respDe(a.id);
       if (est === 'pregunta' && rq) est = 'respondida';
-      var nombres = { nueva: 'Nueva', tomada: 'Tomada' + (e.ed ? ' · ' + e.ed : ''), hecha: 'Hecha', no: 'No se hace', pregunta: 'Esperando respuesta', respondida: 'Respondida' };
+      var nombres = { nueva: 'Nueva', tomada: 'Tomada' + (e.ed ? ' · ' + e.ed : ''), hecha: 'Cerrado', no: 'No se hace', pregunta: 'Esperando respuesta', respondida: 'Respondida', reabierta: 'Reabierto' };
       var d = document.createElement('div'); d.className = 'it';
       d.innerHTML = (a.u && est !== 'hecha' && est !== 'no' ? '<span class="est urg">Urgente</span>' : '') +
         (a._pend ? '<span class="est env">Enviando…</span>' : '<span class="est ' + est + '">' + esc(nombres[est] || est) + '</span>') +
@@ -238,7 +256,7 @@
             var val = { x: x, q: yo, pts: e.pts, ts: Date.now() };
             msg.textContent = '⏳ Enviando…';
             var fin = function () { val._loc = 1; resps[a.id] = val; document.activeElement && document.activeElement.blur(); pintar(); };
-            mandar('aviso_resp|' + a.id, val, clave).then(fin, fin);
+            mandar('aviso_resp|' + a.id, val, clave).then(fin, function (er) { msg.innerHTML = errorDe(er); });
           });
         } else {
           caja.insertAdjacentHTML('beforeend', '<div class="meta" style="margin-top:5px;">' + (yo ? 'La responde ' + esc(a.q || 'quien avisó') + '.' : 'Si el aviso es tuyo, elegí tu nombre arriba para responder.') + '</div>');
@@ -251,6 +269,8 @@
           '<label class="meta">Listo para: <select class="a-ed"><option value="">—</option>' + [num, num + 1, num + 2].map(function (n) { return '<option' + (e.ed === 'ED' + n ? ' selected' : '') + '>ED' + n + '</option>'; }).join('') + '</select></label>' +
           '<div class="fila-preg"><input type="text" class="a-preg" maxlength="300" placeholder="Pregunta para ' + esc(a.q || 'quien avisó') + '"><button type="button" data-e="pregunta">❓ Preguntar</button></div>' +
           '<div class="bots"><button type="button" data-e="tomada">✓ Tomar</button><button type="button" data-e="hecha">Responder y cerrar</button><button type="button" data-e="no" class="rech">No se hace</button></div><span class="a-msg meta"></span>';
+        // lo cerrado solo ofrece volver a abrirlo (la respuesta queda)
+        if (est === 'hecha' || est === 'no') adm.innerHTML = '<div class="bots"><button type="button" data-e="reabierta">↩ Volver a abrir</button></div><span class="a-msg meta"></span><input type="hidden" class="a-resp" value="' + esc(e.r || '') + '"><input type="hidden" class="a-ed" value="' + esc(e.ed || '') + '">';
         adm.addEventListener('click', function (ev) {
           var b = ev.target.closest('button'); if (!b) return;
           var clave = $('clave').value.trim(), msg = adm.querySelector('.a-msg'), resp = adm.querySelector('.a-resp').value.trim();
@@ -264,7 +284,7 @@
           } else if (e.pq) { val.pq = e.pq; val.pts = e.pts; }   // la pregunta y su respuesta quedan a la vista
           msg.textContent = '⏳ Guardando…';
           var fin = function () { val._loc = 1; estados[a.id] = val; document.activeElement && document.activeElement.blur(); pintar(); };
-          mandar('aviso_est|' + a.id, val, clave).then(fin, fin);
+          mandar('aviso_est|' + a.id, val, clave).then(fin, function (er) { msg.innerHTML = errorDe(er); });
         });
         d.appendChild(adm);
       }
@@ -288,7 +308,7 @@
         (urgente ? ' <span class="err">Como es urgente, escribile también a Juan por WhatsApp.</span>' : '');
       filtro = 'abiertos'; pintar(); setTimeout(cargar, 6000);
     };
-    mandar('aviso|' + id, a, clave).then(fin, fin);
+    mandar('aviso|' + id, a, clave).then(fin, function (er) { $('enviar').disabled = false; msg.innerHTML = errorDe(er); });
   });
 
   if (ADMIN) $('card-form').querySelector('h2').textContent = '💬 Cargar un aviso';
@@ -296,6 +316,6 @@
   setInterval(function () { if (!document.hidden) cargar(); }, 30000);
 })();
 </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 17/11 b · avisos con pregunta y respuesta</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 26/11 · avisos sin Make, cerrado y reabrir</p>
 </body>
 </html>
