@@ -235,7 +235,7 @@
       var e = estados[a.id] || {}, est = e.est || 'nueva';
       var rq = respDe(a.id);
       if (est === 'pregunta' && rq) est = 'respondida';
-      var nombres = { nueva: 'Nueva', tomada: 'Tomada' + (e.ed ? ' · ' + e.ed : ''), hecha: 'Cerrado', no: 'No se hace', pregunta: 'Esperando respuesta', respondida: 'Respondida', reabierta: 'Reabierto' };
+      var nombres = { nueva: 'Nueva', tomada: 'Tomada' + (e.ed ? ' · ' + e.ed : ''), hecha: 'Resuelto', no: 'Rechazado', pregunta: 'Esperando respuesta', respondida: 'Respondida', reabierta: 'Reabierto' };
       var d = document.createElement('div'); d.className = 'it';
       d.innerHTML = (a.u && est !== 'hecha' && est !== 'no' ? '<span class="est urg">Urgente</span>' : '') +
         (a._pend ? '<span class="est env">Enviando…</span>' : '<span class="est ' + est + '">' + esc(nombres[est] || est) + '</span>') +
@@ -268,7 +268,7 @@
         adm.innerHTML = '<input type="text" class="a-resp" maxlength="300" placeholder="Respuesta (la ve la equipa)" value="' + esc(e.r || '') + '">' +
           '<label class="meta">Listo para: <select class="a-ed"><option value="">—</option>' + [num, num + 1, num + 2].map(function (n) { return '<option' + (e.ed === 'ED' + n ? ' selected' : '') + '>ED' + n + '</option>'; }).join('') + '</select></label>' +
           '<div class="fila-preg"><input type="text" class="a-preg" maxlength="300" placeholder="Pregunta para ' + esc(a.q || 'quien avisó') + '"><button type="button" data-e="pregunta">❓ Preguntar</button></div>' +
-          '<div class="bots"><button type="button" data-e="tomada">✓ Tomar</button><button type="button" data-e="hecha">Responder y cerrar</button><button type="button" data-e="no" class="rech">No se hace</button></div><span class="a-msg meta"></span>';
+          '<div class="bots"><button type="button" data-e="tomada">✓ Tomar</button><button type="button" data-e="hecha">Responder y resolver</button><button type="button" data-e="no" class="rech">Rechazar</button></div><span class="a-msg meta"></span>';
         // lo cerrado solo ofrece volver a abrirlo (la respuesta queda)
         if (est === 'hecha' || est === 'no') adm.innerHTML = '<div class="bots"><button type="button" data-e="reabierta">↩ Volver a abrir</button></div><span class="a-msg meta"></span><input type="hidden" class="a-resp" value="' + esc(e.r || '') + '"><input type="hidden" class="a-ed" value="' + esc(e.ed || '') + '">';
         adm.addEventListener('click', function (ev) {
@@ -316,6 +316,6 @@
   setInterval(function () { if (!document.hidden) cargar(); }, 30000);
 })();
 </script>
-<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 26/11 · avisos sin Make, cerrado y reabrir</p>
+<p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:28px 0 14px;">versión 26/11 b · avisos sin Make, resuelto y rechazado</p>
 </body>
 </html>
