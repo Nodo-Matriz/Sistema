@@ -437,6 +437,8 @@
 
   </main>
 
+  <p class="nm-version" style="text-align:center;font-size:0.72rem;color:#8A8A7A;margin:0 0 14px;">versión 26/11 · nombres en Tipo Título</p>
+
   <script src="../assets/form-logic.js"></script>
   <script>
   (function () {
@@ -847,7 +849,7 @@
 
       productosNuevos.forEach(function (p) {
         var tr = p.tr;
-        var nombre = tr.querySelector('[data-campo="nombre"]').value.trim();
+        var nombre = tipoTitulo(tr.querySelector('[data-campo="nombre"]').value);
         if (!nombre) return;
         var precio = parseFloat(tr.querySelector('[data-campo="precio"]').value) || null;
         var unidad = tr.querySelector('[data-campo="unidad"]').value;
@@ -880,6 +882,28 @@
 
     function habilitarEnvio(on) {
       document.getElementById('btn-enviar-bottom').disabled = !on;
+    }
+
+    // ── Tipo Título (26/11) ────────────────────────────────────────
+    // Los nombres del catálogo se publican en Tipo Título: mayúscula inicial
+    // en cada palabra principal, conectores y unidades en minúscula.
+    // Se aplica al salir del campo y de nuevo al enviar.
+    var TT_CONECTORES = ['de','del','la','las','el','los','y','e','o','u','en','con','sin','a','al','para','por','x'];
+    var TT_UNIDADES   = ['g','gr','grs','kg','kgs','ml','cc','l','lt','lts','cm','u','un'];
+    function tipoTitulo(texto) {
+      var limpio = String(texto || '').replace(/\s+/g, ' ').trim();
+      if (!limpio) return '';
+      var todoMayus = !/[a-záéíóúüñ]/.test(limpio);
+      var partes = limpio.split(' ');
+      return partes.map(function (p, i) {
+        var min = p.toLowerCase();
+        var solo = min.replace(/^[(¿¡"']+/, '').replace(/[.,;:)]+$/, '');
+        if (/^\d/.test(p)) return min;                                   // 500g, 750ML
+        if (i > 0 && /^\d/.test(partes[i - 1]) && TT_UNIDADES.indexOf(solo) !== -1) return min;  // 1 KG
+        if (i > 0 && TT_CONECTORES.indexOf(solo) !== -1) return min;     // de, con, x
+        if (!todoMayus && /^[A-ZÁÉÍÓÚÜÑ]{2,5}$/.test(p)) return p;       // IPA, TACC
+        return min.replace(/(^|[-\/(¿¡"'])([a-záéíóúüñ])/g, function (m, a, b) { return a + b.toUpperCase(); });
+      }).join(' ');
     }
 
     // ── Agregar producto nuevo ─────────────────────────────────────
@@ -926,6 +950,10 @@
       productosNuevos.push({ key: key, tr: tr });
 
       tr.querySelector('[data-campo="nombre"]').addEventListener('input', actualizarResumen);
+      tr.querySelector('[data-campo="nombre"]').addEventListener('blur', function () {
+        var t = tipoTitulo(this.value);
+        if (t !== this.value) { this.value = t; actualizarResumen(); }
+      });
 
       tr.querySelector('[data-accion="eliminar-nuevo"]').addEventListener('click', function () {
         tr.remove();
@@ -983,7 +1011,7 @@
       // 2. Productos nuevos (solo si tienen nombre)
       productosNuevos.forEach(function (p) {
         var tr = p.tr;
-        var nombre = tr.querySelector('[data-campo="nombre"]').value.trim();
+        var nombre = tipoTitulo(tr.querySelector('[data-campo="nombre"]').value);
         if (!nombre) return;
         var elStockN = tr.querySelector('[data-campo="stock"]');
         var elDesc = tr.querySelector('[data-campo="descripcion"]');
